@@ -1,0 +1,406 @@
+.tb-ribbon-stack {
+  display: flex;
+  flex-direction: column;
+  background: #003f2b;
+  color: #ffffff;
+}
+
+/* Ligne 2 : onglets du ruban. */
+.tb-tabbar {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+  background: #00291d;
+}
+
+.tb-tab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+}
+
+.tb-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tb-tab-active {
+  color: #003f2b;
+  background: #ffffff;
+  font-weight: 600;
+}
+
+/* Ligne 3 (+ légendes) : groupes de commandes de l'onglet actif. */
+.tb-ribbon {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #003f2b;
+}
+
+/* Gros bouton (façon "Coller" dans Word) : occupe toute la hauteur des 2
+ * lignes de commandes, pour la bascule de l'explorateur — c'est l'action la
+ * plus fréquente après la frappe elle-même, elle mérite mieux qu'une petite
+ * icône perdue dans la barre d'accès rapide. */
+.tb-big-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+.tb-big-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tb-big-icon-glyph {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.tb-big-icon-label {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* Un groupe occupe toute la hauteur disponible ; ses boutons se répartissent
+ * dans une grille à 2 LIGNES (remplie colonne par colonne, comme le groupe
+ * "Police" de Word : Police/Taille en haut, G/I/S/couleur/surlignage en bas)
+ * et sa légende reste collée tout en bas — jamais au milieu, et toujours à
+ * la même hauteur que la légende du groupe voisin, quel que soit le nombre
+ * de boutons qu'il contient. */
+.tb-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2px 8px 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tb-group:last-child {
+  border-right: none;
+}
+
+.tb-group-buttons {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
+  flex: 1;
+  padding-bottom: 4px;
+}
+
+/* Une "ligne" explicite à l'intérieur d'un groupe (voir le groupe "Police"
+ * de l'onglet Format avancé) : utile quand un groupe a besoin d'un
+ * découpage en 2 lignes fixe et voulu (pas juste la répartition automatique
+ * colonne par colonne de `.tb-group-buttons`) — chaque `.tb-group-row`
+ * occupe alors une des 2 lignes de la grille parente comme une seule
+ * cellule (une seule colonne utilisée), ses boutons se répartissant en
+ * ligne à l'intérieur. */
+.tb-group-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Petit chevron décoratif façon Word sur un bouton qui ouvre par ailleurs
+ * déjà un sélecteur (couleur du texte, surlignage) — pas un second contrôle
+ * séparé, juste une meilleure affordance visuelle sur le même bouton. */
+.tb-swatch-caret {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  font-size: 7px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.tb-btn-with-caret {
+  position: relative;
+}
+
+.tb-group-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  text-align: center;
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: default;
+}
+
+/* Icône "lanceur" façon Word (petite flèche ouvrant une boîte de dialogue
+ * détaillée), posée juste après le libellé du groupe — voir RibbonGroup.
+ * Volontairement bien visible (pas juste un détail discret dans la légende)
+ * — une première version trop discrète (10px, faible opacité, à peine
+ * différente entre "actif" et "TODO") avait rendu le réglage des styles de
+ * titre difficile à retrouver après le déplacement du bouton 🎨 ici (retour
+ * utilisateur direct). Un lanceur SANS `onClick` (Police/Paragraphe, pas
+ * encore de dialogue à brancher) reste nettement plus terne qu'un lanceur
+ * fonctionnel (Styles/Pages), pour qu'on ne confonde pas les deux au premier
+ * coup d'œil. */
+.tb-group-launcher {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 3px;
+  cursor: pointer;
+}
+.tb-group-launcher:hover:not(:disabled) {
+  color: #ffffff;
+  transform: translateX(1px);
+}
+.tb-group-launcher:disabled {
+  cursor: default;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* Galerie de styles "Normal / Titre 1 / Titre 2 / …" — voir StyleGallery. */
+.tb-style-gallery {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  align-self: center;
+}
+
+.tb-style-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 5px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
+}
+.tb-style-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+.tb-style-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Style courant sous le curseur : fond blanc, texte vert Sapin (couleur de
+ * marque MBEF, voir le fond du ruban lui-même). */
+.tb-style-btn-active {
+  background: #ffffff;
+  color: #003f2b;
+  font-weight: 600;
+}
+.tb-style-btn-active:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.tb-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ffffff;
+  padding: 5px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.tb-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tb-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Bouton carré icône seule (avec info-bulle) : c'est ce qui donne son
+ * aspect compact et net au ruban de Word — plus de largeurs de bouton
+ * disparates selon la longueur du libellé, toutes les commandes courantes
+ * (gras, listes, lien, tableau...) tiennent dans le même petit carré. */
+.tb-btn-icon {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ffffff;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.tb-btn-icon:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tb-btn-icon:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tb-heading-picker {
+  position: relative;
+}
+
+.tb-heading-picker-trigger {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.tb-heading-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  /* Doit rester AU-DESSUS du champ d'édition flottant d'en-tête/pied de
+   * page (`.xmd-header-footer-edit`, z-index 50 dans MarkdownEditor.css) —
+   * le menu "Variable" doit rester cliquable même quand ce champ est ouvert
+   * juste en dessous du ruban (piège vécu : le champ interceptait les clics
+   * sur le menu). */
+  z-index: 60;
+}
+
+.tb-heading-option {
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: #2f52a0;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  padding: 6px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.tb-heading-option:hover {
+  background: #dfeff8;
+}
+
+.tb-heading-option-token {
+  font-weight: normal;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #6b6b69;
+  margin-left: 4px;
+}
+
+.tb-emoji-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  width: 200px;
+  z-index: 60;
+}
+
+.tb-emoji-option {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tb-emoji-option:hover {
+  background: #dfeff8;
+}
+
+.tb-sep {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 2px 6px;
+}
+
+.tb-select {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  max-width: 130px;
+}
+
+.tb-select-narrow {
+  max-width: 72px;
+}
+
+.tb-select option {
+  color: #343334;
+  background: #ffffff;
+}
+
+.tb-color-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.tb-color-swatch input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tb-color-swatch:has(input:disabled) {
+  opacity: 0.4;
+  cursor: default;
+}

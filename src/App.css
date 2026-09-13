@@ -1,0 +1,142 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  color: #343334;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Le ruban (Toolbar) est un frère direct de .app-body : il occupe toute la
+ * largeur de la fenêtre, au-dessus de l'explorateur ET de l'éditeur — comme
+ * dans Word, où le ruban ne s'arrête pas au bord du volet de navigation. */
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.app-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.app-main-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-editor-area {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+.app-placeholder-wrap {
+  flex: 1;
+  background: #e6e6e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-placeholder {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  padding: 30px;
+  max-width: 600px;
+  text-align: center;
+  color: #6b6b69;
+}
+
+/* Impression / export PDF (2026-09-13) : on imprime directement la couche
+ * déjà peinte par la vue Pages (.xmd-page-canvas dans MarkdownEditor.tsx) —
+ * les mêmes boîtes A4 à taille fixe que ce que l'utilisateur voit à l'écran.
+ * Pas de moteur de pagination séparé : un ancien essai avec Paged.js
+ * (bibliothèque tierce de pagination HTML) a été abandonné (instable dans
+ * la WebView2 de Tauri — voir CLAUDE.md pour l'historique complet), et de
+ * toute façon redondant : notre propre pagination (paintPages.ts) est déjà
+ * fiable et donne EXACTEMENT ce qui doit être imprimé.
+ *
+ * Principe : cacher tout le chrome de l'application (ruban, explorateur,
+ * onglets, barre de statut) et les couches d'édition non visuelles (curseur
+ * dessiné, surbrillance de sélection, éditeur invisible), puis sortir
+ * `.xmd-page-canvas` du flux normal (position: fixed) pour l'imprimer seul,
+ * sans transform de zoom ni espacement entre pages. `.xmd-pages-mount` est
+ * forcé visible même si l'utilisateur est en vue Markdown/Code au moment
+ * d'imprimer (voir App.tsx) : la classe permet à `!important` de l'emporter
+ * sur le `style={{ display: ... }}` inline posé par React. */
+@media print {
+  .tb-ribbon-stack,
+  .app-sidebar,
+  .tabbar,
+  .sb-bar,
+  .xmd-live-editor-host,
+  .xmd-fake-caret,
+  .xmd-selection-layer,
+  .xmd-source-wrap,
+  .xmd-preview-wrap {
+    display: none !important;
+  }
+
+  .xmd-pages-mount {
+    display: contents !important;
+  }
+
+  .app-shell,
+  .app-body,
+  .app-main-column,
+  .app-editor-area {
+    display: contents !important;
+  }
+
+  .xmd-page-wrap {
+    position: static !important;
+    overflow: visible !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .xmd-canvas-frame {
+    position: static !important;
+  }
+
+  .xmd-page-canvas {
+    display: block !important;
+    transform: none !important;
+    gap: 0 !important;
+  }
+
+  .xmd-page {
+    box-shadow: none !important;
+    max-width: none !important;
+    break-after: page;
+  }
+
+  .xmd-page:last-child {
+    break-after: auto;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}

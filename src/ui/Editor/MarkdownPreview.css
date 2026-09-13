@@ -1,0 +1,73 @@
+.xmd-preview-wrap {
+  flex: 1;
+  overflow-y: auto;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+}
+
+.xmd-preview-content {
+  width: 100%;
+  max-width: 900px;
+  padding: 32px 40px;
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.5;
+  color: #343334;
+}
+
+.xmd-preview-content h1,
+.xmd-preview-content h2,
+.xmd-preview-content h3 {
+  color: #2f52a0;
+}
+
+.xmd-preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.xmd-preview-content td,
+.xmd-preview-content th {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+}
+
+.xmd-preview-content th {
+  background: #dfeff8;
+}
+
+.xmd-preview-content blockquote {
+  border-left: 3px solid #24ac6e;
+  margin-left: 0;
+  padding-left: 12px;
+  color: #555;
+}
+
+.xmd-preview-content pre {
+  background: #2b2b2b;
+  color: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.xmd-preview-content code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.xmd-preview-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Le saut de page / trous de pagination n'ont aucun sens hors de la vue
+ * Pages : masqués ici. */
+.xmd-preview-content .xmd-pagebreak,
+.xmd-preview-content .xmd-page-gap,
+.xmd-preview-content .xmd-page-start-label {
+  display: none;
+}
