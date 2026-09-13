@@ -8,6 +8,8 @@ Pagina est un éditeur de documents WYSIWYG (« ce que vous voyez est ce que vou
 
 Chez [**Mon BE Fluides**](https://www.monbefluides.fr), bureau d'études fluides, on rédige beaucoup : CCTP, procédures techniques, comptes rendus de chantier. Ces documents ont besoin d'une vraie mise en page — un en-tête avec le nom du projet, une numérotation de pages, un sommaire, des titres numérotés — mais on ne voulait pas s'enfermer dans le format `.docx` : fichiers lourds, binaires, difficiles à suivre dans un historique de versions, dépendants d'une seule suite bureautique.
 
+Autre motivation, plus interne : il nous fallait aussi un format simple et texte, plus facile à faire ingérer et indexer par notre RAG (Ingenerix) que des documents Word — un fichier `.md` se lit directement, sans conversion ni parsing fragile.
+
 Le Markdown résout ce problème de portabilité depuis longtemps... mais nativement, il ne sait rien faire de tout ça : pas d'en-tête, pas de pagination, pas de sommaire généré. Les outils existants forcent soit à écrire du Markdown "à l'aveugle" dans un simple éditeur de texte, soit à basculer dans un traitement de texte classique et perdre la portabilité.
 
 Pagina est notre réponse : un vrai éditeur visuel, avec de vraies pages qui se comportent comme dans Word, mais qui n'écrit jamais rien d'autre que du Markdown lisible partout. Tout ce qui n'existe pas nativement en Markdown (saut de page, sommaire, réglages de mise en page, styles de titre) est encodé dans des commentaires HTML standards (`<!-- ... -->`) — invisibles et sans le moindre effet de bord dans n'importe quel autre outil Markdown qui ouvrirait le même fichier.
