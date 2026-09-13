@@ -1,0 +1,23 @@
+.xmd-source-wrap {
+  flex: 1;
+  display: flex;
+  background: #1e1e1e;
+}
+
+.xmd-source-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: #d4d4d4;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 20px 24px;
+  tab-size: 2;
+}
+
+.xmd-source-textarea::placeholder {
+  color: #6b6b69;
+}

@@ -1,0 +1,519 @@
+/* Zone d'édition en mode "page" : fond gris neutre, feuilles A4 espacées
+ * dedans (voir .xmd-page-canvas) — comme des cartes dans une mise en page
+ * responsive, pas un flux continu avec des trous calculés. */
+.xmd-page-wrap {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #e6e6e6;
+  padding: 32px 16px;
+  position: relative;
+}
+
+/* Zone RÉELLEMENT éditable (ProseMirror natif : curseur, sélection, undo/
+ * redo, IME) — invisible, décalée d'une distance MODÉRÉE hors de la zone
+ * visible (deux pièges déjà rencontrés et à éviter, voir CLAUDE.md) :
+ * - SUPERPOSÉE en place (top:0;left:0) : le point-hit-testing natif du
+ *   navigateur qu'utilise `posAtCoords` en interne accroche alors l'élément
+ *   VISIBLE de la couche peinte au-dessus (même si `pointer-events:none` sur
+ *   celle du dessous), pas l'éditeur invisible — un clic dans un tableau
+ *   atterrissait n'importe où.
+ * - décalée d'une distance EXTRÊME (essayé -100000px) : semble aussi casser
+ *   la précision de `posAtCoords` (même symptôme).
+ * Une distance modérée (quelques milliers de px, sûrement hors de toute
+ * zone visible réaliste sans être un cas limite pour le moteur de rendu)
+ * évite les deux. `height:0;overflow:hidden` évité aussi : casse la largeur
+ * intrinsèque des tableaux. `opacity:0` (pas `visibility:hidden`, qui
+ * empêcherait le focus) + `pointer-events:none`. */
+.xmd-live-editor-host {
+  position: absolute;
+  top: 0;
+  left: -5000px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Ancêtre positionné PARTAGÉ par .xmd-page-canvas et .xmd-fake-caret, sans
+ * aucun padding/bordure — caretPosition.ts calcule les coordonnées du
+ * curseur relativement au coin haut-gauche de .xmd-page-canvas ; s'ils
+ * n'avaient pas le même ancêtre positionné (ex. .xmd-page-wrap, qui a du
+ * padding), le curseur affiché dériverait de cette différence. */
+.xmd-canvas-frame {
+  position: relative;
+}
+
+/* Conteneur des feuilles peintes (voir pagination/paintPages.ts) : une boîte
+ * `.xmd-page` par page, empilées avec un espace visible entre elles. */
+.xmd-page-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  transform: scale(var(--xmd-zoom, 1));
+  transform-origin: top center;
+}
+
+.xmd-page {
+  background: #ffffff;
+  width: var(--xmd-page-width, 210mm);
+  /* Hauteur FIXE, jamais recalculée selon le contenu — une page qui ne se
+   * remplit pas reste simplement blanche en dessous, comme dans Word. */
+  height: var(--xmd-page-height, 297mm);
+  max-width: 100%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
+  /* Un bloc exceptionnellement plus haut qu'une page (rare — voir la garde
+   * anti-boucle dans paginator.ts) déborde visuellement plutôt que d'être
+   * tronqué en silence : mieux vaut voir le problème que perdre du contenu
+   * à l'écran. */
+  overflow: visible;
+}
+
+.xmd-page-content {
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--xmd-margin-top, 25mm) var(--xmd-margin-right, 20mm) var(--xmd-margin-bottom, 25mm)
+    var(--xmd-margin-left, 20mm);
+  /* Les clones ne sont jamais édités directement (voir resolveClickPosition.ts) :
+   * on désactive la sélection native du navigateur dessus pour ne pas la
+   * confondre avec le vrai curseur/la vraie sélection ProseMirror, dessinés
+   * à la main (.xmd-fake-caret). */
+  user-select: none;
+  cursor: text;
+}
+
+/* En-tête / pied de page (voir pageLayout.ts) : texte statique, identique
+ * sur toutes les pages (pas de numéro de page ni de variable dynamique pour
+ * l'instant — voir CLAUDE.md/roadmap). Vivent DANS la zone de marge, comme
+ * dans Word — pas en plus de la marge — d'où `position: absolute` par
+ * rapport à `.xmd-page` plutôt que de pousser `.xmd-page-content`. Collés
+ * contre le début du CONTENU (pas contre le bord physique de la page) : le
+ * blanc de la marge reste donc au-dessus de l'en-tête / en-dessous du pied
+ * de page (vers le bord de la page), pas entre eux et le texte du document
+ * — correctif suite à un retour utilisateur (capture d'écran) qui montrait
+ * l'inverse. Un en-tête/pied de page plus haut que la marge déborderait
+ * du côté du bord de la page (valeur `top`/`bottom` négative) ; à la charge
+ * de l'utilisateur de garder une marge >= hauteur d'en-tête/pied de page
+ * (pas de validation automatique pour l'instant). */
+.xmd-page-header,
+.xmd-page-footer {
+  position: absolute;
+  left: var(--xmd-margin-left, 20mm);
+  right: var(--xmd-margin-right, 20mm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--xmd-font-family);
+  font-size: 9pt;
+  color: #6b6b69;
+  overflow: hidden;
+  user-select: none;
+}
+
+.xmd-page-header {
+  top: calc(var(--xmd-margin-top, 25mm) - var(--xmd-header-height, 12mm));
+  height: var(--xmd-header-height, 12mm);
+}
+
+.xmd-page-footer {
+  bottom: calc(var(--xmd-margin-bottom, 25mm) - var(--xmd-footer-height, 12mm));
+  height: var(--xmd-footer-height, 12mm);
+}
+
+.xmd-page-header,
+.xmd-page-footer {
+  cursor: text;
+}
+
+/* Un en-tête/pied de page vide reste invisible en fonctionnement normal
+ * (pas de bordure ni de fond en permanence — ce serait moche sur une page
+ * qui n'en veut pas), mais SANS aucun texte l'utilisateur ne sait pas qu'il
+ * peut cliquer là pour en ajouter un (piège vécu). Un contour pointillé +
+ * une invite n'apparaissent qu'au survol, seulement sur la page 1 (inutile
+ * de répéter l'invite sur chaque page). */
+.xmd-page:first-child .xmd-page-header:empty:hover,
+.xmd-page:first-child .xmd-page-footer:empty:hover {
+  outline: 1px dashed #b9b9b7;
+  outline-offset: -1px;
+}
+
+.xmd-page:first-child .xmd-page-header:empty:hover::before {
+  content: "Cliquer pour ajouter un en-tête";
+  color: #b9b9b7;
+  font-style: italic;
+}
+
+.xmd-page:first-child .xmd-page-footer:empty:hover::before {
+  content: "Cliquer pour ajouter un pied de page";
+  color: #b9b9b7;
+  font-style: italic;
+}
+
+/* Champ d'édition flottant pour l'en-tête/pied de page (voir
+ * `startHeaderFooterEdit` dans MarkdownEditor.tsx) — positionné en JS
+ * exactement par-dessus l'élément cliqué (`position: fixed` + coordonnées
+ * de `getBoundingClientRect()`), donc pas de règles de position ici. */
+.xmd-header-footer-edit {
+  position: fixed;
+  z-index: 50;
+  font-family: var(--xmd-font-family);
+  font-size: 9pt;
+  text-align: center;
+  border: 2px solid #2f52a0;
+  border-radius: 2px;
+  outline: none;
+  padding: 0;
+  background: #ffffff;
+  color: #343334;
+}
+
+/* Rectangles de surbrillance d'une sélection étendue (voir
+ * pagination/selectionHighlight.ts) — un `<div>` par ligne visuelle
+ * sélectionnée, repositionné à chaque changement de sélection, même
+ * ancêtre positionné que le curseur dessiné et pour la même raison. */
+.xmd-selection-rect {
+  position: absolute;
+  background: rgba(47, 82, 160, 0.28);
+  pointer-events: none;
+}
+
+/* Curseur dessiné à la main (voir pagination/caretPosition.ts), positionné
+ * en absolu par rapport à .xmd-page-wrap. La vraie sélection ProseMirror est
+ * invisible (zone éditable hors écran) — sans ce curseur, taper ou naviguer
+ * au clavier ne montrerait aucun retour visuel. */
+.xmd-fake-caret {
+  position: absolute;
+  width: 2px;
+  background: #000000;
+  display: none;
+  pointer-events: none;
+  animation: xmd-caret-blink 1s step-end infinite;
+}
+
+@keyframes xmd-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.xmd-prosemirror p,
+.xmd-prosemirror ul,
+.xmd-prosemirror ol {
+  /* Espacement façon "après paragraphe" de Word, pas une marge symétrique
+   * haut+bas comme un <p> HTML par défaut (qui double visuellement l'écart
+   * entre deux paragraphes) — valeur fixée en JS via --xmd-paragraph-spacing
+   * (src/core/pageLayout.ts). */
+  margin: 0 0 var(--xmd-paragraph-spacing, 8pt) 0;
+}
+
+/* Les paragraphes À L'INTÉRIEUR d'un item de liste ne doivent pas cumuler
+ * l'espacement "après paragraphe" — sinon chaque puce/numéro se retrouve
+ * avec un grand vide en dessous, contrairement à une liste Word (serrée,
+ * un seul espacement après la liste entière, pas après chaque item). */
+.xmd-prosemirror li > p {
+  margin: 0;
+}
+
+.xmd-prosemirror {
+  outline: none;
+  color: #343334;
+  font-family: var(--xmd-font-family);
+  font-size: var(--xmd-font-size);
+  line-height: var(--xmd-line-height);
+}
+
+/* Style par niveau de titre (voir pageLayout.ts HeadingLevelStyle) — les
+ * variables sont posées par MarkdownEditor.tsx (pageVars). La numérotation
+ * automatique ("1.2. ") n'est PAS gérée ici : elle est écrite en dur dans
+ * le texte du titre par HeadingAutoNumber.ts, donc déjà incluse dans le
+ * texte normal rendu par ces règles — rien de spécial à faire côté CSS. */
+.xmd-prosemirror h1 {
+  font-family: var(--xmd-h1-font);
+  font-size: var(--xmd-h1-size);
+  color: var(--xmd-h1-color);
+  font-weight: var(--xmd-h1-weight);
+  font-style: var(--xmd-h1-style);
+}
+.xmd-prosemirror h2 {
+  font-family: var(--xmd-h2-font);
+  font-size: var(--xmd-h2-size);
+  color: var(--xmd-h2-color);
+  font-weight: var(--xmd-h2-weight);
+  font-style: var(--xmd-h2-style);
+}
+.xmd-prosemirror h3 {
+  font-family: var(--xmd-h3-font);
+  font-size: var(--xmd-h3-size);
+  color: var(--xmd-h3-color);
+  font-weight: var(--xmd-h3-weight);
+  font-style: var(--xmd-h3-style);
+}
+.xmd-prosemirror h4 {
+  font-family: var(--xmd-h4-font);
+  font-size: var(--xmd-h4-size);
+  color: var(--xmd-h4-color);
+  font-weight: var(--xmd-h4-weight);
+  font-style: var(--xmd-h4-style);
+}
+.xmd-prosemirror h5 {
+  font-family: var(--xmd-h5-font);
+  font-size: var(--xmd-h5-size);
+  color: var(--xmd-h5-color);
+  font-weight: var(--xmd-h5-weight);
+  font-style: var(--xmd-h5-style);
+}
+.xmd-prosemirror h6 {
+  font-family: var(--xmd-h6-font);
+  font-size: var(--xmd-h6-size);
+  color: var(--xmd-h6-color);
+  font-weight: var(--xmd-h6-weight);
+  font-style: var(--xmd-h6-style);
+}
+
+/* Encart du marqueur de sommaire (voir extensions/TocMarker.ts) — discret
+ * mais repérable, sélectionnable pour le supprimer, comme .xmd-pagebreak. */
+.xmd-toc-marker {
+  border: 1px dashed #b9b9b7;
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  color: #6b6b69;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-style: italic;
+  cursor: default;
+}
+
+.xmd-toc-marker::before {
+  content: "Sommaire — cliquer sur \"Générer/Mettre à jour le sommaire\" dans le ruban pour le remplir";
+}
+
+/* Note de bas de page (en réalité de FIN de document, voir Footnote.ts). */
+.xmd-footnote-ref {
+  color: #2f52a0;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0 1px;
+}
+.xmd-footnote-ref:hover {
+  text-decoration: underline;
+}
+
+.xmd-footnote-def {
+  font-size: 9pt;
+  color: #6b6b69;
+  padding-top: 4px;
+  margin-top: 4px;
+}
+
+/* Seule la PREMIÈRE définition porte le séparateur — pas une ligne entre
+ * chaque note, juste une frontière entre le corps du document et la
+ * section des notes. */
+.xmd-footnote-def:first-of-type {
+  border-top: 1px solid #d9d9d7;
+  padding-top: 8px;
+  margin-top: 16px;
+}
+
+.xmd-footnote-def::before {
+  content: attr(data-id) ". ";
+  font-weight: 600;
+  color: #2f52a0;
+}
+
+/* Diagramme Mermaid (voir extensions/MermaidDiagram.ts) : source éditable
+ * au-dessus, aperçu SVG rendu en direct en dessous. */
+.xmd-mermaid {
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.xmd-mermaid-source {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid #d9d9d7;
+  background: #f4f4f3;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 8px 10px;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.xmd-mermaid-preview {
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.xmd-mermaid-preview.xmd-mermaid-error {
+  color: #c0392b;
+  font-size: 11px;
+  font-style: italic;
+  justify-content: flex-start;
+}
+
+/* Formule mathématique (voir extensions/Math.ts) — rendu KaTeX. */
+.xmd-math {
+  cursor: pointer;
+}
+
+.xmd-math:hover {
+  background: rgba(47, 82, 160, 0.08);
+  border-radius: 3px;
+}
+
+.xmd-math-block {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  margin: 10px 0;
+}
+
+.xmd-math-error {
+  color: #c0392b;
+  font-style: italic;
+  font-size: 11px;
+}
+
+.xmd-prosemirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9a9a9a;
+  pointer-events: none;
+  height: 0;
+}
+
+.xmd-prosemirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.xmd-prosemirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.xmd-prosemirror ul[data-type="taskList"] li > label {
+  margin-top: 3px;
+}
+
+.xmd-prosemirror ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+.xmd-prosemirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: #9a9a9a;
+  text-decoration: line-through;
+}
+
+.xmd-prosemirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.xmd-prosemirror td,
+.xmd-prosemirror th {
+  border: 1px solid #ccc;
+  padding: 6px 8px;
+}
+
+.xmd-prosemirror th {
+  background: #dfeff8;
+}
+
+.xmd-prosemirror blockquote {
+  border-left: 3px solid #24ac6e;
+  margin-left: 0;
+  padding-left: 12px;
+  color: #555;
+}
+
+.xmd-prosemirror pre {
+  background: #2b2b2b;
+  color: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.xmd-prosemirror code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.xmd-prosemirror pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Coloration syntaxique (voir CodeBlockLowlight dans MarkdownEditor.tsx) —
+ * thème minimal fait main plutôt qu'importer une feuille de style
+ * highlight.js complète (une centaine de classes `.hljs-*` inutilisées ici,
+ * pour un thème qu'on veut cohérent avec la charte MBEF). Ne couvre que les
+ * classes que lowlight `common` produit réellement. */
+.xmd-prosemirror .hljs-comment,
+.xmd-prosemirror .hljs-quote {
+  color: #8a8a8a;
+  font-style: italic;
+}
+.xmd-prosemirror .hljs-keyword,
+.xmd-prosemirror .hljs-selector-tag,
+.xmd-prosemirror .hljs-literal,
+.xmd-prosemirror .hljs-type {
+  color: #7fb8f0;
+}
+.xmd-prosemirror .hljs-string,
+.xmd-prosemirror .hljs-attr,
+.xmd-prosemirror .hljs-template-tag {
+  color: #b5e08c;
+}
+.xmd-prosemirror .hljs-number,
+.xmd-prosemirror .hljs-symbol {
+  color: #e0b05e;
+}
+.xmd-prosemirror .hljs-title,
+.xmd-prosemirror .hljs-name,
+.xmd-prosemirror .hljs-function,
+.xmd-prosemirror .hljs-section {
+  color: #e0a0e0;
+}
+.xmd-prosemirror .hljs-variable,
+.xmd-prosemirror .hljs-attribute,
+.xmd-prosemirror .hljs-tag {
+  color: #f0a0a0;
+}
+
+/* Marqueur de saut de page manuel : une fine ligne grise claire avec
+ * "Saut de page" écrit dessus — discret, mais repérable (et sélectionnable,
+ * pour le supprimer) sans dupliquer la grande transition "Page N" déjà
+ * affichée juste après par le système de pagination automatique. */
+.xmd-pagebreak {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 10px 0;
+  position: relative;
+  cursor: default;
+}
+
+.xmd-pagebreak::after {
+  content: "Saut de page";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  padding: 0 8px;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  color: #bbbbbb;
+}

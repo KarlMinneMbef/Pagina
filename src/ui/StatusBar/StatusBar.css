@@ -1,0 +1,98 @@
+.sb-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f4f3;
+  border-top: 1px solid #d9d9d7;
+  color: #6b6b69;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 4px 12px;
+  flex-shrink: 0;
+}
+
+.sb-item {
+  white-space: nowrap;
+}
+
+.sb-sep {
+  width: 1px;
+  height: 14px;
+  background: #d9d9d7;
+}
+
+.sb-spacer {
+  flex: 1;
+}
+
+.sb-zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+}
+
+.sb-zoom-btn {
+  background: transparent;
+  border: 1px solid #d9d9d7;
+  color: #6b6b69;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.sb-zoom-btn:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.sb-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sb-zoom-value {
+  min-width: 40px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sb-view-switch {
+  display: flex;
+  gap: 2px;
+  background: #e6e6e4;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.sb-view-btn {
+  background: transparent;
+  border: none;
+  color: #6b6b69;
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.sb-view-btn:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.sb-view-btn-active {
+  background: #003f2b;
+  color: #ffffff;
+}
+
+.sb-view-btn-active:hover {
+  background: #003f2b;
+}
+
+.sb-view-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
