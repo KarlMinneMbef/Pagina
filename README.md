@@ -1,6 +1,10 @@
-# Pagina
+<p align="center">
+  <img src="public/pagina-logo-lockup.svg" alt="Pagina" width="360">
+</p>
 
 **L'éditeur Markdown qui se met en page comme Word — et qui reste du Markdown.**
+
+![Capture d'écran de Pagina](docs/screenshot.png)
 
 Pagina est un éditeur de documents WYSIWYG (« ce que vous voyez est ce que vous obtenez ») bâti autour du Markdown : vous rédigez et mettez en page à l'écran, avec de vraies pages A4, des titres numérotés automatiquement, un en-tête et un pied de page, un sommaire cliquable — et le fichier que vous enregistrez reste un `.md` tout à fait standard, lisible et correctement affiché dans n'importe quel autre outil (GitHub, VS Code, Obsidian, Typora...).
 
