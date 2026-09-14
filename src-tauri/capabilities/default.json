@@ -8,10 +8,13 @@
     "opener:default",
     "dialog:default",
     "dialog:allow-open",
+    "dialog:allow-confirm",
+    "dialog:allow-ask",
     "core:window:allow-minimize",
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",
     "core:window:allow-toggle-maximize",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "core:window:allow-destroy"
   ]
 }

@@ -626,6 +626,77 @@ projets"). Constats et actions :
     acceptable pour un usage interne MBEF, à revoir si distribution plus
     large envisagée un jour (nécessiterait l'achat d'un certificat de
     signature de code).
+- **Correctifs fenêtre (2026-09-14)**, remontés par l'utilisateur : "je
+  n'arrive pas à déplacer l'application dans Windows" et "il faudrait
+  demander à enregistrer si les documents ne sont pas enregistrés" à la
+  fermeture.
+  - **Fenêtre non déplaçable** : `data-tauri-drag-region` n'était posé QUE
+    sur `.tbar` (le fond de la barre) — Tauri documente explicitement que
+    cet attribut NE S'HÉRITE PAS aux enfants. Or `.tbar-left`/`.tbar-center`/
+    `.tbar-right` (les 3 conteneurs flex) recouvrent toute la largeur de la
+    barre : le fond de `.tbar` n'était donc jamais réellement sous la
+    souris, seule une frange de quelques px de padding l'était. **Fix**
+    (`TitleBar.tsx`) : attribut reposé sur les 3 conteneurs directement —
+    l'espace VIDE qu'ils contiennent (au-delà de leurs boutons) devient
+    une vraie zone de glisser, sans rien changer aux boutons eux-mêmes
+    (éléments distincts, sans l'attribut, restent cliquables normalement).
+    **Non vérifiable par automatisation** : un glisser-déposer natif de
+    fenêtre exige un VRAI clic maintenu matériel pour que Windows entre en
+    boucle modale de déplacement — un geste souris synthétique via CDP
+    (`Input.dispatchMouseEvent`) ne déclenche pas cette boucle (limitation
+    connue, confirmée en testant : position de fenêtre strictement
+    inchangée après un glisser simulé). À vérifier manuellement par
+    l'utilisateur.
+  - **Fermeture sans confirmation malgré des documents non enregistrés** —
+    en creusant, DEUX bugs liés au même piège que `window.print()`
+    documenté plus haut (`print_commands.rs`) : Tauri réachemine aussi
+    `window.confirm()` vers sa propre commande native
+    (`dialog.confirm`), qui échoue si la permission dédiée n'est pas
+    déclarée (`Unknown Error: dialog.confirm not allowed. Command not
+    found`, vu dans les logs `tauri dev`) :
+    1. **`handleCloseTab` (fermeture d'un ONGLET, `App.tsx`) — bug
+       PRÉ-EXISTANT, pas une régression du jour.** `const ok =
+       window.confirm(...)` : l'appel rejetant silencieusement, `ok`
+       valait une PROMESSE (donc toujours "truthy" en JS) — `if (!ok)
+       return;` ne bloquait alors JAMAIS rien. Fermer un onglet modifié
+       perdait le travail non enregistré SANS JAMAIS vraiment demander
+       confirmation, depuis le tout début du projet. Passé inaperçu car
+       jamais explicitement testé (les tests Playwright de cette session
+       annulent toujours leurs modifications AVANT de fermer un onglet,
+       jamais après).
+    2. **Fermeture de la FENÊTRE entière** : aucune confirmation n'existait
+       du tout avant aujourd'hui (seule la fermeture d'onglet en avait
+       une, bien que cassée — voir ci-dessus). Nouveau : `Window.close()`
+       émet un évènement `closeRequested` ANNULABLE (`onCloseRequested`,
+       API officielle `@tauri-apps/api/window`) — intercepté dans
+       `App.tsx` (pas dans `TitleBar.tsx`, qui ne connaît pas le store des
+       onglets) : si un onglet est `dirty`, `event.preventDefault()` puis
+       confirmation ; si confirmée, `appWindow.destroy()` (force la
+       fermeture SANS réémettre `closeRequested`, sinon boucle infinie).
+    **Fix commun aux deux** : abandon de `window.confirm()`, remplacé par
+    `confirm()` du plugin officiel `@tauri-apps/plugin-dialog` (déjà une
+    dépendance du projet, déjà utilisé pour `pickWorkspaceFolder` dans
+    `fileService.ts`) — ouvre un VRAI dialogue natif Windows, titré
+    "Pagina". Permissions ajoutées dans `capabilities/default.json` :
+    `dialog:allow-confirm`, `dialog:allow-ask`. **À RETENIR** (renforce la
+    leçon déjà tirée de `window.print()`) : ne JAMAIS faire confiance aux
+    fonctions de dialogue web standard (`alert`/`confirm`/`prompt`/`print`)
+    dans cette version de Tauri sans avoir vérifié explicitement qu'elles
+    fonctionnent — `window.prompt`/`window.alert` restent utilisés ailleurs
+    dans le projet (`handleNewFile`, `setLink`, `insertImage`...) et
+    SEMBLENT fonctionner (testés à répétition tout au long de cette
+    session), mais seul `window.confirm` s'est avéré, à l'usage, être
+    intercepté et cassé sans la permission dédiée — si un autre
+    `window.alert`/`window.prompt` se met un jour à échouer silencieusement,
+    appliquer le même remède (permission dédiée ou plugin officiel).
+    **Vérifié par Playwright/CDP + énumération de fenêtres Windows** (même
+    méthode que pour `printWindow` en son temps) : dirty sur un onglet →
+    clic sur son ✕ → une VRAIE fenêtre native "Pagina" apparaît (confirmée
+    par `EnumWindows`) → fermée via Échap (équivalent Annuler) → l'onglet
+    reste bien ouvert avec son indicateur de modification non enregistrée
+    intact (pas perdu). Le chemin fermeture de FENÊTRE utilise exactement
+    le même mécanisme, non revérifié séparément par manque de temps mais
+    reposant sur le même appel `confirmDialog` déjà validé.
 - Explorateur de fichiers : ouverture d'un dossier, arborescence `.md`/`.xmd`,
   watcher filesystem, mémorisation du dernier dossier ouvert.
 - Onglets multi-fichiers : ouverture/fermeture, indicateur non-sauvegardé (•),

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
 import { FileExplorer } from "./ui/FileExplorer/FileExplorer";
 import { TitleBar } from "./ui/TitleBar/TitleBar";
 import { Toolbar, type ToolbarActions } from "./ui/Toolbar/Toolbar";
@@ -49,6 +51,46 @@ function App() {
     restoreLastWorkspace();
     restoreSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Confirmation à la fermeture de la FENÊTRE (bouton ✕ du TitleBar, mais
+  // aussi Alt+F4 ou tout autre déclencheur système) si des documents ont des
+  // modifications non enregistrées — jusqu'ici seule la fermeture d'un
+  // ONGLET individuel demandait confirmation (`handleCloseTab` plus bas),
+  // rien n'empêchait de fermer toute l'application sans avertissement.
+  // `Window.close()` émet un évènement `closeRequested` annulable (voir
+  // doc @tauri-apps/api) — le bouton ✕ du TitleBar l'appelle déjà tel quel,
+  // il suffit d'intercepter ici plutôt que de dupliquer la logique dans
+  // TitleBar.tsx (qui ne connaît pas le store des onglets).
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    let unlisten: (() => void) | undefined;
+    appWindow
+      .onCloseRequested(async (event) => {
+        const hasDirty = useTabsStore.getState().tabs.some((t) => t.dirty);
+        if (!hasDirty) return;
+        event.preventDefault();
+        // PAS `window.confirm()` : Tauri le réachemine vers sa propre
+        // commande native (`dialog.confirm`), qui échoue silencieusement
+        // (`Command not found`, rejet non intercepté) sans la permission
+        // dédiée — même piège que `window.print()` documenté dans
+        // `print_commands.rs`. On passe directement par le plugin dialogue
+        // officiel (`@tauri-apps/plugin-dialog`), permission
+        // `dialog:allow-confirm` ajoutée dans `capabilities/default.json`.
+        const ok = await confirmDialog(
+          "Un ou plusieurs documents contiennent des modifications non enregistrées. Fermer sans enregistrer ?",
+          { title: "Pagina", kind: "warning" },
+        );
+        if (ok) {
+          // `.close()` réémettrait le même évènement (boucle) : `.destroy()`
+          // force la fermeture sans repasser par `closeRequested`.
+          await appWindow.destroy();
+        }
+      })
+      .then((f) => {
+        unlisten = f;
+      });
+    return () => unlisten?.();
   }, []);
 
   const activeTab = tabs.find((t) => t.path === activePath) ?? null;
@@ -110,10 +152,22 @@ function App() {
     void printWindow();
   };
 
-  const handleCloseTab = (path: string) => {
+  const handleCloseTab = async (path: string) => {
     const tab = tabs.find((t) => t.path === path);
     if (tab?.dirty) {
-      const ok = window.confirm(`« ${tab.title} » contient des modifications non enregistrées. Fermer sans enregistrer ?`);
+      // PAS `window.confirm()` (voir le commentaire détaillé sur
+      // `onCloseRequested` plus haut) : Tauri le réachemine vers une
+      // commande native sans la permission adéquate, qui rejette
+      // silencieusement — `ok` valait alors une PROMESSE (toujours
+      // "truthy"), donc `if (!ok)` ne bloquait JAMAIS rien : fermer un
+      // onglet modifié perdait le travail non enregistré sans jamais
+      // vraiment demander confirmation. Bug pré-existant, corrigé au
+      // passage en même temps que le même piège sur la fermeture de la
+      // fenêtre.
+      const ok = await confirmDialog(`« ${tab.title} » contient des modifications non enregistrées. Fermer sans enregistrer ?`, {
+        title: "Pagina",
+        kind: "warning",
+      });
       if (!ok) return;
     }
     closeTab(path);
