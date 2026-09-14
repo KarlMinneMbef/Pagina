@@ -46,7 +46,7 @@ export function TitleBar({
   return (
     <div className="tbar" data-tauri-drag-region>
       <div className="tbar-left">
-        <img className="tbar-logo" src="/pagina-logo-icon.svg" alt="Pagina" title="Pagina" />
+        <img className="tbar-logo" src="/pagina-icon.svg" alt="Pagina" title="Pagina" />
         <button className="tbar-icon-btn" disabled={disabled} onClick={onSave} title="Enregistrer (Ctrl+S)">
           💾
         </button>
