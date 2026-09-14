@@ -45,7 +45,16 @@ export function TitleBar({
 }) {
   return (
     <div className="tbar" data-tauri-drag-region>
-      <div className="tbar-left">
+      {/* `data-tauri-drag-region` ne s'hérite PAS aux enfants (comportement
+       * documenté de Tauri) — le poser seulement sur `.tbar` (juste
+       * au-dessus) ne suffit donc pas : les trois conteneurs flex
+       * (gauche/centre/droite) recouvrent toute la largeur de la barre, le
+       * fond de `.tbar` lui-même n'étant jamais réellement sous la souris.
+       * Reposé ici sur chacun des trois — l'espace VIDE qu'ils contiennent
+       * (au-delà de leurs boutons) devient une vraie zone de déplacement,
+       * sans rien changer au clic sur les boutons eux-mêmes (éléments
+       * distincts, sans l'attribut). */}
+      <div className="tbar-left" data-tauri-drag-region>
         <img className="tbar-logo" src="/pagina-icon.svg" alt="Pagina" title="Pagina" />
         <button className="tbar-icon-btn" disabled={disabled} onClick={onSave} title="Enregistrer (Ctrl+S)">
           💾
@@ -73,11 +82,11 @@ export function TitleBar({
         </button>
       </div>
 
-      <div className="tbar-center">
+      <div className="tbar-center" data-tauri-drag-region>
         <span className="tbar-title">{documentTitle ? `${documentTitle} — Pagina` : "Pagina"}</span>
       </div>
 
-      <div className="tbar-right">
+      <div className="tbar-right" data-tauri-drag-region>
         {/* Non fonctionnelle — voir le commentaire d'en-tête. */}
         <div className="tbar-search" title="Recherche (à venir)">
           <span className="tbar-search-icon">🔍</span>
