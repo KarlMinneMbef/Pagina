@@ -640,13 +640,36 @@ projets"). Constats et actions :
     l'espace VIDE qu'ils contiennent (au-delà de leurs boutons) devient
     une vraie zone de glisser, sans rien changer aux boutons eux-mêmes
     (éléments distincts, sans l'attribut, restent cliquables normalement).
-    **Non vérifiable par automatisation** : un glisser-déposer natif de
-    fenêtre exige un VRAI clic maintenu matériel pour que Windows entre en
-    boucle modale de déplacement — un geste souris synthétique via CDP
-    (`Input.dispatchMouseEvent`) ne déclenche pas cette boucle (limitation
-    connue, confirmée en testant : position de fenêtre strictement
-    inchangée après un glisser simulé). À vérifier manuellement par
-    l'utilisateur.
+    **Suite immédiate, remontée par l'utilisateur avec une capture d'écran
+    annotée (zones essayées en rouge)** : toujours pas déplaçable malgré le
+    fix ci-dessus. La VRAIE cause, trouvée en lisant les logs `tauri dev`
+    (comme pour `window.confirm()` juste avant) : `Unknown Error:
+    window.start_dragging not allowed. Permissions associated with this
+    command: core:window:allow-start-dragging` — le mécanisme
+    `data-tauri-drag-region` invoque en interne la commande
+    `window.start_dragging`, qui est elle-même soumise au système de
+    permissions ACL de Tauri v2 comme n'importe quelle autre commande de
+    fenêtre (minimiser/agrandir/fermer...) — **oubliée** lors de l'ajout
+    initial des permissions `core:window:allow-*` (section "Barre
+    supérieure fusionnée" plus haut), qui ne couvrait que les boutons
+    minimiser/agrandir/fermer, pas le glisser. Troisième occurrence du même
+    piège en une session (après `window.print()` et `window.confirm()`) :
+    **toute commande de fenêtre Tauri v2 échoue en SILENCE (rejet de
+    promesse non affiché à l'écran) sans la permission `core:window:allow-*`
+    exacte — vérifier systématiquement les logs `tauri dev` (pas seulement
+    la console du navigateur) au moindre bouton/geste qui "ne fait rien".**
+    **Fix** : `core:window:allow-start-dragging` ajouté à
+    `capabilities/default.json`. Application redémarrée AUTOMATIQUEMENT par
+    `tauri dev` (surveille les fichiers de capacités, recompile Rust tout
+    seul en ~16s). **Vérifié** : plus aucune erreur `not allowed` dans les
+    logs après un geste de glisser synthétique (avant le fix, l'erreur
+    apparaissait à chaque tentative ; après, silence complet — cohérent
+    avec un appel qui réussit désormais). Le déplacement RÉEL de la fenêtre
+    par la souris de l'utilisateur reste à confirmer par lui (limitation
+    déjà documentée : un geste souris synthétique via CDP ne déclenche pas
+    la boucle modale native de déplacement de Windows, donc la position de
+    fenêtre elle-même ne peut pas être vérifiée par ce biais — seule
+    l'absence d'erreur de permission l'est).
   - **Fermeture sans confirmation malgré des documents non enregistrés** —
     en creusant, DEUX bugs liés au même piège que `window.print()`
     documenté plus haut (`print_commands.rs`) : Tauri réachemine aussi
