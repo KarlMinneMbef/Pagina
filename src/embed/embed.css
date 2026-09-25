@@ -1,0 +1,49 @@
+/*
+ * Habillage de PaginaLight : un ruban au-dessus d'une zone d'édition dont la hauteur est fixée par
+ * l'application hôte. Classes préfixées `xmd-embed-` — aucun sélecteur global (pas de `*`, `html`,
+ * `body`), pour ne jamais interférer avec le CSS de l'application qui intègre l'éditeur (ex. Tailwind).
+ */
+.xmd-embed {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e6e6e6;
+}
+
+.xmd-embed-editor-area {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+.xmd-embed-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #ffffff;
+  background: #00291d;
+}
+
+.xmd-embed-statusbar-spacer {
+  flex: 1;
+}
+
+.xmd-embed-zoom {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+.xmd-embed-zoom option {
+  color: #000000;
+}
