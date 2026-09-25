@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 // Version du PAQUET léger — indépendante de la version de l'application Pagina (package.json) : à incrémenter
 // à la main quand la version légère évolue (nouvelle fonction, correctif), avant de reconstruire et de poser un tag.
-const VERSION_PAQUET = "0.1.1";
+const VERSION_PAQUET = "0.1.2";
 
 const racine = process.cwd();
 const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf-8"));
