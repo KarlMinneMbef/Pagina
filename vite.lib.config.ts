@@ -14,7 +14,11 @@ import { fileURLToPath } from "node:url";
 
 const chemin = (relatif: string) => fileURLToPath(new URL(relatif, import.meta.url));
 const pkg = JSON.parse(readFileSync(chemin("./package.json"), "utf-8")) as { dependencies: Record<string, string> };
-const externes = [...Object.keys(pkg.dependencies), "react", "react-dom", "react/jsx-runtime"];
+// mermaid et katex ne sont PAS externes : ils sont remplacés par des stubs (alias ci-dessous). Rollup teste
+// « externe » sur le nom brut de l'import AVANT l'alias — s'ils figuraient ici, le fichier produit garderait
+// `import "katex/dist/katex.min.css"` alors que le paquet n'en dépend pas (constaté à l'intégration dans MBEF Platform).
+const REMPLACES_PAR_DES_STUBS = new Set(["mermaid", "katex"]);
+const externes = [...Object.keys(pkg.dependencies).filter((d) => !REMPLACES_PAR_DES_STUBS.has(d)), "react", "react-dom", "react/jsx-runtime"];
 
 export default defineConfig({
   plugins: [react()],
