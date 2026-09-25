@@ -47,3 +47,26 @@
 .xmd-embed-zoom option {
   color: #000000;
 }
+
+/*
+ * Restauration des styles par défaut du navigateur dans le contenu du document.
+ *
+ * Pagina s'appuie sur eux (marges des titres, puces et numéros des listes, liens) sans jamais les redéfinir.
+ * Or un « reset » CSS d'application hôte — le preflight de Tailwind dans MBEF Platform — les supprime
+ * (`h1 { margin: 0 }`, `ul { list-style: none; padding: 0 }`…), ce qui écrasait les titres contre le texte et
+ * faisait disparaître les puces. Sélecteurs volontairement limités aux propriétés que Pagina NE définit PAS
+ * (ses règles sur `p`, `ul`, `ol` — marges — et sur les tableaux, citations et blocs de code priment) ;
+ * valeurs identiques à la feuille de style par défaut de Chrome/Firefox, donc sans effet dans une application
+ * sans reset (dont Pagina elle-même).
+ */
+.xmd-prosemirror h1 { margin: 0.67em 0; }
+.xmd-prosemirror h2 { margin: 0.83em 0; }
+.xmd-prosemirror h3 { margin: 1em 0; }
+.xmd-prosemirror h4 { margin: 1.33em 0; }
+.xmd-prosemirror h5 { margin: 1.67em 0; }
+.xmd-prosemirror h6 { margin: 2.33em 0; }
+.xmd-prosemirror ul { list-style: disc; padding-left: 40px; }
+.xmd-prosemirror ol { list-style: decimal; padding-left: 40px; }
+.xmd-prosemirror ul ul { list-style: circle; }
+.xmd-prosemirror ul ul ul { list-style: square; }
+.xmd-prosemirror a { color: #0000ee; text-decoration: underline; }
