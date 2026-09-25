@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 // Version du PAQUET léger — indépendante de la version de l'application Pagina (package.json) : à incrémenter
 // à la main quand la version légère évolue (nouvelle fonction, correctif), avant de reconstruire et de poser un tag.
-const VERSION_PAQUET = "0.1.0";
+const VERSION_PAQUET = "0.1.1";
 
 const racine = process.cwd();
 const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf-8"));
@@ -25,6 +25,17 @@ const dependances = Object.fromEntries(Object.entries(pkg.dependencies).filter((
 
 executer("npx vite build --config vite.lib.config.ts");
 executer("npx tsc -p tsconfig.lib.json");
+
+// Garde-fou : chaque import « nu » du fichier produit doit être une dépendance déclarée du paquet (ou React) —
+// sinon l'application hôte échouerait à la compilation (ex. import de katex oublié, voir vite.lib.config.ts).
+{
+  const code = readFileSync(join(racine, "lib-embed", "pagina-light.js"), "utf-8");
+  // Uniquement les instructions `import` statiques (une par ligne dans la sortie du build), pas le texte du code.
+  const importes = new Set([...code.matchAll(/^import\s.*?from\s*["']([^"'./][^"']*)["']|^import\s*["']([^"'./][^"']*)["']/gm)].map((m) => m[1] ?? m[2]));
+  const declares = new Set([...Object.keys(dependances), "react", "react-dom"]);
+  const inconnus = [...importes].filter((spec) => ![...declares].some((d) => spec === d || spec.startsWith(`${d}/`)));
+  if (inconnus.length > 0) throw new Error(`Le paquet importe des modules non déclarés : ${inconnus.join(", ")}`);
+}
 
 const sortie = join(racine, "lib-embed");
 const css = readdirSync(sortie).find((f) => f.endsWith(".css"));

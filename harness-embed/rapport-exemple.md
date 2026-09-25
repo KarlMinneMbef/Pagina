@@ -1,6 +1,6 @@
 # Compte rendu mensuel RH — septembre 2026
 
-*Mon BE Fluides — éléments variables de paie à l'attention du gestionnaire de paie.*
+*Mon BE Fluides — éléments variables de paie à l'attention du gestionnaire de paie.*  
 *Document généré par MBEF Platform, relu avant envoi. Période : du 01/09/26 au 30/09/26.*
 
 ## Synthèse de l'équipe

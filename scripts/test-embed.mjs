@@ -17,12 +17,15 @@ const NAVIGATEURS = [
 const navigateur = NAVIGATEURS.find((p) => existsSync(p));
 if (!navigateur) throw new Error("Ni Chrome ni Edge trouvés.");
 
-const serveur = spawn("npx", ["vite", "--config", "vite.harness.config.ts"], { shell: true, stdio: "pipe" });
+// HARNESS_URL : viser un serveur déjà lancé (ex. banc d'essai d'une application hôte, avec SON React et SES dépendances).
+const urlExterne = process.env.HARNESS_URL;
+const URL_BANC = urlExterne ?? "http://localhost:5199/";
+const serveur = urlExterne ? null : spawn("npx", ["vite", "--config", "vite.harness.config.ts"], { shell: true, stdio: "pipe" });
 let echecs = 0;
 const verifier = (ok, message) => { console.log(`${ok ? "OK  " : "ÉCHEC"} ${message}`); if (!ok) echecs++; };
 const attendreServeur = async () => {
   for (let i = 0; i < 60; i++) {
-    try { const r = await fetch("http://localhost:5199/"); if (r.ok) return; } catch { /* pas encore prêt */ }
+    try { const r = await fetch(URL_BANC); if (r.ok) return; } catch { /* pas encore prêt */ }
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error("Le serveur Vite du banc d'essai n'a pas démarré.");
@@ -36,7 +39,7 @@ try {
   page.on("pageerror", (e) => erreursConsole.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("404")) erreursConsole.push(m.text()); });
 
-  await page.goto("http://localhost:5199/");
+  await page.goto(URL_BANC);
   await page.waitForSelector(".xmd-page", { timeout: 15000 });
   await page.waitForTimeout(800);
   await page.screenshot({ path: join(dossierCaptures, "1-chargement.png") });
@@ -53,6 +56,7 @@ try {
   verifier(Math.abs(largeur - 793.7) < 3, `page A4 (largeur ${largeur.toFixed(1)} px ≈ 793,7)`);
   const texte = await page.locator(".xmd-page").first().innerText();
   verifier(texte.includes("Compte rendu mensuel RH") && texte.includes("Julien DESCHAMPS"), "contenu du rapport affiché");
+  verifier(/gestionnaire de paie[.]\s+Document/.test(texte) && texte.includes("paie.Document") === false, "retour à la ligne (deux espaces en fin de ligne) respecté dans l'en-tête du rapport");
   verifier((await page.locator(".xmd-page table").count()) >= 1, "tableau du rapport rendu en vrai tableau");
 
   // 3. Aucun onChange sans intervention (sinon « modifié » s'afficherait à tort dans la plateforme)
@@ -95,8 +99,10 @@ try {
   verifier(erreursConsole.length === 0, `aucune erreur console${erreursConsole.length ? " : " + erreursConsole.slice(0, 3).join(" | ") : ""}`);
   await nav.close();
 } finally {
-  serveur.kill();
-  spawn("taskkill", ["/pid", String(serveur.pid), "/T", "/F"], { shell: true, stdio: "ignore" });
+  if (serveur) {
+    serveur.kill();
+    spawn("taskkill", ["/pid", String(serveur.pid), "/T", "/F"], { shell: true, stdio: "ignore" });
+  }
 }
 console.log(echecs === 0 ? "\nTous les contrôles passent." : `\n${echecs} contrôle(s) en échec.`);
 process.exit(echecs === 0 ? 0 : 1);
