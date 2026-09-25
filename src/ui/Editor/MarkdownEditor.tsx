@@ -177,10 +177,12 @@ interface MarkdownEditorProps {
   zoom?: number;
   /** Ctrl+molette : proposition d'un nouveau niveau de zoom (paliers gérés par l'appelant). */
   onZoomChange?: (zoom: number) => void;
+  /** Lecture seule (document figé) : aucune saisie possible, mais mise en page et défilement inchangés. */
+  readOnly?: boolean;
 }
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, onZoomChange }, ref) => {
+  ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, onZoomChange, readOnly = false }, ref) => {
     const loadedContentRef = useRef(initialContent);
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -228,6 +230,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     }, [layout]);
 
     const editor = useEditor({
+      editable: !readOnly,
       extensions: [
         StarterKit.configure({
           link: { openOnClick: false },
@@ -365,6 +368,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
       },
     });
+
+    // Bascule lecture seule / édition après le montage (ex. un document qui vient d'être figé).
+    useEffect(() => {
+      editor?.setEditable(!readOnly, false); // false = sans événement `update` (ce n'est pas une modification du contenu)
+    }, [editor, readOnly]);
 
     useImperativeHandle(ref, () => ({
       getMarkdown: () => {

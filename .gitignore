@@ -27,3 +27,10 @@ src-tauri/target
 *.njsproj
 *.sln
 *.sw?
+
+# Build intermédiaire de la version légère (le paquet final est dans releases/)
+lib-embed/
+lib-embed-paquet/
+
+# Captures du banc d essai
+harness-embed/captures/

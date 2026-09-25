@@ -57,6 +57,10 @@ Les installeurs prêts à l'emploi se trouvent dans [`releases/`](releases/) :
 
 Aucun certificat de signature de code n'est configuré : Windows SmartScreen affichera un avertissement « éditeur non reconnu » au premier lancement — cliquer sur « Informations complémentaires → Exécuter quand même ».
 
+## Version légère intégrable
+
+Une version réduite (WYSIWYG + pages A4, sans explorateur ni Tauri) existe pour être intégrée dans d'autres applications : voir [`docs/version-legere.md`](docs/version-legere.md).
+
 ## Stack technique
 
 Tauri (Rust) + React + TypeScript, éditeur riche basé sur Tiptap/ProseMirror.

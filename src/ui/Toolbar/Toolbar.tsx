@@ -120,12 +120,17 @@ export function Toolbar({
   onOpenPageSetup,
   onOpenHeadingStyles,
   activeBlockStyle = "paragraph",
+  leger = false,
 }: {
   actions: ToolbarActions | null;
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
+  /** Version LÉGÈRE (intégration dans une autre application, ex. MBEF Platform) : uniquement l'onglet
+   * « Accueil », sans bouton Explorateur, sans bouton Image, sans lanceurs de dialogues (mise en page,
+   * styles de titres). Sans effet (false) dans Pagina elle-même. */
+  leger?: boolean;
   /** Style de bloc sous le curseur — surligne le bon bouton de la galerie
    * "Styles" (voir `EditorStats.activeBlockStyle` dans MarkdownEditor.tsx). */
   activeBlockStyle?: "paragraph" | 1 | 2 | 3 | 4 | 5 | 6;
@@ -136,8 +141,8 @@ export function Toolbar({
   return (
     <div className="tb-ribbon-stack">
 
-      {/* Barre d'onglets du ruban. */}
-      <div className="tb-tabbar">
+      {/* Barre d'onglets du ruban (absente en version légère : un seul onglet). */}
+      {!leger && <div className="tb-tabbar">
         <button
           className={`tb-tab${tab === "accueil" ? " tb-tab-active" : ""}`}
           onClick={() => setTab("accueil")}
@@ -158,22 +163,22 @@ export function Toolbar({
         >
           Extras
         </button>
-      </div>
+      </div>}
 
-      {tab === "accueil" && (
+      {(leger || tab === "accueil") && (
         <div className="tb-ribbon">
-          <button
+          {!leger && <button
             className="tb-big-icon"
             onClick={onToggleSidebar}
             title={sidebarOpen ? "Masquer l'explorateur" : "Afficher l'explorateur"}
           >
             <span className="tb-big-icon-glyph">🗀</span>
             <span className="tb-big-icon-label">Explorateur</span>
-          </button>
+          </button>}
 
           <RibbonGroup
             label="Police"
-            launcher={{ title: "Autres réglages de police (à venir)" }}
+            launcher={leger ? undefined : { title: "Autres réglages de police (à venir)" }}
           >
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBold()} title="Gras (Ctrl+B)">
               <b>G</b>
@@ -199,7 +204,7 @@ export function Toolbar({
 
           <RibbonGroup
             label="Paragraphe"
-            launcher={{ onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
+            launcher={leger ? undefined : { onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
           >
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
               ☰•
@@ -233,7 +238,7 @@ export function Toolbar({
 
           <RibbonGroup
             label="Styles"
-            launcher={{ onClick: onOpenHeadingStyles, title: "Styles de titres (police, couleur, numérotation automatique par niveau)" }}
+            launcher={leger ? undefined : { onClick: onOpenHeadingStyles, title: "Styles de titres (police, couleur, numérotation automatique par niveau)" }}
           >
             <StyleGallery
               disabled={disabled}
@@ -247,9 +252,9 @@ export function Toolbar({
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setLink()} title="Lien">
               🔗
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.insertImage()} title="Image">
+            {!leger && <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.insertImage()} title="Image">
               🖼️
-            </button>
+            </button>}
           </RibbonGroup>
 
           <RibbonGroup label="Éléments">
@@ -324,7 +329,7 @@ export function Toolbar({
         </div>
       )}
 
-      {tab === "avance" && (
+      {!leger && tab === "avance" && (
         <div className="tb-ribbon">
           <RibbonGroup
             label="Police"
@@ -445,7 +450,7 @@ export function Toolbar({
         </div>
       )}
 
-      {tab === "extras" && (
+      {!leger && tab === "extras" && (
         <div className="tb-ribbon">
           <RibbonGroup label="Diagrammes">
             <button
