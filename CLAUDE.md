@@ -103,6 +103,100 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Ouvrir un fichier directement (sans dossier), Enregistrer sous, et
+  association de fichiers Windows (2026-09-27)**, sur demande explicite de
+  l'utilisateur : "ouvrir un dossier est un bon moyen d'ouvrir plusieurs
+  fichiers, mais il faudrait aussi 'ouvrir un fichier' pour pouvoir ouvrir
+  des fichiers directement depuis Windows, et un 'enregistrer sous'".
+  - **"Ouvrir un fichier…"** (`fileService.pickFiles`, bouton 📄 dans
+    `TitleBar.tsx`, entre Nouveau et Ouvrir un dossier) : sélection
+    multiple de `.md`/`.xmd` via le dialogue natif, sans dépendre d'un
+    dossier de travail déjà ouvert — `tabsStore.openFile` accepte déjà
+    n'importe quel chemin absolu tel quel, aucun changement nécessaire de
+    ce côté.
+  - **"Enregistrer sous…"** (`fileService.pickSaveLocation` + nouvelle
+    action `tabsStore.saveTabAs`, bouton 📤 juste après Enregistrer) :
+    écrit le contenu actuel à un nouvel emplacement (même
+    `withDocumentConfig`/mise en page que `saveTab`) puis bascule sur un
+    nouvel onglet pour ce chemin — l'onglet d'origine reste ouvert
+    inchangé (comportement standard "dupliquer puis continuer sur la
+    copie", pas de renommage de l'onglet existant). Permission
+    `dialog:allow-save` ajoutée (le réflexe "vérifier la permission
+    dédiée" est maintenant systématique après les mésaventures
+    `window.print`/`window.confirm`/glisser de fenêtre de la session
+    précédente).
+  - **Association de fichiers Windows + double-clic depuis l'Explorateur**
+    — la partie la plus structurante :
+    1. `bundle.fileAssociations` dans `tauri.conf.json` (`.md` et `.xmd`,
+       `"role": "Editor"`) : enregistré par l'installeur NSIS/MSI, permet
+       "Ouvrir avec → Pagina" et de définir Pagina comme application par
+       défaut pour ces extensions.
+    2. **Nouveau module Rust `src-tauri/src/startup_files.rs`** : au
+       premier lancement, les arguments de `std::env::args()` ressemblant
+       à un vrai chemin `.md`/`.xmd` existant sont filtrés
+       (`filter_openable_args`, exclut `argv[0]` — toujours le chemin de
+       l'exe lui-même) et stockés dans un état Tauri partagé
+       (`PendingOpenFiles`, `Mutex<Vec<String>>`) ; une commande
+       `pending_open_files` les "tire" une seule fois (`mem::take`) —
+       PAS un évènement émis depuis Rust vers le frontend, qui ne peut pas
+       encore écouter quoi que ce soit à cet instant précis du démarrage
+       (racing inévitable si Rust émettait avant que React n'ait fini de
+       monter son listener).
+    3. **`tauri-plugin-single-instance`** (nouvelle dépendance Cargo,
+       DOIT être enregistré comme PREMIER plugin d'après sa propre
+       documentation) : si l'utilisateur double-clique un second fichier
+       pendant que Pagina tourne déjà, Windows relance un second PROCESSUS
+       — ce plugin l'intercepte AVANT toute création de fenêtre, extrait
+       ses arguments (même filtre `filter_openable_args`) et les
+       retransmet à la fenêtre déjà ouverte via un évènement Tauri
+       `"open-files"` (cette fois-ci une vraie émission Rust→JS a du sens :
+       le frontend de l'instance déjà lancée est depuis longtemps monté et
+       à l'écoute), puis fait passer cette fenêtre au premier plan
+       (`set_focus`) — le second processus ne crée jamais de fenêtre et se
+       termine immédiatement tout seul.
+    4. **`App.tsx`** : un seul effet au montage gère les deux chemins —
+       `getStartupFiles()` (tire la liste initiale) ET
+       `listen("open-files", ...)` (écoute les lancements ultérieurs) —
+       chaque chemin reçu est simplement passé à
+       `useTabsStore.getState().openFile(path)`, exactement le même
+       chemin de code que n'importe quel autre fichier ouvert dans l'app.
+  - **Vérifié en conditions RÉELLES** (pas seulement via Playwright/CDP,
+    qui ne peut pas driver deux PROCESSUS natifs séparés) : l'exécutable
+    RELEASE fraîchement compilé (`src-tauri/target/release/xmd-editor.exe`)
+    lancé directement avec un chemin de fichier de test en argument
+    (simulation exacte d'un double-clic Explorateur) — le fichier s'ouvre
+    bien comme onglet actif dès le démarrage (titre de fenêtre et contenu
+    affiché confirmés par capture d'écran Win32/GDI, puisqu'un exe release
+    n'a pas de port de debug CDP branché). **Puis, l'app RESTANT OUVERTE**,
+    le même exécutable relancé une seconde fois avec un AUTRE fichier en
+    argument : un seul processus `xmd-editor.exe` est resté visible dans
+    `tasklist` après ce second lancement (pas de seconde fenêtre créée), et
+    ce second fichier est bien apparu comme nouvel onglet actif dans la
+    fenêtre déjà ouverte (titre + contenu re-vérifiés par capture d'écran)
+    — confirmation complète et sans ambiguïté du bon fonctionnement du
+    `single-instance` cross-lancement. Les boutons "Ouvrir un fichier…" et
+    "Enregistrer sous…" testés séparément via Playwright/CDP en mode dev :
+    les DEUX dialogues natifs s'ouvrent bien avec leur titre personnalisé
+    (confirmant que les permissions `dialog:allow-open`/`-save` sont
+    correctes et qu'aucune erreur "not allowed" n'apparaît dans les logs
+    `tauri dev`) — piloter ensuite un dialogue Explorer natif jusqu'au bout
+    par automatisation clavier (`SendKeys`) s'est avéré peu fiable
+    (dialogue resté ouvert malgré plusieurs approches), non poursuivi car
+    hors du périmètre du code de l'app (limite de l'outillage de test, pas
+    un doute sur `pickFiles`/`pickSaveLocation`/`saveTabAs` eux-mêmes, dont
+    la logique est directement inspectable et repose sur les mêmes
+    fonctions `writeTextFile`/`save()`/`open()` déjà éprouvées ailleurs
+    dans le projet).
+  - **Effet de bord repéré pendant les tests, sans lien avec ce
+    correctif** : l'instance `tauri dev` (débogage, port 9222) ouverte en
+    parallèle s'est arrêtée de façon inexpliquée pendant ces
+    manipulations (peut-être un effet du partage du même VERROU
+    single-instance — même `identifier` dans `tauri.conf.json` — entre un
+    build debug et un build release lancés simultanément, un scénario qui
+    ne se produit jamais en usage réel où un seul type de build tourne à
+    la fois). Non creusé plus avant (n'affecte pas le comportement en
+    production, uniquement un désagrément de méthode de test) ; à
+    surveiller si ça se reproduit en conditions de développement normales.
 - **Intégration du nouveau logo Pagina (2026-09-13)** — deux fichiers déposés
   par l'utilisateur dans `public/` : `pagina-logo-icon.svg` (icône seule,
   document plié vert Sapin + "P") et `pagina-logo-lockup.svg` (icône +

@@ -41,6 +41,7 @@ Développé en interne, on a choisi de le rendre public : si un autre bureau d'�
 
 ### Autour de l'édition
 - **Explorateur de fichiers** intégré : ouverture d'un dossier de travail, arborescence `.md`/`.xmd`, création de fichiers et dossiers.
+- **Ouverture directe de fichiers** (sans passer par un dossier), **Enregistrer sous**, et **association de fichiers Windows** : un `.md`/`.xmd` peut s'ouvrir en double-cliquant dessus dans l'Explorateur ("Ouvrir avec Pagina" ou en application par défaut).
 - **Onglets multi-fichiers**, avec indicateur de modifications non enregistrées.
 - **Export PDF réel**, directement depuis la mise en page affichée à l'écran (pas un moteur de rendu séparé qui pourrait diverger).
 - Interface façon ruban, en français, pensée pour rester lisible même avec beaucoup de commandes.

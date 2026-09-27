@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { FileExplorer } from "./ui/FileExplorer/FileExplorer";
 import { TitleBar } from "./ui/TitleBar/TitleBar";
 import { Toolbar, type ToolbarActions } from "./ui/Toolbar/Toolbar";
@@ -12,7 +13,7 @@ import { StatusBar, type ViewMode } from "./ui/StatusBar/StatusBar";
 import { PageSetupDialog } from "./ui/PageSetup/PageSetupDialog";
 import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
-import { printWindow } from "./persistence/fileService";
+import { printWindow, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
 import { useWorkspaceStore } from "./core/store/workspaceStore";
 import { useTabsStore } from "./core/store/tabsStore";
 import "./App.css";
@@ -34,6 +35,7 @@ function App() {
     updateContent,
     updateLayout,
     saveTab,
+    saveTabAs,
     restoreSession,
   } = useTabsStore();
 
@@ -50,6 +52,29 @@ function App() {
   useEffect(() => {
     restoreLastWorkspace();
     restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ouverture depuis l'Explorateur Windows (double-clic sur un .md/.xmd
+  // associé à Pagina, ou "Ouvrir avec") — voir `startup_files.rs` côté Rust.
+  // Deux chemins d'arrivée bien distincts :
+  // - fichiers passés en argument au tout premier lancement du processus
+  //   (`getStartupFiles`, "tiré" une seule fois depuis Rust — le frontend ne
+  //   peut pas écouter un évènement émis avant même d'exister) ;
+  // - fichier(s) d'un lancement ULTÉRIEUR pendant que l'app tourne déjà
+  //   (`tauri-plugin-single-instance` empêche une vraie 2e fenêtre et
+  //   réémet plutôt l'évènement `"open-files"` vers celle-ci, déjà montée).
+  useEffect(() => {
+    void getStartupFiles().then((paths) => {
+      for (const p of paths) void useTabsStore.getState().openFile(p);
+    });
+    let unlisten: (() => void) | undefined;
+    listen<string[]>("open-files", (event) => {
+      for (const p of event.payload) void useTabsStore.getState().openFile(p);
+    }).then((f) => {
+      unlisten = f;
+    });
+    return () => unlisten?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -130,6 +155,23 @@ function App() {
     } catch (e) {
       window.alert(`Impossible de créer le fichier : ${e}`);
     }
+  };
+
+  // "Ouvrir un fichier" — contrairement à "Ouvrir un dossier", ne nécessite
+  // aucun workspace : `tabsStore.openFile` accepte n'importe quel chemin
+  // absolu, dossier de travail ouvert ou non.
+  const handleOpenFiles = async () => {
+    const paths = await pickFiles();
+    for (const p of paths) {
+      await openFile(p);
+    }
+  };
+
+  const handleSaveAs = async () => {
+    if (!activeTab) return;
+    const newPath = await pickSaveLocation(activeTab.title);
+    if (!newPath) return;
+    await saveTabAs(activeTab.path, newPath);
   };
 
   // Impression / export PDF : on imprime directement la couche déjà peinte
@@ -238,6 +280,8 @@ function App() {
         onRedo={() => actions?.redo()}
         onNewFile={handleNewFile}
         onOpenFolder={() => void openFolderPicker()}
+        onOpenFiles={() => void handleOpenFiles()}
+        onSaveAs={() => void handleSaveAs()}
         onPrint={handlePrint}
       />
       <Toolbar
