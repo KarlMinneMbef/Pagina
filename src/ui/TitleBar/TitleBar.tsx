@@ -32,6 +32,8 @@ export function TitleBar({
   onRedo,
   onNewFile,
   onOpenFolder,
+  onOpenFiles,
+  onSaveAs,
   onPrint,
 }: {
   documentTitle: string | null;
@@ -41,6 +43,11 @@ export function TitleBar({
   onRedo: () => void;
   onNewFile: () => void;
   onOpenFolder: () => void;
+  /** "Ouvrir un fichier" — un ou plusieurs `.md`/`.xmd` directement, sans
+   * passer par un dossier de travail (contrairement à `onOpenFolder`). */
+  onOpenFiles: () => void;
+  /** "Enregistrer sous" — écrit le document actif à un nouvel emplacement. */
+  onSaveAs: () => void;
   onPrint: () => void;
 }) {
   return (
@@ -59,6 +66,9 @@ export function TitleBar({
         <button className="tbar-icon-btn" disabled={disabled} onClick={onSave} title="Enregistrer (Ctrl+S)">
           💾
         </button>
+        <button className="tbar-icon-btn" disabled={disabled} onClick={onSaveAs} title="Enregistrer sous…">
+          📤
+        </button>
         <span className="tbar-sep" />
         <button className="tbar-icon-btn" disabled={disabled} onClick={onUndo} title="Annuler">
           ↶
@@ -69,6 +79,9 @@ export function TitleBar({
         <span className="tbar-sep" />
         <button className="tbar-icon-btn" onClick={onNewFile} title="Nouveau document">
           🗋
+        </button>
+        <button className="tbar-icon-btn" onClick={onOpenFiles} title="Ouvrir un fichier…">
+          📄
         </button>
         <button className="tbar-icon-btn" onClick={onOpenFolder} title="Ouvrir un dossier">
           📂

@@ -40,6 +40,11 @@ interface TabsState {
   updateContent: (path: string, content: string) => void;
   updateLayout: (path: string, layout: PageLayoutSettings) => void;
   saveTab: (path: string) => Promise<void>;
+  /** "Enregistrer sous" : écrit le contenu actuel de `path` à `newPath`, puis
+   * bascule sur un onglet pour `newPath` (contenu/mise en page repris tels
+   * quels, `dirty:false` puisqu'on vient de l'écrire) — l'ancien onglet
+   * reste ouvert inchangé, comme dans la plupart des éditeurs. */
+  saveTabAs: (path: string, newPath: string) => Promise<void>;
   restoreSession: () => Promise<void>;
 }
 
@@ -137,6 +142,21 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     set({
       tabs: tabs.map((t) => (t.path === path ? { ...t, content, dirty: false } : t)),
     });
+  },
+
+  saveTabAs: async (path: string, newPath: string) => {
+    const { pendingContent, tabs } = get();
+    const content = pendingContent[path];
+    const tab = tabs.find((t) => t.path === path);
+    if (content === undefined || !tab) return;
+    await writeTextFile(newPath, withDocumentConfig(tab.layout, content));
+    const newTab: EditorTab = { path: newPath, title: titleFromPath(newPath), content, dirty: false, layout: tab.layout };
+    set((s) => ({
+      tabs: [...s.tabs.filter((t) => t.path !== newPath), newTab],
+      pendingContent: { ...s.pendingContent, [newPath]: content },
+      activePath: newPath,
+    }));
+    persist(get());
   },
 
   restoreSession: async () => {

@@ -8,6 +8,7 @@
     "opener:default",
     "dialog:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     "dialog:allow-confirm",
     "dialog:allow-ask",
     "core:window:allow-minimize",

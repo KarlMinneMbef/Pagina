@@ -3,8 +3,10 @@
  * Tauri (invoke) pour lire/écrire le filesystem. Le reste de l'app passe par ici.
  */
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type { FileNode } from "../core/types";
+
+const MARKDOWN_FILTERS = [{ name: "Markdown", extensions: ["md", "xmd"] }];
 
 export async function pickWorkspaceFolder(): Promise<string | null> {
   const selected = await open({
@@ -14,6 +16,40 @@ export async function pickWorkspaceFolder(): Promise<string | null> {
   });
   if (!selected || Array.isArray(selected)) return null;
   return selected;
+}
+
+/** Ouvre un ou plusieurs fichiers `.md`/`.xmd` directement, sans dépendre
+ * d'un dossier de travail déjà ouvert — `tabsStore.openFile` accepte
+ * n'importe quel chemin absolu. */
+export async function pickFiles(): Promise<string[]> {
+  const selected = await open({
+    directory: false,
+    multiple: true,
+    filters: MARKDOWN_FILTERS,
+    title: "Ouvrir un ou plusieurs fichiers",
+  });
+  if (!selected) return [];
+  return Array.isArray(selected) ? selected : [selected];
+}
+
+/** Boîte de dialogue "Enregistrer sous" — retourne le chemin choisi, ou
+ * `null` si l'utilisateur annule. N'écrit rien elle-même (voir
+ * `tabsStore.saveTabAs`, qui appelle ensuite `writeTextFile`). */
+export async function pickSaveLocation(defaultName: string): Promise<string | null> {
+  return save({
+    defaultPath: defaultName,
+    filters: MARKDOWN_FILTERS,
+    title: "Enregistrer sous",
+  });
+}
+
+/** Fichiers `.md`/`.xmd` passés en argument au tout premier lancement de
+ * l'app (double-clic depuis l'Explorateur Windows) — à appeler une seule
+ * fois au montage de l'app, voir `startup_files.rs` côté Rust pour le
+ * pourquoi (un second lancement pendant que l'app tourne déjà arrive plutôt
+ * via l'évènement `"open-files"`, écouté séparément). */
+export async function getStartupFiles(): Promise<string[]> {
+  return invoke<string[]>("pending_open_files");
 }
 
 export async function readWorkspaceTree(root: string): Promise<FileNode[]> {
