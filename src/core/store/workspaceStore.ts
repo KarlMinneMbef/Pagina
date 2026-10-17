@@ -47,6 +47,20 @@ export function joinPath(root: string, name: string): string {
   return root.endsWith(sep) ? `${root}${name}` : `${root}${sep}${name}`;
 }
 
+/** Collator francophone insensible à la casse ET aux accents
+ * (sensitivity "base" : é ≈ e, E ≈ e). */
+const nameCollator = new Intl.Collator("fr", { sensitivity: "base" });
+
+/** Trie récursif d'affichage : dossiers avant les fichiers, puis ordre
+ * alphabétique insensible à la casse et aux accents, à toutes profondeurs. */
+export function sortTree(nodes: FileNode[]): FileNode[] {
+  const sorted = [...nodes].sort((a, b) => {
+    if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+    return nameCollator.compare(a.name, b.name);
+  });
+  return sorted.map((n) => (n.children ? { ...n, children: sortTree(n.children) } : n));
+}
+
 let watcherStarted: string | null = null;
 let unlistenChanged: (() => void) | null = null;
 
@@ -66,7 +80,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   openWorkspace: async (root: string) => {
     set({ loading: true, error: null });
     try {
-      const tree = await readWorkspaceTree(root);
+      const tree = sortTree(await readWorkspaceTree(root));
       set({ root, tree, loading: false });
       localStorage.setItem(LAST_WORKSPACE_KEY, root);
 
@@ -87,7 +101,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const { root } = get();
     if (!root) return;
     try {
-      const tree = await readWorkspaceTree(root);
+      const tree = sortTree(await readWorkspaceTree(root));
       set({ tree });
     } catch (e) {
       set({ error: String(e) });

@@ -103,6 +103,20 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 4 : tri de l'arborescence
+  (2026-10-17)**, suite du chantier explorateur. Dossiers avant les
+  fichiers, puis ordre alphabétique **insensible à la casse ET aux
+  accents** (`Intl.Collator("fr", { sensitivity: "base" })` : é ≈ e,
+  E ≈ e), récursif à toutes profondeurs. Implémenté dans
+  `workspaceStore.ts` (`sortTree`, appliqué à `openWorkspace` ET
+  `refreshTree` — l'état du store lui-même est trié, pas seulement le
+  rendu) et réutilisé par la vue aplatie de recherche dans
+  `FileExplorer.tsx` (sinon elle héritait de l'ordre de parcours de
+  l'arbre). Piège rencontré : l'ordre exact de « CCTP.md » vs
+  « cctp v2.md » dépend du traitement ICU des espaces/ponctuation
+  (poids variables) — l'exigence est l'ADJACENCE, pas un ordre absolu.
+  Tests : `FileExplorer.sort.test.tsx` (4 cas de tri pur + 2 cas de
+  rendu : ordre des lignes après refresh, vue aplatie triée).
 - **Explorateur de fichiers — Fonctionnalité 3 : badge « modifié »
   (2026-10-17)**, suite du chantier explorateur. Point orange (•,
   `title="Modifié (non enregistré)"`, classe `fx-dirty-badge`) sur
