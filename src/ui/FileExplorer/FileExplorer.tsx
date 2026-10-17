@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FileNode } from "../../core/types";
-import { useWorkspaceStore, joinPath } from "../../core/store/workspaceStore";
+import { useWorkspaceStore, joinPath, sortTree } from "../../core/store/workspaceStore";
 import { useTabsStore } from "../../core/store/tabsStore";
 import { useHorizontalResize } from "../ResizeHandle/useHorizontalResize";
 import { ResizeHandle } from "../ResizeHandle/ResizeHandle";
@@ -150,11 +150,12 @@ export function FileExplorer({
   };
 
   // Correspondances de recherche : vue aplatie de tous les nœuds (fichiers et
-  // dossiers) dont le nom contient la requête, insensible à la casse.
+  // dossiers) dont le nom contient la requête, insensible à la casse —
+  // triées comme l'arbre (dossiers puis fichiers, ordre francophone).
   const matches = useMemo(() => {
     if (!search) return [] as FileNode[];
     const q = search.toLowerCase();
-    return flattenTree(tree).filter((n) => n.name.toLowerCase().includes(q));
+    return sortTree(flattenTree(tree).filter((n) => n.name.toLowerCase().includes(q)));
   }, [tree, search]);
 
   // --- Menu contextuel + dialogues (aucun window.prompt/confirm : ils
