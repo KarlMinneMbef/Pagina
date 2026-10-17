@@ -19,6 +19,7 @@
  * base) — seuls les paragraphes strictement vides sont concernés.
  */
 import { Paragraph as ParagraphBase } from "@tiptap/extension-paragraph";
+import { DOMSerializer } from "@tiptap/pm/model";
 
 const EMPTY_LINE_COMMENT = /^<!--\s*empty-line\s*-->$/i;
 
@@ -26,9 +27,26 @@ export const ParagraphMarkdown = ParagraphBase.extend({
   addStorage() {
     return {
       markdown: {
-        serialize(state: any, node: any) {
+        // `this` est lié par tiptap-markdown à { editor, options } (voir
+        // `serializeNode` dans tiptap-markdown.es.js) — typé ici à la main
+        // pour rester en TypeScript strict sans dépendre des types internes.
+        serialize(this: { editor: { schema: never } }, state: any, node: any) {
           if (node.content.size === 0) {
             state.write("<!-- empty-line -->");
+            state.closeBlock(node);
+            return;
+          }
+          // Paragraphe ALIGNÉ (text-align, via le ruban) : pas d'équivalent
+          // en Markdown standard — repli HTML <p style="…"> comme tous les
+          // réglages avancés (voir Markdown.configure({ html: true })).
+          // SANS ce repli, le sérialiseur ci-dessous écrivait le texte
+          // inline sans les attributs : l'alignement était silencieusement
+          // PERDU à la sauvegarde (bug préexistant, révélé par la
+          // vérification systématique du ruban refait).
+          if (node.attrs.textAlign) {
+            const div = document.createElement("div");
+            div.appendChild(DOMSerializer.fromSchema(this.editor.schema).serializeNode(node));
+            state.write(div.innerHTML);
             state.closeBlock(node);
             return;
           }

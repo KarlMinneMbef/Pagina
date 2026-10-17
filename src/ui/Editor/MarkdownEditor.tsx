@@ -29,8 +29,8 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { TableMarkdown as Table } from "./extensions/TableMarkdown";
 import TableRow from "@tiptap/extension-table-row";
-import TableCell from "@tiptap/extension-table-cell";
-import TableHeader from "@tiptap/extension-table-header";
+import { TableCellStyled as TableCell, TableHeaderStyled as TableHeader, type BorderSide } from "./extensions/TableCellStyle";
+import { CellSelection, TableMap } from "@tiptap/pm/tables";
 import Placeholder from "@tiptap/extension-placeholder";
 import { TextStyle } from "@tiptap/extension-text-style";
 import FontFamily from "@tiptap/extension-font-family";
@@ -46,7 +46,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { createLowlight, common } from "lowlight";
 import { FontSize } from "./extensions/FontSize";
 import { Markdown } from "tiptap-markdown";
-import { useEffect, useImperativeHandle, forwardRef, useRef, useMemo, type CSSProperties } from "react";
+import { useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useState, type CSSProperties } from "react";
 import { PageBreak } from "./extensions/PageBreak";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
 import { TocMarker } from "./extensions/TocMarker";
@@ -85,8 +85,68 @@ export interface MarkdownEditorHandle {
    * curseur (aucun effet si le curseur n'est pas dans un bloc de code). */
   setCodeBlockLanguage: (language: string) => void;
   setLink: () => void;
-  insertImage: (src: string, alt?: string) => void;
-  insertTable: () => void;
+  // --- Presse-papiers (boutons Coller/Couper/Copier du ruban) ---
+  /** Copie la sélection en Markdown (texte brut) via l'API Clipboard. */
+  copySelection: () => void;
+  /** Copie la sélection puis la supprime. */
+  cutSelection: () => void;
+  /** Insère le texte du presse-papiers à la position du curseur — le texte
+   * passe par le parseur Markdown de tiptap-markdown (override de
+   * `insertContentAt`), donc coller du Markdown le convertit en nœuds
+   * riches, pas en texte brut. */
+  pasteClipboard: () => void;
+  /** Agrandit/Réduit la police de la sélection d'un pas dans
+   * `FONT_SIZE_STEPS` (voir juste dessous), façon Word. */
+  increaseFontSize: () => void;
+  decreaseFontSize: () => void;
+  /** Fait cycler la casse de la sélection : minuscules/mixte →
+   * MAJUSCULES → Casse de titre → minuscules. */
+  changeCase: () => void;
+  /** `rows`/`cols` : taille choisie via le sélecteur-grille du ruban (façon
+   * Word) — voir `TableSizePicker` dans `Toolbar.tsx`. */
+  insertTable: (rows: number, cols: number) => void;
+  /** Commandes de tableau ci-dessous : toutes fournies nativement par
+   * `@tiptap/extension-table`, juste exposées ici. Sans effet si le curseur
+   * n'est pas dans un tableau (Tiptap ignore silencieusement). Rien
+   * au-delà du Markdown standard (pas de fusion/scission de cellules,
+   * pas de largeurs personnalisées) — voir la discussion avec
+   * l'utilisateur dans CLAUDE.md. */
+  addRowBefore: () => void;
+  addRowAfter: () => void;
+  deleteRow: () => void;
+  addColumnBefore: () => void;
+  addColumnAfter: () => void;
+  deleteColumn: () => void;
+  deleteTable: () => void;
+  /** Fusion/scission de cellules + couleur de fond/bordures par côté —
+   * onglet "Format avancé", groupe "Tableau" (voir `TableCellStyle.ts`).
+   * Sans équivalent Markdown standard : un tableau qui utilise l'une de ces
+   * fonctions bascule automatiquement en `<table>` HTML à la sauvegarde
+   * (voir `TableMarkdown.ts`, `isMarkdownSerializable`) — les tableaux
+   * simples restent en syntaxe GFM comme avant, rien ne change pour eux. */
+  mergeCells: () => void;
+  splitCell: () => void;
+  /** Transforme la ligne courante en ligne d'en-tête (et inversement) —
+   * commande native de `@tiptap/extension-table`. Sans effet hors tableau. */
+  toggleHeaderRow: () => void;
+  setCellBackgroundColor: (color: string | null) => void;
+  /** `sides` vide = tous les côtés. `css` = chaîne de bordure CSS complète
+   * (ex. "2px solid #343334") ou `null` pour retirer la bordure sur ces
+   * côtés. Appliqué à la cellule courante, ou à toutes les cellules
+   * couvertes par une sélection multi-cellules (glisser-sélectionner). */
+  setCellBorder: (sides: ("top" | "right" | "bottom" | "left")[], css: string | null) => void;
+  /** Présets façon Word (voir groupe "Tableau", Format avancé) : "all"/"none"
+   * touchent les 4 côtés de chaque cellule sélectionnée ; "outside"/"inside"
+   * distinguent le pourtour de la sélection de ses arêtes internes (voir
+   * `applyBorderPreset` dans ce fichier). */
+  setCellBorderPreset: (preset: "all" | "outside" | "inside" | "none", css: string | null) => void;
+  /** Applique/retire une bordure sur des lignes de grille PRÉCISES du
+   * schéma interactif (voir `GridLine`/`setGridLineBorder` dans ce fichier)
+   * — contrairement à `setCellBorderPreset`, permet de ne toucher QUE les
+   * lignes explicitement cliquées (ex. une seule ligne interne parmi
+   * plusieurs), pas "tout l'intérieur" d'un coup. */
+  setGridLineBorder: (lines: GridLine[], css: string | null) => void;
+  setCellVerticalAlign: (align: "top" | "middle" | "bottom") => void;
   insertHorizontalRule: () => void;
   insertPageBreak: () => void;
   setFontFamily: (family: string) => void;
@@ -129,6 +189,46 @@ export interface MarkdownEditorHandle {
 const lowlight = createLowlight(common);
 export const CODE_BLOCK_LANGUAGES = Object.keys(common).sort();
 
+/** Échelle de tailles de police (en pt) — partagée entre le menu "Taille"
+ * du ruban et les boutons Agrandir/Réduire (un pas = la valeur suivante de
+ * cette échelle, pas +1 pt : façon Word). Le 12pt sert de base de départ
+ * quand la sélection n'a pas encore de taille explicite. */
+export const FONT_SIZE_STEPS = [8, 9, 10, 11, 12, 14, 16, 18, 24, 36];
+const DEFAULT_FONT_SIZE_PT = 12;
+
+/** Extrait la taille de police (en pt) de la sélection, ou la valeur par
+ * défaut si aucune marque `fontSize` n'est posée. */
+function currentFontSizePt(editor: Editor): number {
+  const fontSize = editor.getAttributes("textStyle").fontSize;
+  if (typeof fontSize === "string") {
+    const pt = parseFloat(fontSize);
+    if (!Number.isNaN(pt)) return pt;
+  }
+  return DEFAULT_FONT_SIZE_PT;
+}
+
+/** Casse suivante façon bouton "Aa" de Word : minuscules/mixte →
+ * MAJUSCULES → Casse de titre (1re lettre de chaque mot) → minuscules.
+ * La détection « casse de titre » doit venir AVANT celle « contient une
+ * minuscule », sinon "Bonjour" (titre) serait renvoyé en MAJUSCULES et
+ * la boucle ne repasserait jamais en minuscules. */
+function nextCase(text: string): string {
+  const upper = text.toUpperCase();
+  const lower = text.toLowerCase();
+  const title = lower.replace(/(^|[\s\-"'(«\[\]])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+  if (text === upper) return title; // tout en majuscules → casse de titre
+  if (text === title && text !== lower) return lower; // casse de titre → minuscules
+  return upper; // contient au moins une minuscule → MAJUSCULES
+}
+
+/** Presse-papiers INTERNE : dernier texte copié/coupé DANS l'application.
+ * Repli de `pasteClipboard` quand la lecture du presse-papiers système est
+ * refusée — WebView2 peut afficher une demande de permission native pour
+ * clipboard-read (ou la voir bloquée par la configuration) : Coller reste
+ * ainsi fonctionnel pour tout ce qui a été copié/coupé via les boutons du
+ * ruban, sans dépendre de cette permission. */
+let internalClipboard: string | null = null;
+
 function mmToPx(mm: number): number {
   const probe = document.createElement("div");
   probe.style.height = `${mm}mm`;
@@ -149,6 +249,218 @@ function getActiveBlockStyle(editor: Editor): EditorStats["activeBlockStyle"] {
   return "paragraph";
 }
 
+/** Position du nœud cellule (`tableCell`/`tableHeader`) qui contient `pos`,
+ * ou `null` si `pos` n'est dans aucun tableau. Même principe que
+ * `findCellPosFromPmPos` dans le projet CasualOffice/docs (qui nous a
+ * inspiré l'architecture éditeur invisible + couche peinte) : on marche les
+ * ancêtres de la position résolue plutôt que de chercher par coordonnées —
+ * une fois qu'on a une position DOCUMENT valide (peu importe comment on l'a
+ * obtenue), retrouver la cellule englobante est purement structurel, donc
+ * fiable quel que soit le zoom/la résolution d'écran. */
+function findCellPos(doc: Editor["state"]["doc"], pos: number): number | null {
+  try {
+    const $pos = doc.resolve(pos);
+    for (let depth = $pos.depth; depth > 0; depth--) {
+      const node = $pos.node(depth);
+      if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
+        return $pos.before(depth);
+      }
+    }
+  } catch {
+    // position invalide
+  }
+  return null;
+}
+
+/** Applique un patch d'attributs à TOUTES les cellules concernées par la
+ * sélection courante — soit une vraie sélection multi-cellules
+ * (`CellSelection`, glisser-sélectionner un rectangle de cellules), soit,
+ * à défaut, la seule cellule contenant le curseur. Nécessaire car
+ * `editor.commands.updateAttributes` ne met à jour qu'un seul nœud (celui
+ * de la position courante) — pas ce qu'il faut pour "appliquer une bordure
+ * à toutes les cellules sélectionnées" façon Word. `addToHistory: false`
+ * n'est PAS posé : contrairement à la renumérotation automatique des
+ * titres, c'est ici une action explicite de l'utilisateur, qui doit rester
+ * annulable par Ctrl+Z comme les autres actions du ruban. */
+function applyToSelectedCells(editor: Editor, patch: Record<string, unknown>) {
+  const { state, view } = editor;
+  const { selection } = state;
+  const tr = state.tr;
+  let touched = false;
+
+  if (selection instanceof CellSelection) {
+    selection.forEachCell((node, pos) => {
+      tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...patch });
+      touched = true;
+    });
+  } else {
+    const { $from } = selection;
+    for (let depth = $from.depth; depth > 0; depth--) {
+      const node = $from.node(depth);
+      if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
+        tr.setNodeMarkup($from.before(depth), undefined, { ...node.attrs, ...patch });
+        touched = true;
+        break;
+      }
+    }
+  }
+
+  if (touched) view.dispatch(tr);
+}
+
+/** Résout la sélection courante en une vraie `CellSelection` — construite à
+ * partir de la cellule unique sous le curseur si ce n'est pas déjà le cas
+ * (glisser-sélectionner plusieurs cellules en produit déjà une, voir le
+ * correctif du 2026-10-10 dans `onMouseMove`). Nécessaire pour
+ * `applyBorderPreset` ci-dessous : les présets "Extérieur"/"Intérieur" ont
+ * besoin du RECTANGLE de la sélection (via `TableMap`), pas juste de la
+ * liste de ses cellules. */
+function resolveCellSelection(editor: Editor): CellSelection | null {
+  const { state } = editor;
+  if (state.selection instanceof CellSelection) return state.selection;
+  const cellPos = findCellPos(state.doc, state.selection.from);
+  if (cellPos === null) return null;
+  try {
+    return CellSelection.create(state.doc, cellPos, cellPos) as CellSelection;
+  } catch {
+    return null;
+  }
+}
+
+/** Présets de bordures façon Word : "Tout"/"Aucune" touchent les 4 côtés de
+ * chaque cellule sélectionnée sans condition ; "Extérieur"/"Intérieur"
+ * comparent la position de chaque cellule (via `TableMap.findCell`, qui
+ * donne son rectangle {left,top,right,bottom} dans la grille du tableau) au
+ * rectangle de la SÉLECTION ENTIÈRE (`TableMap.rectBetween`) pour décider,
+ * côté par côté, si c'est un bord extérieur (bord de la sélection) ou
+ * intérieur (partagé avec une autre cellule sélectionnée). */
+function applyBorderPreset(editor: Editor, preset: "all" | "outside" | "inside" | "none", css: string | null) {
+  const cellSel = resolveCellSelection(editor);
+  if (!cellSel) return;
+  const table = cellSel.$anchorCell.node(-1);
+  const tableStart = cellSel.$anchorCell.start(-1);
+  const map = TableMap.get(table);
+  const rect = map.rectBetween(cellSel.$anchorCell.pos - tableStart, cellSel.$headCell.pos - tableStart);
+  const offsets: number[] = map.cellsInRect(rect);
+  if (!offsets.length) return;
+
+  const tr = editor.state.tr;
+  for (const offset of offsets) {
+    const node = table.nodeAt(offset);
+    if (!node) continue;
+    const cellRect = map.findCell(offset);
+    const sides: BorderSide[] = [];
+    if (preset === "all" || preset === "none") {
+      sides.push("borderTop", "borderRight", "borderBottom", "borderLeft");
+    } else if (preset === "outside") {
+      if (cellRect.top === rect.top) sides.push("borderTop");
+      if (cellRect.bottom === rect.bottom) sides.push("borderBottom");
+      if (cellRect.left === rect.left) sides.push("borderLeft");
+      if (cellRect.right === rect.right) sides.push("borderRight");
+    } else {
+      // "inside" : bords partagés avec une autre cellule DE LA SÉLECTION.
+      if (cellRect.top > rect.top) sides.push("borderTop");
+      if (cellRect.bottom < rect.bottom) sides.push("borderBottom");
+      if (cellRect.left > rect.left) sides.push("borderLeft");
+      if (cellRect.right < rect.right) sides.push("borderRight");
+    }
+    if (!sides.length) continue;
+    const patch: Record<string, unknown> = { ...node.attrs };
+    for (const side of sides) patch[side] = preset === "none" ? null : css;
+    tr.setNodeMarkup(tableStart + offset, undefined, patch);
+  }
+  editor.view.dispatch(tr);
+}
+
+/** Dimensions (en cellules) du rectangle actuellement sélectionné dans un
+ * tableau — `{rows:1, cols:1}` pour un simple curseur dans une cellule
+ * (toujours au moins 1×1), `null` hors tableau. Pilote le schéma de
+ * bordures interactif (`TablePropertiesPanel`/`BorderDiagram`) : un
+ * rectangle plus grand qu'une cellule fait apparaître des lignes
+ * INTERNES cliquables en plus des 4 côtés extérieurs. */
+function getSelectionShape(editor: Editor): { rows: number; cols: number } | null {
+  const cellSel = resolveCellSelection(editor);
+  if (!cellSel) return null;
+  const table = cellSel.$anchorCell.node(-1);
+  const tableStart = cellSel.$anchorCell.start(-1);
+  const map = TableMap.get(table);
+  const rect = map.rectBetween(cellSel.$anchorCell.pos - tableStart, cellSel.$headCell.pos - tableStart);
+  return { rows: rect.bottom - rect.top, cols: rect.right - rect.left };
+}
+
+/** Une "ligne de grille" du schéma de bordures : `axis: "row"` désigne une
+ * ligne HORIZONTALE (sépare deux rangées, ou borde le haut/bas de la
+ * sélection), `axis: "col"` une ligne VERTICALE. `index` va de 0 (bord
+ * extérieur haut/gauche) à `rows`/`cols` (bord extérieur bas/droite) —
+ * toute valeur intermédiaire désigne une ligne INTERNE, partagée entre
+ * deux cellules adjacentes de la sélection. */
+export interface GridLine {
+  axis: "row" | "col";
+  index: number;
+}
+
+/** Applique (ou retire, si `css` est `null`) une bordure à une ou
+ * plusieurs lignes de grille de la sélection courante — généralise
+ * `applyBorderPreset` (qui ne gère que les 4 côtés extérieurs/tous les
+ * bords internes d'un coup) en laissant choisir EXACTEMENT quelles lignes
+ * individuelles toucher, pour le schéma interactif du panneau Tableau.
+ * Une ligne extérieure ne touche que les cellules dont le bord
+ * correspondant coïncide avec le pourtour de la sélection ; une ligne
+ * INTERNE pose la même valeur sur les DEUX côtés de la cellule concernée
+ * (ex. `borderBottom` de la cellule du dessus ET `borderTop` de celle du
+ * dessous) — nécessaire pour un rendu cohérent avec `border-collapse`. */
+function setGridLineBorder(editor: Editor, lines: GridLine[], css: string | null) {
+  const cellSel = resolveCellSelection(editor);
+  if (!cellSel) return;
+  const table = cellSel.$anchorCell.node(-1);
+  const tableStart = cellSel.$anchorCell.start(-1);
+  const map = TableMap.get(table);
+  const rect = map.rectBetween(cellSel.$anchorCell.pos - tableStart, cellSel.$headCell.pos - tableStart);
+  const offsets = map.cellsInRect(rect);
+  if (!offsets.length) return;
+
+  const patches = new Map<number, Record<string, unknown>>();
+  const getPatch = (offset: number) => {
+    let p = patches.get(offset);
+    if (!p) {
+      const node = table.nodeAt(offset);
+      p = node ? { ...node.attrs } : {};
+      patches.set(offset, p);
+    }
+    return p;
+  };
+
+  for (const offset of offsets) {
+    const cellRect = map.findCell(offset);
+    for (const line of lines) {
+      if (line.axis === "row") {
+        const rows = rect.bottom - rect.top;
+        if (line.index === 0 && cellRect.top === rect.top) getPatch(offset).borderTop = css;
+        else if (line.index === rows && cellRect.bottom === rect.bottom) getPatch(offset).borderBottom = css;
+        else if (line.index > 0 && line.index < rows) {
+          if (cellRect.bottom === rect.top + line.index) getPatch(offset).borderBottom = css;
+          if (cellRect.top === rect.top + line.index) getPatch(offset).borderTop = css;
+        }
+      } else {
+        const cols = rect.right - rect.left;
+        if (line.index === 0 && cellRect.left === rect.left) getPatch(offset).borderLeft = css;
+        else if (line.index === cols && cellRect.right === rect.right) getPatch(offset).borderRight = css;
+        else if (line.index > 0 && line.index < cols) {
+          if (cellRect.right === rect.left + line.index) getPatch(offset).borderRight = css;
+          if (cellRect.left === rect.left + line.index) getPatch(offset).borderLeft = css;
+        }
+      }
+    }
+  }
+
+  if (patches.size === 0) return;
+  const tr = editor.state.tr;
+  for (const [offset, patch] of patches) {
+    tr.setNodeMarkup(tableStart + offset, undefined, patch);
+  }
+  editor.view.dispatch(tr);
+}
+
 export interface EditorStats {
   words: number;
   characters: number;
@@ -157,6 +469,13 @@ export interface EditorStats {
   /** Style de bloc sous le curseur — pour surligner le bon bouton dans la
    * galerie de styles du ruban (voir RibbonGroup "Styles" dans Toolbar.tsx). */
   activeBlockStyle: "paragraph" | 1 | 2 | 3 | 4 | 5 | 6;
+  /** Le curseur est-il actuellement dans un tableau — pilote l'apparition/
+   * bascule automatique de l'onglet contextuel "Tableau" du ruban (voir
+   * `Toolbar.tsx`), façon "Outils de tableau" de Word. */
+  insideTable: boolean;
+  /** Dimensions de la sélection de cellules courante — voir
+   * `getSelectionShape` ; `null` hors tableau. */
+  tableSelectionShape: { rows: number; cols: number } | null;
 }
 
 interface MarkdownEditorProps {
@@ -184,6 +503,12 @@ interface MarkdownEditorProps {
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
   ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, onZoomChange, readOnly = false }, ref) => {
     const loadedContentRef = useRef(initialContent);
+    // Menu contextuel clic-droit sur une cellule de tableau (voir
+    // `onContextMenu` plus bas) — seule pièce d'UI de ce composant gérée en
+    // état React classique plutôt qu'en impératif/DOM direct : c'est un
+    // simple overlay ponctuel, sans lien avec la mécanique de repaint, donc
+    // sans risque pour l'architecture "tout en refs" du reste du fichier.
+    const [tableContextMenu, setTableContextMenu] = useState<{ x: number; y: number } | null>(null);
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const caretRef = useRef<HTMLDivElement>(null);
@@ -365,6 +690,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
           activeBlockStyle: getActiveBlockStyle(editor),
+          insideTable: editor.isActive("table"),
+          tableSelectionShape: getSelectionShape(editor),
         });
       },
     });
@@ -408,9 +735,123 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         }
         editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").setLink({ href: url }).run();
       },
-      insertImage: (src, alt) => editor?.chain().focus(undefined, { scrollIntoView: false }).setImage({ src, alt }).run(),
-      insertTable: () =>
-        editor?.chain().focus(undefined, { scrollIntoView: false }).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      // --- Presse-papiers : sérialisation Markdown de la sélection via
+      // tiptap-markdown (storage.markdown.serializer), puis API Clipboard
+      // du navigateur. `navigator.clipboard` peut être absent (contexte
+      // non sécurisé, ex. intégration PaginaLight en file://) : dans ce
+      // cas les boutons restent sans effet silencieux.
+      copySelection: () => {
+        if (!editor) return;
+        const { from, to, empty } = editor.state.selection;
+        if (empty) return;
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const md: string = editor.storage.markdown.serializer.serialize(
+          editor.state.doc.slice(from, to).content
+        );
+        internalClipboard = md;
+        navigator.clipboard?.writeText(md).catch(() => {});
+      },
+      cutSelection: () => {
+        if (!editor) return;
+        const { from, to, empty } = editor.state.selection;
+        if (empty) return;
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const md: string = editor.storage.markdown.serializer.serialize(
+          editor.state.doc.slice(from, to).content
+        );
+        internalClipboard = md;
+        navigator.clipboard?.writeText(md).catch(() => {});
+        editor.chain().focus(undefined, { scrollIntoView: false }).deleteSelection().run();
+      },
+      pasteClipboard: () => {
+        if (!editor) return;
+        const insert = (text: string | null) => {
+          if (!text) return;
+          // insertContent(string) passe par le parseur Markdown de
+          // tiptap-markdown (override de insertContentAt) : le Markdown
+          // collé devient des vrais nœuds (gras, listes...).
+          editor.chain().focus(undefined, { scrollIntoView: false }).insertContent(text).run();
+        };
+        navigator.clipboard
+          ?.readText()
+          .then((text) => {
+            insert(text || internalClipboard);
+          })
+          .catch(() => {
+            // Permission refusée : repli sur le presse-papiers interne.
+            insert(internalClipboard);
+          });
+      },
+      increaseFontSize: () => {
+        if (!editor) return;
+        const pt = currentFontSizePt(editor);
+        const next = FONT_SIZE_STEPS.find((s) => s > pt + 0.01);
+        if (next !== undefined) {
+          editor.chain().focus(undefined, { scrollIntoView: false }).setFontSize(`${next}pt`).run();
+        }
+      },
+      decreaseFontSize: () => {
+        if (!editor) return;
+        const pt = currentFontSizePt(editor);
+        const prev = [...FONT_SIZE_STEPS].reverse().find((s) => s < pt - 0.01);
+        if (prev !== undefined) {
+          editor.chain().focus(undefined, { scrollIntoView: false }).setFontSize(`${prev}pt`).run();
+        } else {
+          // Plus petit que 8pt : retour à la taille par défaut du document.
+          editor.chain().focus(undefined, { scrollIntoView: false }).unsetFontSize().run();
+        }
+      },
+      changeCase: () => {
+        if (!editor) return;
+        const { from, to, empty } = editor.state.selection;
+        if (empty) return;
+        const text = editor.state.doc.textBetween(from, to, "\n");
+        editor
+          .chain()
+          .focus(undefined, { scrollIntoView: false })
+          .command(({ tr }) => {
+            tr.insertText(nextCase(text), from, to);
+            return true;
+          })
+          .run();
+      },
+      insertTable: (rows, cols) =>
+        editor?.chain().focus(undefined, { scrollIntoView: false }).insertTable({ rows, cols, withHeaderRow: true }).run(),
+      addRowBefore: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addRowBefore().run(),
+      addRowAfter: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addRowAfter().run(),
+      deleteRow: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteRow().run(),
+      addColumnBefore: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addColumnBefore().run(),
+      addColumnAfter: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addColumnAfter().run(),
+      deleteColumn: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteColumn().run(),
+      deleteTable: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteTable().run(),
+      mergeCells: () => editor?.chain().focus(undefined, { scrollIntoView: false }).mergeCells().run(),
+      splitCell: () => editor?.chain().focus(undefined, { scrollIntoView: false }).splitCell().run(),
+      toggleHeaderRow: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleHeaderRow().run(),
+      setCellBackgroundColor: (color) => {
+        if (!editor) return;
+        applyToSelectedCells(editor, { backgroundColor: color });
+      },
+      setCellBorder: (sides, css) => {
+        if (!editor) return;
+        const targetSides = sides.length ? sides : (["top", "right", "bottom", "left"] as const);
+        const patch: Record<string, unknown> = {};
+        for (const side of targetSides) {
+          patch[`border${side[0].toUpperCase()}${side.slice(1)}`] = css;
+        }
+        applyToSelectedCells(editor, patch);
+      },
+      setCellVerticalAlign: (align) => {
+        if (!editor) return;
+        applyToSelectedCells(editor, { verticalAlign: align === "middle" ? "middle" : align });
+      },
+      setCellBorderPreset: (preset, css) => {
+        if (!editor) return;
+        applyBorderPreset(editor, preset, css);
+      },
+      setGridLineBorder: (lines, css) => {
+        if (!editor) return;
+        setGridLineBorder(editor, lines, css);
+      },
       insertHorizontalRule: () => editor?.chain().focus(undefined, { scrollIntoView: false }).setHorizontalRule().run(),
       insertPageBreak: () => editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "pageBreak" }).run(),
       setFontFamily: (family) => editor?.chain().focus(undefined, { scrollIntoView: false }).setFontFamily(family).run(),
@@ -430,6 +871,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         words: editor?.storage.characterCount.words() ?? 0,
         characters: editor?.storage.characterCount.characters() ?? 0,
         activeBlockStyle: editor ? getActiveBlockStyle(editor) : "paragraph",
+        insideTable: editor?.isActive("table") ?? false,
+        tableSelectionShape: editor ? getSelectionShape(editor) : null,
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
       }),
@@ -517,7 +960,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           if (isCollapsed) {
             selectionLayer.replaceChildren();
           } else {
-            const rects = computeSelectionRects(editor.view, canvas, from, to, zoomRef.current);
+            const rects = computeSelectionRects(editor.view, canvas, editor.state.selection, zoomRef.current);
             selectionLayer.replaceChildren(
               ...rects.map((r) => {
                 const div = document.createElement("div");
@@ -631,6 +1074,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
           activeBlockStyle: getActiveBlockStyle(editor),
+          insideTable: editor.isActive("table"),
+          tableSelectionShape: getSelectionShape(editor),
         });
       };
       repaintRef.current = repaint;
@@ -751,6 +1196,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
       let dragging = false;
       let anchorPos: number | null = null;
+      // Position de la CELLULE (pas du texte) où le glisser a commencé — voir
+      // `findCellPos` plus haut. `null` si le glisser n'a pas démarré dans un
+      // tableau, auquel cas on reste sur une sélection de texte normale.
+      let cellAnchorPos: number | null = null;
 
       const posFromEvent = (e: MouseEvent): number | null => {
         const block = findClonedBlock(e.target);
@@ -821,6 +1270,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         e.preventDefault();
         dragging = true;
         anchorPos = pos;
+        cellAnchorPos = findCellPos(editor.state.doc, pos);
         editor.commands.focus(undefined, { scrollIntoView: false });
         editor.commands.setTextSelection(pos);
       };
@@ -828,11 +1278,33 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if (!dragging || anchorPos === null) return;
         const pos = posFromEvent(e);
         if (pos === null) return;
+        // Glisser à travers plusieurs cellules d'un tableau DOIT produire une
+        // vraie `CellSelection` (nécessaire pour `mergeCells`/`setCellBorder`
+        // etc., voir `applyToSelectedCells` plus haut) — un simple
+        // `setTextSelection({from, to})` ne la construit JAMAIS, même si la
+        // plage traverse des cellules : ProseMirror la normalise en
+        // sélection de texte ordinaire, ce qui rendait la fusion de cellules
+        // glissées-sélectionnées peu fiable (jamais une vraie sélection
+        // multi-cellules, quel que soit le zoom/la résolution d'écran —
+        // cette étape-ci n'a d'ailleurs rien de géométrique, donc n'est en
+        // fait pas sensible à ça, contrairement à `posFromEvent` ci-dessus).
+        const cellPos = findCellPos(editor.state.doc, pos);
+        if (cellAnchorPos !== null && cellPos !== null && cellPos !== cellAnchorPos) {
+          try {
+            const sel = CellSelection.create(editor.state.doc, cellAnchorPos, cellPos);
+            editor.view.dispatch(editor.state.tr.setSelection(sel));
+            return;
+          } catch {
+            // Les deux cellules ne sont pas dans le même tableau (ou autre
+            // position invalide) — repli sur la sélection de texte normale.
+          }
+        }
         editor.commands.setTextSelection({ from: anchorPos, to: pos });
       };
       const onMouseUp = () => {
         dragging = false;
         anchorPos = null;
+        cellAnchorPos = null;
       };
 
       // Filet de sécurité : un lien réel (`<a href="https://…">`) cliqué
@@ -851,13 +1323,35 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         }
       };
 
+      // Menu contextuel clic-droit (voir `tableContextMenu`/`TableContextMenu`
+      // plus bas) — uniquement si le clic tombe dans un tableau, façon Word :
+      // le menu natif du navigateur reste disponible partout ailleurs (texte
+      // normal), on n'intercepte QUE ce cas précis.
+      const onContextMenu = (e: MouseEvent) => {
+        const pos = posFromEvent(e);
+        if (pos === null) return;
+        const cellPos = findCellPos(editor.state.doc, pos);
+        if (cellPos === null) return;
+        e.preventDefault();
+        // Préserve une sélection multi-cellules déjà en place (pour que
+        // "Fusionner" dans le menu agisse dessus) ; sinon positionne le
+        // curseur dans la cellule cliquée, comme un clic normal.
+        if (!(editor.state.selection instanceof CellSelection)) {
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setTextSelection(pos);
+        }
+        setTableContextMenu({ x: e.clientX, y: e.clientY });
+      };
+
       canvas.addEventListener("mousedown", onMouseDown);
       canvas.addEventListener("click", onClick);
+      canvas.addEventListener("contextmenu", onContextMenu);
       window.addEventListener("mousemove", onMouseMove);
       window.addEventListener("mouseup", onMouseUp);
       return () => {
         canvas.removeEventListener("mousedown", onMouseDown);
         canvas.removeEventListener("click", onClick);
+        canvas.removeEventListener("contextmenu", onContextMenu);
         window.removeEventListener("mousemove", onMouseMove);
         window.removeEventListener("mouseup", onMouseUp);
       };
@@ -890,6 +1384,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             pageCount: pageCountRef.current,
             currentPage: page,
             activeBlockStyle: getActiveBlockStyle(editor),
+            insideTable: editor.isActive("table"),
+            tableSelectionShape: getSelectionShape(editor),
           });
         }
       };
@@ -985,8 +1481,103 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           <div className="xmd-selection-layer" ref={selectionLayerRef} />
           <div className="xmd-fake-caret" ref={caretRef} />
         </div>
+
+        {tableContextMenu && editor && (
+          <TableContextMenu
+            x={tableContextMenu.x}
+            y={tableContextMenu.y}
+            onClose={() => setTableContextMenu(null)}
+            onAction={(run) => {
+              run(editor);
+              setTableContextMenu(null);
+            }}
+          />
+        )}
       </div>
     );
   }
 );
 MarkdownEditor.displayName = "MarkdownEditor";
+
+/** Menu contextuel clic-droit sur une cellule de tableau (voir `onContextMenu`
+ * dans le composant principal) — reprend les mêmes commandes natives de
+ * `@tiptap/extension-table` déjà exposées dans le ruban (voir `CLAUDE.md`,
+ * inspiré du menu équivalent de CasualOffice/docs, `TextContextMenu.tsx` :
+ * right-click dans un tableau y ajoute les mêmes actions que la barre
+ * d'outils dédiée, en plus de couper/copier/coller). Les commandes agissent
+ * ici directement sur l'instance `editor` (pas besoin de repasser par
+ * `MarkdownEditorHandle`/`ToolbarActions` : ce composant a déjà un accès
+ * direct, plus simple que de dupliquer l'indirection). */
+function TableContextMenu({
+  x,
+  y,
+  onAction,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  onAction: (run: (editor: Editor) => void) => void;
+  onClose: () => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onClose();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    // `setTimeout` : le `contextmenu` natif qui a ouvert ce menu déclenche
+    // aussi, juste après, un `mousedown`/`click` fantôme sur certains
+    // navigateurs — sans ce délai, le menu se refermerait instantanément
+    // lui-même dès son ouverture (même piège que les menus du ruban, voir
+    // `Toolbar.tsx`, mais ici sur l'évènement d'OUVERTURE plutôt que sur un
+    // clic d'option).
+    const t = setTimeout(() => {
+      document.addEventListener("mousedown", onMouseDown);
+      document.addEventListener("keydown", onKeyDown);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
+  const item = (label: string, run: (editor: Editor) => void, danger?: boolean) => (
+    <button
+      key={label}
+      type="button"
+      className={`xmd-table-ctx-item${danger ? " xmd-table-ctx-item-danger" : ""}`}
+      onClick={() => onAction(run)}
+    >
+      {label}
+    </button>
+  );
+
+  const chain = (fn: (c: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>) => (editor: Editor) =>
+    fn(editor.chain().focus(undefined, { scrollIntoView: false })).run();
+
+  return (
+    <div
+      ref={rootRef}
+      className="xmd-table-ctx-menu"
+      style={{ left: x, top: y }}
+      role="menu"
+    >
+      {item("Insérer une ligne au-dessus", chain((c) => c.addRowBefore()))}
+      {item("Insérer une ligne en dessous", chain((c) => c.addRowAfter()))}
+      {item("Supprimer la ligne", chain((c) => c.deleteRow()), true)}
+      <div className="xmd-table-ctx-sep" />
+      {item("Insérer une colonne à gauche", chain((c) => c.addColumnBefore()))}
+      {item("Insérer une colonne à droite", chain((c) => c.addColumnAfter()))}
+      {item("Supprimer la colonne", chain((c) => c.deleteColumn()), true)}
+      <div className="xmd-table-ctx-sep" />
+      {item("Fusionner les cellules", chain((c) => c.mergeCells()))}
+      {item("Scinder la cellule", chain((c) => c.splitCell()))}
+      <div className="xmd-table-ctx-sep" />
+      {item("Supprimer le tableau", chain((c) => c.deleteTable()), true)}
+    </div>
+  );
+}
