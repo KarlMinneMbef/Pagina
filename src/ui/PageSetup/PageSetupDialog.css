@@ -13,12 +13,21 @@
   border-radius: 6px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
   width: 420px;
+  height: 480px;
+  min-width: 340px;
+  min-height: 300px;
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
   font-family: Arial, sans-serif;
   color: #343334;
+  /* Redimensionnable à la souris (poignée native du navigateur, coin
+   * bas-droit) — demandé explicitement par l'utilisateur. `overflow: auto`
+   * est requis par la spec CSS pour que la poignée apparaisse, même si le
+   * contenu interne (`.ps-body`) gère déjà son propre défilement. */
+  resize: both;
+  overflow: auto;
 }
 
 .ps-header {
@@ -117,6 +126,8 @@
 }
 
 .ps-body {
+  flex: 1;
+  min-height: 0;
   padding: 12px 16px;
   overflow-y: auto;
   display: flex;

@@ -12,6 +12,7 @@
  */
 import { useState } from "react";
 import type { HeadingLevel, HeadingLevelStyle, NumberingScheme, PageLayoutSettings } from "../../core/pageLayout";
+import { ColorPicker } from "../ColorPicker/ColorPicker";
 import "./HeadingStyleDialog.css";
 
 const LEVELS: HeadingLevel[] = [1, 2, 3, 4, 5, 6];
@@ -106,7 +107,13 @@ export function HeadingStyleDialog({
                       />
                     </td>
                     <td>
-                      <input type="color" value={style.color} onChange={(e) => setLevel(level, { color: e.target.value })} />
+                      <ColorPicker
+                        value={style.color}
+                        title="Couleur du titre"
+                        triggerClassName="hs-color-trigger"
+                        trigger={<span className="hs-color-swatch" style={{ background: style.color }} />}
+                        onChange={(color) => setLevel(level, { color })}
+                      />
                     </td>
                     <td className="hs-checkbox-cell">
                       <input type="checkbox" checked={style.bold} onChange={(e) => setLevel(level, { bold: e.target.checked })} />

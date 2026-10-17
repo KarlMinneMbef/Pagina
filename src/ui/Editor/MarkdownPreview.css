@@ -46,10 +46,10 @@
 }
 
 .xmd-preview-content pre {
-  background: #2b2b2b;
-  color: #f5f5f5;
+  background: #f6f8fa;
+  color: #24292e;
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow-x: auto;
 }
 

@@ -31,7 +31,8 @@ body {
 }
 
 .app-sidebar {
-  width: 260px;
+  /* Largeur contrôlée par `.fx-panel` lui-même (redimensionnable à la
+   * souris, voir `useHorizontalResize`) — pas de largeur fixe ici. */
   flex-shrink: 0;
 }
 
@@ -85,8 +86,10 @@ body {
  * d'imprimer (voir App.tsx) : la classe permet à `!important` de l'emporter
  * sur le `style={{ display: ... }}` inline posé par React. */
 @media print {
+  .tbar,
   .tb-ribbon-stack,
   .app-sidebar,
+  .tp-panel,
   .tabbar,
   .sb-bar,
   .xmd-live-editor-host,

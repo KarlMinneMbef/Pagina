@@ -12,6 +12,8 @@
 // retours à la ligne, ce que `coordsAtPos` ne fait pas (lui ne donne qu'un
 // point, pas une étendue).
 import type { EditorView } from "@tiptap/pm/view";
+import type { Selection } from "@tiptap/pm/state";
+import { CellSelection } from "@tiptap/pm/tables";
 import { SRC_POS_ATTR } from "./paintPages";
 
 export interface SelectionRect {
@@ -21,13 +23,86 @@ export interface SelectionRect {
   height: number;
 }
 
+/** Index [rangée, colonne] d'une cellule au sein de son `<table>` — sert à
+ * retrouver la cellule CORRESPONDANTE dans le clone peint, qui a EXACTEMENT
+ * la même structure (c'est un `cloneNode(true)` du tableau entier, voir
+ * `paintPages.ts`) : la position Nième ligne/Nième colonne est donc fiable,
+ * même si on ne peut pas tagger chaque cellule individuellement comme les
+ * blocs de premier niveau (seul le TABLEAU ENTIER porte `SRC_POS_ATTR`). */
+function cellIndexPath(cell: HTMLElement): [number, number] | null {
+  const row = cell.closest("tr");
+  const table = cell.closest("table");
+  if (!row || !table) return null;
+  const rowIndex = Array.from(table.querySelectorAll("tr")).indexOf(row);
+  const colIndex = Array.from(row.children).indexOf(cell);
+  if (rowIndex < 0 || colIndex < 0) return null;
+  return [rowIndex, colIndex];
+}
+
+/** Rectangles de surbrillance pour une `CellSelection` (glisser-sélectionner
+ * un rectangle de cellules d'un tableau) — un rectangle par CELLULE ENTIÈRE,
+ * pas par ligne de texte : contrairement à une sélection de texte normale,
+ * `Range.getClientRects()` sur l'étendue [from,to] d'une CellSelection ne
+ * fonctionne pas (cette étendue n'est qu'un englobant, les vraies cellules
+ * sélectionnées peuvent être non contiguës dans le document — ex. glisser
+ * verticalement dans une colonne traverse plusieurs `<tr>` séparés par du
+ * texte d'AUTRES colonnes qui ne sont PAS sélectionnées) ; corrigé le
+ * 2026-10-13, remonté par l'utilisateur ("j'ai du mal à sélectionner les
+ * lignes et colonnes" — la sélection sous-jacente était en fait correcte,
+ * seul l'AFFICHAGE en manquait la moitié). */
+function computeCellSelectionRects(
+  view: EditorView,
+  canvas: HTMLElement,
+  selection: CellSelection,
+  zoom: number,
+): SelectionRect[] {
+  const tablePos = selection.$anchorCell.start(-1) - 1;
+  // `SRC_POS_ATTR` est posé sur l'élément renvoyé par `view.nodeDOM(tablePos)`
+  // — pour un tableau avec `resizable: true` (voir MarkdownEditor.tsx),
+  // Tiptap enveloppe `<table>` dans un `<div class="tableWrapper">` pour les
+  // poignées de redimensionnement : c'est CE DIV qui porte l'attribut, pas
+  // `<table>` directement. Un sélecteur `table[...]` ne le trouvait donc
+  // jamais — il faut chercher l'attribut sans restreindre la balise, puis
+  // redescendre jusqu'au vrai `<table>` à l'intérieur si besoin.
+  const cloneWrapper = canvas.querySelector<HTMLElement>(`[${SRC_POS_ATTR}="${tablePos}"]`);
+  const cloneTable = cloneWrapper?.tagName === "TABLE" ? cloneWrapper : cloneWrapper?.querySelector<HTMLElement>("table");
+  if (!cloneTable) return [];
+
+  const frameRect = (canvas.parentElement as HTMLElement).getBoundingClientRect();
+  const rects: SelectionRect[] = [];
+
+  selection.forEachCell((_node, cellPos) => {
+    const originalCell = view.nodeDOM(cellPos) as HTMLElement | null;
+    if (!originalCell) return;
+    const path = cellIndexPath(originalCell);
+    if (!path) return;
+    const [rowIndex, colIndex] = path;
+    const cloneRow = cloneTable.querySelectorAll("tr")[rowIndex];
+    const cloneCell = cloneRow?.children[colIndex] as HTMLElement | undefined;
+    if (!cloneCell) return;
+    const r = cloneCell.getBoundingClientRect();
+    rects.push({
+      left: r.left - frameRect.left,
+      top: r.top - frameRect.top,
+      width: r.width,
+      height: r.height,
+    });
+  });
+
+  void zoom; // Les rects du clone sont déjà à l'échelle réelle à l'écran.
+  return rects;
+}
+
 export function computeSelectionRects(
   view: EditorView,
   canvas: HTMLElement,
-  from: number,
-  to: number,
+  selection: Selection,
   zoom: number,
 ): SelectionRect[] {
+  if (selection instanceof CellSelection) {
+    return computeCellSelectionRects(view, canvas, selection, zoom);
+  }
+  const { from, to } = selection;
   if (from >= to) return [];
 
   // .xmd-selection-rect est positionné dans .xmd-selection-layer, FRÈRE de
