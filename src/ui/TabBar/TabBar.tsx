@@ -23,6 +23,7 @@ export function TabBar({
         >
           <span className="tabbar-title">
             {tab.title}
+            {tab.missing ? " (introuvable)" : ""}
             {tab.dirty ? " •" : ""}
           </span>
           <button

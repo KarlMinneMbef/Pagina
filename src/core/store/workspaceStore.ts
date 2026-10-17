@@ -7,6 +7,7 @@ import {
   pickWorkspaceFolder,
   readWorkspaceTree,
   watchWorkspace,
+  unwatchWorkspace,
   createFile,
   createFolder,
   renamePath,
@@ -63,6 +64,28 @@ export function sortTree(nodes: FileNode[]): FileNode[] {
 
 let watcherStarted: string | null = null;
 let unlistenChanged: (() => void) | null = null;
+let refreshDebounce: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounce du rafraîchissement déclenché par les évènements disque : une
+ * rafale d'évènements workspace://changed (le watcher Rust émet au plus
+ * toutes les 300 ms, mais une opération peut en générer plusieurs à la
+ * suite) ne provoque qu'UNE relecture de l'arbre. */
+function debouncedRefreshTree(get: () => WorkspaceState) {
+  if (refreshDebounce) clearTimeout(refreshDebounce);
+  refreshDebounce = setTimeout(() => {
+    refreshDebounce = null;
+    void get().refreshTree();
+  }, 300);
+}
+
+/** Chemins de tous les nœuds de l'arbre, à toute profondeur. */
+function flattenPaths(nodes: FileNode[], out: Set<string> = new Set()): Set<string> {
+  for (const n of nodes) {
+    out.add(n.path);
+    if (n.children) flattenPaths(n.children, out);
+  }
+  return out;
+}
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   root: null,
@@ -85,11 +108,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       localStorage.setItem(LAST_WORKSPACE_KEY, root);
 
       if (watcherStarted !== root) {
+        // Arrête le watcher de l'ANCIEN dossier avant de lancer celui du
+        // nouveau — sinon l'ancien reste actif (et émet des évènements
+        // déclenchant des refreshTree incohérents avec le root affiché).
+        if (watcherStarted !== null) {
+          await unwatchWorkspace();
+        }
         await watchWorkspace(root);
         watcherStarted = root;
         if (unlistenChanged) unlistenChanged();
         unlistenChanged = await listen("workspace://changed", () => {
-          get().refreshTree();
+          debouncedRefreshTree(get);
         });
       }
     } catch (e) {
@@ -103,6 +132,22 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const tree = sortTree(await readWorkspaceTree(root));
       set({ tree });
+      // Onglets ouverts sous ce workspace dont le fichier a disparu du
+      // disque : marqués « (introuvable) » SANS être fermés (les onglets
+      // hors workspace ne sont jamais marqués — ils n'apparaissent pas
+      // dans l'arbre de toute façon).
+      const onDisk = flattenPaths(tree);
+      const missing = new Set(
+        useTabsStore
+          .getState()
+          .tabs.filter(
+            (t) =>
+              (t.path.startsWith(root + "\\") || t.path.startsWith(root + "/")) &&
+              !onDisk.has(t.path)
+          )
+          .map((t) => t.path)
+      );
+      useTabsStore.getState().markMissingPaths(missing);
     } catch (e) {
       set({ error: String(e) });
     }

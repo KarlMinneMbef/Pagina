@@ -22,6 +22,7 @@ pub fn run() {
         .manage(PendingOpenFiles(Mutex::new(startup_files::filter_openable_args(
             &std::env::args().collect::<Vec<_>>(),
         ))))
+        .manage(watcher::WatcherState::default())
         .invoke_handler(tauri::generate_handler![
             fs_commands::read_workspace_tree,
             fs_commands::read_text_file,
@@ -32,7 +33,9 @@ pub fn run() {
             fs_commands::delete_path,
             fs_commands::duplicate_path,
             watcher::watch_workspace,
+            watcher::unwatch_workspace,
             print_commands::print_window,
+            print_commands::export_pdf,
             startup_files::pending_open_files,
         ])
         .run(tauri::generate_context!())

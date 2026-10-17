@@ -14,6 +14,9 @@ export interface EditorTab {
   content: string; // dernier contenu markdown sauvegardé (ou chargé) — SANS le commentaire de config (voir pageLayout.ts)
   dirty: boolean;
   layout: PageLayoutSettings;
+  /** Vrai quand le fichier a disparu du disque (rafraîchissement de
+   * l'arbre) : l'onglet reste ouvert, marqué « (introuvable) ». */
+  missing?: boolean;
 }
 
 const LAST_TABS_KEY = "xmd.openTabs";
@@ -50,6 +53,9 @@ interface TabsState {
    * dans le dossier) vers `to`, en conservant contenu, dirty et mise en
    * page. Appelé par `workspaceStore.renameEntry`. */
   renameTabPaths: (from: string, to: string) => void;
+  /** Marque les onglets dont le fichier a disparu du disque (ou reparu).
+   * Ne ferme jamais l'onglet : le contenu reste éditable/sauvegardable. */
+  markMissingPaths: (missingPaths: Set<string>) => void;
   restoreSession: () => Promise<void>;
 }
 
@@ -184,6 +190,21 @@ export const useTabsStore = create<TabsState>((set, get) => ({
         s.activePath && under(s.activePath) ? remap(s.activePath) : s.activePath;
       return { tabs, pendingContent, activePath };
     });
+    persist(get());
+  },
+
+  markMissingPaths: (missingPaths: Set<string>) => {
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        missingPaths.has(t.path)
+          ? t.missing
+            ? t
+            : { ...t, missing: true }
+          : t.missing
+            ? { ...t, missing: false }
+            : t
+      ),
+    }));
     persist(get());
   },
 
