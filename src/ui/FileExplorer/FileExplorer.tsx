@@ -48,6 +48,7 @@ function TreeNode({
         <div
           className="fx-row"
           style={{ paddingLeft: 8 + depth * 14 }}
+          title={node.path}
           onClick={() => onToggleDir(node.path, defaultExpanded)}
           onContextMenu={(e) => onNodeContextMenu(e, node)}
         >
@@ -80,6 +81,7 @@ function TreeNode({
     <div
       className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}`}
       style={{ paddingLeft: 8 + depth * 14 + 14 }}
+      title={node.path}
       onClick={() => onOpenFile(node.path)}
       onContextMenu={(e) => onNodeContextMenu(e, node)}
     >
@@ -327,6 +329,7 @@ export function FileExplorer({
               <div
                 key={node.path}
                 className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}`}
+                title={node.path}
                 onClick={node.isDir ? undefined : () => onOpenFile(node.path)}
               >
                 <FileIcon isDir={node.isDir} name={node.name} />
