@@ -1,4 +1,5 @@
 .fx-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -54,7 +55,8 @@
   filter: brightness(1.05);
 }
 
-/* Non fonctionnelle (voir FileExplorer.tsx) : pas de filtrage de l'arborescence. */
+/* Champ de recherche : filtre l'arborescence (vue aplatie des correspondances,
+ * debounce 150 ms côté composant — voir FileExplorer.tsx). */
 .fx-search {
   display: flex;
   align-items: center;
@@ -83,6 +85,17 @@
 .fx-search-input:disabled {
   background: #ebebe9;
   cursor: default;
+}
+
+/* Vue aplatie de recherche : chemin relatif en second, grisé et tronqué. */
+.fx-match-path {
+  margin-left: auto;
+  padding-left: 8px;
+  color: #9c9c9a;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }
 
 .fx-section-label {

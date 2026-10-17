@@ -103,6 +103,1054 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 1 : recherche dans
+  l'arborescence (2026-10-17)**, première étape du chantier explorateur
+  (7 fonctionnalités prévues dans l'ordre : recherche, menu contextuel,
+  badge modifié, tri, tooltip, rafraîchissement robuste, ergonomie clavier).
+  - Le champ de recherche (placeholder pur et `disabled` jusqu'ici) filtre
+    l'arbre par nom, insensible à la casse, correspondance partielle, avec
+    un **debounce de 150 ms** dans `FileExplorer.tsx` (`searchInput` pour
+    l'affichage du champ, `search` débouncé pour le filtrage réel).
+  - Pendant la recherche : **vue aplatie** de toutes les correspondances
+    (fichiers ET dossiers, n'importe quelle profondeur) avec le chemin
+    relatif au workspace en second — masqué à la racine où il redoublerait
+    inutilement le nom du fichier.
+  - **État déplié/remplié des dossiers remonté dans `FileExplorer`**
+    (`expandedOverrides: Map<path, boolean>` au lieu du `useState` local de
+    `TreeNode`, défaut = déplié au premier niveau) : il survivait sinon à
+    chaque aller-retour recherche ↔ arbre normal (démontage/remontage des
+    `TreeNode`). Échap ou champ vidé → retour à l'arbre normal avec l'état
+    déplié préservé.
+  - **Outillage de test installé** (jamais présent auparavant) :
+    `vitest`, `@testing-library/react`, `@testing-library/user-event`,
+    `@testing-library/jest-dom`, `jsdom` en devDependencies ;
+    `vitest.config.ts` (jsdom, setup `src/test/setup.ts`) ; scripts
+    `npm test` (`vitest run`) et `npm test:watch`. Piège rencontré : avec
+    `globals: false` (choix par défaut de Vitest), le setup doit importer
+    `@testing-library/jest-dom/vitest` (pas `@testing-library/jest-dom`,
+    qui cherche un `expect` global inexistant) ET appeler `cleanup()`
+    dans un `afterEach` explicite (l'auto-cleanup de RTL ne s'installe
+    pas sans globales).
+  - Tests : `src/ui/FileExplorer/__tests__/FileExplorer.search.test.tsx`
+    (5 cas : filtre casse-indifférente en profondeur, chemin relatif,
+    retour à l'arbre avec état déplié préservé, zéro résultat, Échap) —
+    tous verts. Vérifié aussi par Playwright/CDP dans la fenêtre réelle
+    (port 9222) sur le workspace de l'utilisateur : correspondance
+    « nouveau » → « Nouveau document.md », message zéro-résultat, Échap.
+  - **Piège d'environnement (sessions futures)** : les processus lancés
+    depuis un appel d'outil (y compris `tools.process.start` ou
+    `Start-Process` PowerShell) sont TUÉS dès la fin de l'appel — pour
+    lancer `tauri dev` avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+    =--remote-debugging-port=9222` de façon durable, passer par le
+    Planificateur de tâches : `run-tauri-dev.cmd` à la racine (non tracké)
+    + `schtasks /create /tn pagina-dev-cdp /tr <chemin> /sc once /st
+    23:59` puis `schtasks /run /tn pagina-dev-cdp` ; log dans
+    `tauri-dev.log`.
+- **Correctif : le panneau `ColorPicker` débordait hors de l'écran
+  (2026-10-14, même jour)**, remonté par l'utilisateur avec une capture
+  d'écran montrant le sélecteur de "Couleur de bordure" tronqué sur le bord
+  droit. Cause : `.cp-panel` s'ouvrait TOUJOURS avec `left: 0` (vers la
+  droite du déclencheur) — correct pour la plupart des cas, mais le
+  déclencheur "Couleur de bordure" vit dans le panneau Tableau, lui-même
+  ancré au bord DROIT de la fenêtre : il n'y a quasiment plus de place à
+  droite, donc le panneau (232px de large) débordait hors de l'écran sans
+  qu'aucun mécanisme ne le détecte. **Fix** : nouvel état `placement`
+  (`{h: "left"|"right"; v: "down"|"up"}`) calculé à l'OUVERTURE (pas en CSS
+  pur, qui casserait le cas normal où le déclencheur est près du bord
+  GAUCHE) — mesure `getBoundingClientRect()` du déclencheur vs
+  `window.innerWidth`/`innerHeight`, bascule vers la gauche/le haut si le
+  panneau déborderait sinon. Même logique posée pour l'axe vertical par
+  cohérence (même risque si un déclencheur est près du bas de l'écran),
+  bien que non signalé par l'utilisateur. Vérifié par Playwright/CDP :
+  fenêtre à 2560px de large, bouton "Couleur de bordure" à x=2510-2550px
+  (quasiment collé au bord) → classe `cp-panel-h-right` bien appliquée,
+  panneau ouvert reste entièrement dans la fenêtre (`right: 2550 ≤
+  windowWidth: 2560`). `npx tsc --noEmit` propre.
+- **Schéma de bordure enrichi : rendu SVG fidèle au style de trait choisi
+  (2026-10-14, même jour)**, sur retour immédiat de l'utilisateur avec une
+  nouvelle capture d'écran de Word (mini-tableau avec lignes de texte
+  décoratives + pourtour pointillé) : "tu peux le faire ressembler à ça, il
+  faudrait que l'on puisse sélectionner un style de ligne/trait pour
+  l'appliquer à notre bordure". La toute première version du schéma (voir
+  entrée juste en dessous) affichait toujours une barre PLEINE quelle que
+  soit le style réglé dans le menu déroulant "Style" — ne répondait donc
+  pas vraiment à "sélectionner un style de ligne".
+  - **Réécrit en SVG** (au lieu de `<div>`/CSS `background-color`) :
+    `stroke-dasharray` donne un VRAI rendu tireté/pointillé fidèle, ce
+    qu'un simple fond de couleur sur une barre de quelques pixels ne peut
+    pas reproduire. Le style "Double" (sans équivalent SVG natif) se
+    dessine comme deux traits fins parallèles légèrement décalés
+    perpendiculairement au côté concerné.
+  - **Ajout du contenu décoratif façon Word** : pourtour pointillé gris
+    clair (repère visuel de sélection, non interactif), 2×2 lignes de
+    texte factices par quadrant (petits rectangles arrondis gris, purement
+    illustratifs — comme les barres grises de la capture Word, aucune
+    fonction), et une croix interne décorative séparant visuellement les 4
+    quadrants (NON cliquable : ce schéma simplifié ne gère toujours que les
+    4 côtés extérieurs, pas de lignes internes individuelles — limite
+    assumée depuis le départ, pas un oubli).
+  - **Cible de clic généreuse malgré un trait fin** : chaque côté est un
+    `<g>` contenant une ligne invisible épaisse (10px, cible de clic
+    confortable) superposée à la ligne visible réelle (fine, fidèle au
+    style/épaisseur réglés) — sans ça, cliquer précisément un trait de
+    1,5px de large serait pénible. Un côté INACTIF s'affiche toujours en
+    simple ligne grise fine, quel que soit le style "Double" réglé (le
+    dédoublement visuel ne s'applique qu'aux côtés ACTIFS, pour ne pas
+    donner l'impression trompeuse que deux côtés distincts existent là où
+    il n'y en a qu'un).
+  - **Vérifié par Playwright/CDP** : style "Tireté" → `stroke-dasharray`
+    confirmé `"6 3"` sur les 4 côtés ; style "Double" → 8 lignes visibles
+    au total (2 par côté × 4) ; clic sur "Droite" → bascule correctement en
+    gris simple. `npx tsc --noEmit` propre.
+- **Schéma de bordure cliquable façon Word (2026-10-14, même jour)**, sur
+  demande explicite de l'utilisateur (deux captures d'écran de référence :
+  le panneau Pagina actuel et la boîte de dialogue "Bordures et trame" de
+  Word) : remplace les 4 cases à cocher Haut/Droite/Bas/Gauche par un petit
+  carré sur lequel on clique DIRECTEMENT le côté à activer/désactiver.
+  Version volontairement simplifiée par rapport à Word (confirmé avec
+  l'utilisateur avant de coder) : pas de rendu fidèle du style tireté/
+  pointillé ni de l'épaisseur dans le schéma lui-même, juste activé/
+  désactivé + couleur en direct — une fidélité totale (types "Quadrillage",
+  liste de styles déroulante, aperçu grand format) aurait demandé beaucoup
+  plus de travail pour un panneau latéral compact, pour un gain d'usage
+  marginal.
+  - **`BorderDiagram`** (nouveau composant dans `TablePropertiesPanel.tsx`) :
+    4 `<button>` positionnés en absolu sur les bords d'un petit carré
+    (`.tp-bd`), chacun coloré en gris quand inactif et dans la couleur de
+    bordure actuellement réglée (`color`, déjà piloté par le `ColorPicker`
+    existant) quand actif — change donc de couleur EN DIRECT si
+    l'utilisateur ajuste la couleur avant de cliquer un côté. Réutilise
+    exactement le même état `sides`/`toggleSide` qu'avant (aucun changement
+    de logique sous-jacente, uniquement la présentation).
+  - **Vérifié par Playwright/CDP** : les 4 bords affichent la bonne couleur
+    de fond et le bon texte d'info-bulle selon leur état ; cliquer un bord
+    bascule correctement son état (confirmé sur "Gauche" : actif → gris) ;
+    changer la couleur via le `ColorPicker` met à jour la couleur affichée
+    sur les bords actifs du diagramme sans avoir besoin de rouvrir quoi que
+    ce soit. Comportement de "Appliquer"/"Retirer" sur la cellule réelle
+    INCHANGÉ (même limite préexistante déjà présente avec les cases à
+    cocher : un côté décoché n'est pas explicitement mis à "aucune
+    bordure", juste "non touché" par ce clic sur Appliquer — et la bordure
+    grise `1px solid #ccc` par défaut de TOUTE cellule, posée dans
+    `MarkdownEditor.css`, reste visible tant qu'aucun style personnalisé ne
+    la recouvre, y compris après "Retirer" — pas une régression de ce
+    changement). `npx tsc --noEmit` propre.
+- **Installeur 0.4.8 (2026-10-14)**, sur demande explicite de l'utilisateur
+  ("fais un install"). Version alignée dans les 3 endroits synchronisés
+  (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`).
+  Regroupe tout le travail de cette session de travail très longue :
+  export PDF direct + correctif `.tbar` visible à l'impression/export,
+  panneau latéral contextuel de tableau (remplace le dialogue modal de
+  bordures) avec ses sections Lignes/Colonnes/Cellules/Bordures, nouveau
+  sélecteur de couleur façon Word/GitHub (`ColorPicker`, déployé sur les 4
+  sélecteurs de couleur de l'app), dialogues modaux et panneaux latéraux
+  redimensionnables à la souris, et le correctif du thème des blocs de
+  code (fond clair façon GitHub). `npx tsc --noEmit` propre puis `npx
+  tauri build` (≈6min de compilation Rust release) ; anciens fichiers
+  `0.4.7` supprimés de `releases/`, remplacés par
+  `Pagina_0.4.8_x64-setup.exe`/`Pagina_0.4.8_x64_en-US.msi`, liens du
+  `README.md` mis à jour en conséquence.
+- **Correctif du thème des blocs de code (2026-10-14, même jour)**, remonté
+  par l'utilisateur avec une capture d'écran de GitHub comme référence :
+  "les encarts de code sont de base noir dans le rendu, il faut qu'ils
+  soient gris clair de base comme sur GitHub". `.xmd-prosemirror pre`/
+  `.xmd-preview-content pre` avaient un fond sombre codé en dur
+  (`#2b2b2b`/texte `#f5f5f5`) — reliquat d'un thème inspiré d'un éditeur de
+  code sombre, jamais mis à jour depuis, et incohérent avec le reste de
+  l'interface claire de Pagina. **Fix** : fond `#f6f8fa`/texte `#24292e`
+  (couleurs exactes du thème clair de GitHub) dans les DEUX vues qui
+  affichent du code (`MarkdownEditor.css` pour la vue Pages,
+  `MarkdownPreview.css` pour l'aperçu Markdown). La palette de coloration
+  syntaxique (`.hljs-*`, voir `CodeBlockLowlight` dans `MarkdownEditor.tsx`)
+  a dû être entièrement retuned en même temps : les teintes pastel
+  précédentes (bleu clair, vert clair, orange clair...) étaient choisies
+  pour rester lisibles sur fond SOMBRE — sur le nouveau fond clair, elles
+  auraient été quasi illisibles (contraste insuffisant). Remplacées par les
+  couleurs réelles du thème clair de GitHub (`.hljs-keyword` rouge
+  `#d73a49`, `.hljs-string` bleu foncé `#032f62`, `.hljs-number` bleu
+  `#005cc5`, `.hljs-title`/fonction violet `#6f42c1`, `.hljs-tag`/variable
+  vert `#22863a`, `.hljs-comment` gris `#6a737d` italique). Vérifié par
+  Playwright/CDP sur un bloc de code déjà présent dans le document réel de
+  l'utilisateur : `getComputedStyle` confirme `rgb(246, 248, 250)` (= 
+  `#f6f8fa`) de fond et `rgb(36, 41, 46)` (= `#24292e`) de texte. `npx tsc
+  --noEmit` propre (changements CSS uniquement).
+- **Panneaux latéraux redimensionnables à la souris (2026-10-14, même
+  jour)**, sur demande explicite de l'utilisateur ("idem sur le panneau
+  latéral les élargit ou réduire") — suite directe du correctif précédent
+  sur les dialogues modaux, mais la technique CSS pure (`resize: both`) ne
+  convenait PAS ici : sa poignée est TOUJOURS au coin bas-droit de
+  l'élément, ce qui marche pour un panneau ancré à GAUCHE (Explorateur,
+  bordure libre à droite) mais pousserait un panneau ancré à DROITE
+  (panneau Tableau, bordure libre à gauche) hors de la fenêtre au lieu de
+  l'élargir.
+  - **Nouveau hook générique** `src/ui/ResizeHandle/useHorizontalResize.ts`
+    (+ composant `ResizeHandle.tsx`) : suit le glisser de souris via
+    `mousemove`/`mouseup` posés sur `document` (pas sur la poignée
+    elle-même — un drag sort forcément du petit rectangle de 6px de la
+    poignée en cours de route). Paramètre `anchor: "left" | "right"`
+    inverse le sens du delta horizontal selon le bord du panneau concerné
+    — un seul hook réutilisable pour les deux cas, pas de code dupliqué
+    ni de logique "à l'envers" à réécrire pour le second panneau.
+  - **Intégré dans `FileExplorer.tsx`** (poignée sur le bord DROIT,
+    `anchor: "left"`) et **`TablePropertiesPanel.tsx`** (poignée sur le
+    bord GAUCHE, `anchor: "right"`) — chaque composant gère sa PROPRE
+    largeur en interne (pas de nouvel état remonté dans `App.tsx`, cohérent
+    avec le fait qu'aucun des deux composants n'exposait de prop de
+    largeur auparavant). Largeur fixe retirée de `App.css`
+    (`.app-sidebar { width: 260px; }` supprimé — contrôlée par `.fx-panel`
+    lui-même maintenant) et de `TablePropertiesPanel.css`
+    (`.tp-panel { width: 260px; }` supprimé). `position: relative` ajouté
+    aux deux conteneurs racines pour ancrer la poignée `position: absolute`
+    correctement ; poignée positionnée à `left:0`/`right:0` (pas un
+    décalage négatif à cheval sur le bord) pour ne pas être rognée par
+    l'`overflow` interne des panneaux (scroll de contenu déjà en place).
+  - **Vérifié par Playwright/CDP** : glisser la poignée de l'Explorateur de
+    +80px vers la droite → largeur passée de 260 à 340px (exact) ; glisser
+    la poignée du panneau Tableau de -60px vers la gauche → largeur passée
+    de 260 à 320px (exact, confirme le sens de calcul inversé pour
+    `anchor: "right"`). `npx tsc --noEmit` propre.
+- **Dialogues redimensionnables à la souris (2026-10-14, même jour)**, sur
+  demande explicite de l'utilisateur ("les fenêtres il faudrait que l'on
+  puisse les ragrandir"), après clarification (`AskUserQuestion`) : vrai
+  redimensionnement à la souris (pas juste une taille par défaut plus
+  grande). **Implémenté en CSS pur** (`resize: both; overflow: auto;` sur
+  `.hs-dialog`/`.ps-dialog`) — la poignée de redimensionnement native du
+  navigateur (coin bas-droit) suffit, aucune logique JS de glisser-déposer
+  à écrire. `min-width`/`min-height` ajoutés pour empêcher de réduire le
+  dialogue en dessous d'une taille lisible ; `max-width`/`max-height`
+  déjà présents (`calc(100vw/100vh - 40px)`) empêchent de dépasser l'écran.
+  **Piège évité dès l'écriture** (pas découvert après coup) : le corps
+  interne scrollable (`.hs-body`/`.ps-body`) avait `overflow: auto` mais
+  PAS `flex: 1` — sans ça, agrandir le dialogue aurait laissé un vide entre
+  le corps et le pied de page au lieu de remplir l'espace. Ajout de
+  `flex: 1; min-height: 0;` (le `min-height: 0` est nécessaire : un enfant
+  flex avec `overflow: auto` a par défaut `min-height: auto`, qui
+  l'empêche de rétrécir en dessous de son contenu et casse le défilement
+  interne — piège flexbox classique). S'applique aux deux seuls dialogues
+  modaux actuels du projet (`HeadingStyleDialog`, `PageSetupDialog`) — le
+  panneau latéral de tableau (`TablePropertiesPanel`) et le popover
+  `ColorPicker` ne sont volontairement PAS concernés (ancrés à un bord/une
+  position fixe, un redimensionnement n'y aurait pas de sens). Vérifié par
+  Playwright/CDP : propriété CSS `resize: both` confirmée active sur les
+  deux dialogues, agrandissement simulé (changement direct de `width`/
+  `height`, la vraie poignée se pilote par un glisser-déposer natif
+  difficile à automatiser fiablement via CDP) confirmant que le corps
+  interne remplit bien le nouvel espace disponible dans les deux cas.
+  `npx tsc --noEmit` propre (changements CSS uniquement).
+- **Sélecteur de couleur façon Word/Google Docs (2026-10-14, même jour)**,
+  sur demande explicite de l'utilisateur (capture d'écran à l'appui) :
+  "Automatique" / "Couleurs du thème" (grille de nuances) / "Couleurs
+  standard" / "Couleur personnalisée" (hex + Appliquer) — remplace les
+  `<input type="color">` natifs (sélecteur du système d'exploitation, sans
+  cohérence visuelle) utilisés un peu partout dans l'app. Confirmé par
+  l'utilisateur que la portée couvre TOUS les sélecteurs existants.
+  - **Nouveau composant générique** `src/ui/ColorPicker/ColorPicker.tsx` +
+    `colorUtils.ts` (mélange RGB linéaire pour générer les nuances — pas
+    besoin de la précision d'un vrai espace HSL pour cet usage). Ne connaît
+    ni Tiptap ni `ToolbarActions`, uniquement `value`/`onChange`/
+    `onAutomatic` (optionnel — absent, la ligne "Automatique" n'apparaît
+    pas) : chaque appelant décide de ce que "Automatique" signifie dans son
+    contexte. Palette de thème : 9 couleurs de base × 6 lignes (base + 5
+    nuances générées, 2 plus claires/1 proche/2 plus sombres) ; couleurs
+    standard : 10 valeurs fixes identiques à celles de Word
+    (`#C00000`...`#7030A0`).
+  - **4 points d'intégration** : couleur de texte (`Toolbar.tsx`, "Format
+    avancé"/Police — `onAutomatic` appelle le nouveau `unsetColor` sur
+    `ToolbarActions`, qui existait déjà sur `MarkdownEditorHandle` mais
+    n'avait jamais été exposé jusqu'ici), couleur de fond de cellule et
+    couleur de bordure (`TablePropertiesPanel.tsx` — `setCellBackgroundColor`
+    élargi pour accepter `string | null`, `null` = "Automatique" = fond
+    transparent), couleur de titre (`HeadingStyleDialog.tsx`, simple champ
+    de state local comme avant, pas de sémantique "Automatique" distincte
+    ici).
+  - **Piège rencontré et corrigé** : la première version ne fonctionnait
+    QUE pour le trigger lui-même, pas pour les actions — cliquer un
+    swatch (couleur de texte ou de fond de cellule) ne produisait AUCUN
+    changement visible, bien que le panneau se fermait normalement
+    (confirmant que `onClick` s'exécutait). Cause : même piège DÉJÀ
+    documenté dans ce fichier pour le menu "Variable" d'en-tête/pied de
+    page (voir plus haut, section du même jour) — un `mousedown` sur un
+    bouton du panneau fait perdre le FOCUS DOM à l'éditeur invisible AVANT
+    que `onClick` ne s'exécute, ce qui vide la sélection de texte/cellule
+    en cours ; l'action s'applique alors à une sélection vide, sans effet
+    visible. **Fix** : `onMouseDown={(e) => e.preventDefault()}` sur le
+    bouton déclencheur ET sur le conteneur du panneau (`.cp-panel`, en
+    excluant explicitement le champ de saisie hex — qui, lui, a BESOIN du
+    focus natif pour que la frappe fonctionne). **À RETENIR, troisième
+    occurrence de ce piège dans le projet** : tout nouveau composant de
+    type menu/dropdown/panneau qui agit sur la sélection de l'éditeur DOIT
+    neutraliser `mousedown` sur ses propres boutons dès l'écriture initiale
+    — ne pas attendre un bug utilisateur pour s'en souvenir.
+  - **Piège méthodologique rencontré PENDANT la vérification, à part** :
+    après une succession de nombreux cycles HMR Vite dans cette session de
+    travail très longue, l'objet `actions` de `App.tsx` est redevenu périmé
+    (même symptôme déjà documenté pour `setCellVerticalAlign` début de
+    session : un clic sur un bouton du panneau ne produisait plus RIEN,
+    y compris des actions déjà éprouvées comme "Insérer une ligne" —
+    confirmant que ce n'était PAS un bug du ColorPicker lui-même). Un
+    redémarrage complet et propre de `tauri dev` a suffi à repartir d'un
+    état frais et confirmer que tout fonctionne (couleur de texte,
+    couleur de fond de cellule, couleur de bordure, toutes vérifiées par
+    `getComputedStyle` après coup). **Ce projet rencontre ce piège de
+    façon récurrente** — envisager de systématiser un redémarrage complet
+    après, disons, une heure de session de travail continue avec
+    beaucoup d'éditions de fichiers, plutôt que d'attendre qu'une action
+    semble "ne rien faire" pour le suspecter.
+  - `npx tsc --noEmit` propre. Toutes les actions de test annulées via
+    l'API `editor.commands.undo()` (plus fiable que `Ctrl+Z` clavier
+    quand le focus DOM est incertain — voir aussi le piège de focus perdu
+    documenté juste en dessous, section "Regroupement des commandes de
+    tableau").
+- **Regroupement des commandes de tableau du ruban dans le panneau latéral
+  (2026-10-14, même jour que la création du panneau)**, sur demande
+  explicite de l'utilisateur : "il faut regroupé les commande de tableau du
+  ruban haut [dans] le panneau latéral[e], ajoute de colonne de ligne
+  suppression, dans le ruban on garde juste la création de tableau du ruban
+  accueil." Suite directe de "Phase 1" de `ROADMAP-CASUALOFFICE.md` — voir
+  ce fichier pour le détail complet (groupes supprimés, nouvelles sections
+  du panneau, piège de focus perdu après un clic sur un bouton du ruban qui
+  empêchait `Ctrl+Z` d'atteindre l'éditeur pendant la vérification). Résumé
+  : l'onglet contextuel "Tableau" du ruban et le groupe "Tableau" de
+  "Format avancé" ont disparu, leurs commandes vivent maintenant dans
+  `TablePropertiesPanel.tsx` (nouvelles sections "Lignes"/"Colonnes"), le
+  ruban ne garde que le sélecteur de création de tableau (onglet Accueil).
+  `npx tsc --noEmit` propre, vérifié par Playwright/CDP.
+- **Panneau latéral contextuel de mise en forme de tableau (2026-10-14)**,
+  sur demande explicite de l'utilisateur après avoir vu le panneau
+  équivalent de CasualOffice/docs ("l'édition de tableau où l'on peut
+  déplacer le tableau... [le panneau] c'est plus simple à utiliser").
+  Première entrée portée depuis `ROADMAP-CASUALOFFICE.md` (Phase 1,
+  inventaire complet des fonctionnalités du fork établi le même jour).
+  - **Remplace l'ancien dialogue modal `TableBorderDialog`** (supprimé,
+    `src/ui/TableBorders/`) par `src/ui/TableProperties/
+    TablePropertiesPanel.tsx` — un panneau ancré à droite (comme
+    l'explorateur de fichiers à gauche), même visuel/mêmes `ToolbarActions`
+    que l'ancien dialogue (`setCellBorder`, `setCellBorderPreset`,
+    `setCellBackgroundColor`, `setCellVerticalAlign`, `mergeCells`,
+    `splitCell`, `deleteTable`) — **aucune nouvelle action nécessaire**,
+    juste une nouvelle surface d'UI pour les mêmes commandes déjà câblées.
+  - **Ouverture/fermeture automatique** (`App.tsx`) : même principe de
+    "front montant" déjà utilisé pour la bascule de l'onglet ruban
+    contextuel "Tableau" (`wasInsideTableRef`, comparaison avant/après à
+    chaque changement de `stats.insideTable`) — entrer dans un tableau
+    ouvre toujours le panneau, mais une fermeture manuelle n'est pas
+    annulée tant que le curseur reste dans le MÊME tableau ; seule une
+    vraie sortie (front descendant) le referme, et une ressortie/rentrée
+    ultérieure le rouvre.
+  - **Piège déjà évité cette fois** (appris du correctif `.tbar` du même
+    jour) : `.tp-panel` ajouté d'emblée à la règle `@media print`
+    (`App.css`) dès l'écriture du composant, pas après coup.
+  - **Vérifié par Playwright/CDP** contre le document réel de l'utilisateur
+    (toujours sans jamais sauvegarder, Ctrl+Z systématique après chaque
+    test) : panneau qui s'ouvre à l'entrée dans un tableau, préset de
+    bordure "Tout" appliqué (`getComputedStyle().borderTopStyle === "solid"`
+    confirmé), couleur de fond appliquée (`getComputedStyle().
+    backgroundColor` confirmé), fermeture manuelle qui persiste tant qu'on
+    reste dans le tableau, réouverture après une vraie ressortie/rentrée.
+    **Piège de méthode de test rencontré et corrigé** (pas un bug de
+    l'app) : un premier essai de couleur de fond via
+    `input.dispatchEvent(new Event("change"))` ne déclenchait jamais le
+    `onChange` React — React écoute l'évènement natif `input` (pas
+    `change`) pour `<input type="color">` (comme pour `type="range"`),
+    contrairement à un `<input type="checkbox">` où React écoute `click`.
+    Fix du script de test : `dispatchEvent(new Event("input"))` après avoir
+    posé `value` via le setter natif (`Object.getOwnPropertyDescriptor`,
+    nécessaire car l'assignation directe `input.value = ...` ne déclenche
+    pas toujours le détecteur de changement interne de React). **Toujours
+    utiliser `input`, jamais `change`, pour simuler par script un
+    changement sur un `<input type="color">`/`type="range"` React.**
+  - **Second piège de méthode, plus sérieux, rencontré pendant la
+    vérification** : après un redémarrage complet de `tauri dev` (requis
+    pour contourner le bug `shared_worker` CDP documenté plus haut), la
+    session restaurée automatiquement (persistance `tabsStore` via
+    localStorage) a rouvert l'onglet actif sur **"Nouveau document.md"**
+    plutôt que sur le document réel ouvert avant le redémarrage — un
+    fichier déjà identifié ailleurs dans ce journal comme un VRAI CCTP de
+    l'utilisateur (pas un brouillon jetable malgré son nom), portant déjà
+    une corruption connue et non corrigée ("Con texte" avec espace
+    parasite, voir plus haut). Mes scripts de test suivants ont donc agi
+    sur CE fichier sans que je m'en rende compte immédiatement (le nom de
+    l'onglet actif n'avait pas été revérifié après le redémarrage).
+    Détecté a posteriori en listant tous les onglets ouverts et en
+    inspectant le contenu réel de l'onglet actif (texte peint contenant
+    bien la corruption déjà connue) — confirmé ensuite qu'aucune trace de
+    mes actions de test ne persistait (0 cellule à fond jaune de test,
+    bordures restantes = style par défaut `1px solid #ccc`/`#dfeff8` de
+    `MarkdownEditor.css`, pas une trace de préset appliqué) et qu'aucune
+    sauvegarde n'avait eu lieu. **À RETENIR, renforce une leçon déjà tirée
+    le 2026-09-13** : après TOUT redémarrage de l'app pendant une session
+    de test (HMR cassé, bug CDP...), revérifier explicitement quel onglet
+    est actif (`document.querySelector('.tabbar-tab-active .tabbar-title')`
+    ou équivalent) AVANT de continuer une suite de tests qui modifie du
+    contenu — la session restaurée automatiquement peut très bien ne pas
+    être celle qu'on croit, surtout si un autre onglet était actif avant
+    le tout premier lancement de la session de travail.
+  - `npx tsc --noEmit` propre. Fichiers de test jetables tous supprimés
+    après coup (`test-table-panel.mjs`, `test-table-panel2.mjs`,
+    `test-verify-clean.mjs`, `check-dirty.mjs`, `check-tabs.mjs`,
+    `check-active-content.mjs`).
+- **Installeur 0.4.7 (2026-10-14)**, sur demande explicite de l'utilisateur
+  ("fais l'exe install"). Version choisie en continuité du rythme habituel
+  (incrément mineur, correctifs de bugs sans rupture) : `0.4.6` → `0.4.7`
+  dans les 3 endroits synchronisés (`package.json`,
+  `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`). Correctifs pris en
+  compte depuis le 0.4.6 : export PDF direct (nouvelle fonctionnalité) et
+  le correctif critique de la barre `.tbar` visible dans le PDF/l'impression
+  (voir sections juste en dessous). `npx tsc --noEmit` propre puis `npx
+  tauri build` (≈6min30 de compilation Rust release) ; les trois anciens
+  fichiers `0.4.6` supprimés de `releases/`, remplacés par
+  `Pagina_0.4.7_x64-setup.exe`/`Pagina_0.4.7_x64_en-US.msi`, liens du
+  `README.md` mis à jour en conséquence.
+- **Correctif critique : la barre supérieure (`.tbar`) apparaissait dans le
+  PDF exporté ET à l'impression, avec une page blanche en plus (2026-10-13,
+  même jour)**, remonté par l'utilisateur sur un VRAI export (fichier
+  `GUIDE-NF-C-15-100-2024-VERSION-ANNOTEE-VERIFIEE.pdf`, trouvé dans son
+  dossier Téléchargements) : "j'ai le meme probleme que l'impression, de
+  plus il a rajouté une pages". Diagnostic par extraction de texte PDF
+  (`pymupdf`/`fitz`, voir ci-dessous) plutôt qu'en devinant : la page 1 du
+  PDF contenait littéralement les icônes de la barre supérieure
+  (💾📤↶↷🗋📄📂🖨️📑, la barre "Rechercher", l'avatar "KM", les boutons
+  ─▢✕) suivies du titre du document — la vraie page 1 du contenu était donc
+  repoussée en page 3, avec une page 2 quasi-vide entre les deux (d'où "il a
+  rajouté une page").
+  - **Cause** : la règle `@media print` (`App.css`) masque bien
+    `.tb-ribbon-stack`/`.app-sidebar`/`.tabbar`/`.sb-bar`/l'éditeur
+    invisible/etc., mais **PAS `.tbar`** — la classe racine de
+    `TitleBar.tsx` (barre fusionnée Enregistrer/Annuler/Nouveau/Ouvrir/
+    Imprimer/Export PDF/Rechercher/avatar/fenêtre, voir section "Barre
+    supérieure fusionnée" plus bas). Cette règle `@media print` a été écrite
+    AVANT la fusion de la barre de titre (ou en tout cas jamais mise à jour
+    depuis) : elle liste encore les classes de l'ancienne "quickbar"/ruban
+    séparés, jamais celle du nouveau composant qui les a remplacés. Comme
+    **les deux chemins d'impression/export (`ShowPrintUI` ET
+    `ICoreWebView2_7::PrintToPdf`) reposent sur le MÊME CSS**, le bug
+    touchait les deux, confirmant exactement le "même problème que
+    l'impression" rapporté par l'utilisateur.
+  - **Fix** : ajout de `.tbar` à la liste des sélecteurs masqués par
+    `@media print` dans `App.css` (une seule ligne).
+  - **Piège méthodologique pour la prochaine fois** : la vérification
+    PRÉCÉDENTE de l'impression (voir section "Impression / export PDF"
+    plus bas) avait utilisé `page.pdf()` de Playwright (CDP) sur un
+    document qui, à l'époque, ne faisait sans doute pas encore remonter ce
+    bug précis (barre de titre pas encore fusionnée, ou test fait sur un
+    document sans assez de contenu pour que l'absence de masquage soit
+    visible) — **retenir qu'un changement ultérieur de l'UI (ex. fusionner
+    plusieurs barres en une seule, renommer une classe) peut silencieusement
+    désynchroniser une règle `@media print` écrite avant lui**, sans qu'aucun
+    test automatique ne le révèle (TypeScript ne vérifie pas les sélecteurs
+    CSS). Après toute refonte visuelle touchant la structure de haut niveau
+    de l'app (barre de titre, ruban, sidebar...), revérifier explicitement
+    que `@media print` dans `App.css` masque encore TOUTES les classes
+    racines visibles à l'écran.
+  - **Outil utilisé pour inspecter un PDF sans dépendance `poppler-utils`
+    (absente de cette machine)** : `pymupdf` (`pip install pymupdf`,
+    `import pymupdf` — anciennement `fitz`, toujours importable sous ce nom
+    mais déprécié) permet d'ouvrir un PDF et d'en extraire le texte page par
+    page (`doc.page_count`, `page.get_text()`) directement en Python, sans
+    passer par le rendu visuel de l'outil `Read` (qui a besoin de
+    `pdftoppm`/poppler, non installé ici) — bien plus rapide pour
+    diagnostiquer "qu'est-ce qu'il y a VRAIMENT sur chaque page" qu'une
+    capture d'écran. Nécessite `sys.stdout.reconfigure(encoding='utf-8')`
+    (ou `PYTHONIOENCODING=utf-8`) sous ce Python Windows, sinon
+    `UnicodeEncodeError` dès qu'un emoji/caractère accentué apparaît dans le
+    texte extrait (encodage console par défaut `cp1252`).
+  - **Vérifié** : nouveau PDF généré via `page.pdf()` (CDP, même pipeline
+    Chromium d'impression que l'API COM native WebView2
+    `ICoreWebView2_7::PrintToPdf` utilisée en production — les deux
+    respectent les mêmes règles `@media print`) sur le document réel de
+    l'utilisateur toujours ouvert : 7 pages (au lieu de 8), page 1
+    commençant directement par le vrai titre du document, plus aucune trace
+    des icônes de la barre supérieure dans le texte extrait de chaque page.
+    `npx tsc --noEmit` propre. **Les deux anciens fichiers exportés par
+    l'utilisateur dans son dossier Téléchargements n'ont pas été
+    supprimés** (pas à moi de les effacer sans qu'il le demande) — à
+    régénérer par lui avec le bouton Export PDF/Imprimer une fois ce
+    correctif en place pour confirmer en conditions réelles.
+- **Export PDF direct (2026-10-13)**, sur demande explicite de l'utilisateur :
+  "il faut que l'on fasse un export PDF, l'impresion ne fonctionne par
+  super. du coup je pense qu'un export pdf cerai plus propre" — l'ancien
+  bouton Imprimer (`ShowPrintUI`, boîte de dialogue système) reste en
+  place, mais un nouveau bouton 📑 "Exporter en PDF…" est ajouté juste
+  à côté dans la barre supérieure (`TitleBar.tsx`), qui écrit directement
+  un `.pdf` sur disque sans passer par AUCUNE boîte de dialogue
+  d'impression — basé sur le même rendu HTML/CSS `@media print`/`@page`
+  déjà validé pour l'impression (voir section "Impression / export PDF"
+  plus bas), donc la même mise en page.
+  - **API utilisée** : `ICoreWebView2_7::PrintToPdf(path, settings,
+    completionHandler)` — asynchrone côté COM, le résultat arrive via un
+    callback, pas une valeur de retour directe (`src-tauri/src/
+    print_commands.rs`, nouvelle commande `export_pdf`).
+  - **Piège majeur rencontré et corrigé, à ne jamais reproduire** : la
+    PREMIÈRE version utilisait `webview2_com::PrintToPdfCompletedHandler::
+    wait_for_async_operation`, qui BLOQUE en pompant la boucle de messages
+    Windows (`wait_with_pump`, `GetMessageA`/`DispatchMessageA`) jusqu'à
+    ce que le callback arrive — ça compile sans erreur, mais **reste
+    bloqué INDÉFINIMENT à l'exécution** (confirmé en conditions réelles :
+    l'appel `invoke` ne s'est jamais résolu, même après plusieurs
+    minutes, il a fallu tuer le processus). Cause probable : `with_webview`
+    dispatche déjà sa closure SUR la boucle d'évènements principale de
+    `tao`/wry (pas une boucle Win32 brute) — y imbriquer un second pompage
+    `GetMessageA` ne reçoit jamais le message de complétion, cette boucle
+    n'étant apparemment pas ré-entrante de cette façon ici (contrairement
+    à un vrai message loop Win32 natif — ex. boîtes de dialogue modales,
+    drag-and-drop — où un pompage imbriqué est normalement sûr).
+  - **Fix** : abandon de toute attente SYNCHRONE dans la commande.
+    `export_pdf` lance l'opération via `PrintToPdfCompletedHandler::create`
+    (construction SANS attendre, juste une closure appelée plus tard par
+    WebView2) et retourne IMMÉDIATEMENT (le PDF n'est pas encore
+    forcément écrit au moment où la commande répond) ; le VRAI résultat
+    arrive plus tard via un évènement Tauri (`"pdf-export-result"`,
+    payload `Option<String>` — `null` = succès, sinon message d'erreur),
+    écouté côté frontend dans `App.tsx` (`handleExportPdf`, `listen()`
+    à usage unique qui affiche un `messageDialog` de succès/échec). Aucune
+    boucle de messages pompée nous-mêmes : la livraison du callback
+    repose entièrement sur la boucle d'évènements EXISTANTE de
+    l'application, jamais sur une seconde boucle concurrente pilotée
+    depuis l'intérieur de la commande. **À RETENIR** : dans cette config
+    Tauri/wry, toute API COM asynchrone à callback doit être traitée de
+    cette façon (fire-and-forget + évènement Tauri côté retour), jamais
+    attendue de façon bloquante à l'intérieur d'une commande `#[tauri::
+    command]`, même via une primitive "faite pour ça" comme
+    `wait_for_async_operation`.
+  - **Frontend** : `fileService.ts` (`pickPdfSaveLocation` — dialogue
+    natif Enregistrer sous, filtre `.pdf` ; `exportPdf(path)` — simple
+    `invoke`), `App.tsx` (`handleExportPdf`), `TitleBar.tsx` (nouveau
+    bouton, prop `onExportPdf`).
+  - **Vérifié par un appel direct `invoke('export_pdf', …)`/`listen(...)`
+    via Playwright** (sur le document de test jetable "Nouveau
+    document.md", `withGlobalTauri: true` activé temporairement dans
+    `tauri.conf.json` pour permettre cet appel direct — **repassé à
+    `false` après coup**, cette option n'étant utile que pour ce test, pas
+    nécessaire en usage normal où l'export passe par le bouton du ruban) :
+    `invoke` résolu en 199ms (confirme que le blocage précédent est bien
+    corrigé — à comparer à l'ancienne version qui ne revenait jamais),
+    évènement `pdf-export-result` reçu avec `payload: null` (succès) dans
+    la foulée. Fichier `.pdf` généré ensuite vérifié directement sur
+    disque : en-tête `%PDF-1.4` et fin `startxref`/`%%EOF` corrects,
+    539 Ko de contenu (page count non vérifiable par un simple `grep` sur
+    `/Type /Page` — les PDF modernes de WebView2 utilisent des flux
+    d'objets compressés, pas un texte PDF à plat — mais la taille et la
+    structure confirment un fichier réellement écrit, pas un fichier vide
+    ou tronqué). Non revérifié via le VRAI bouton du ruban + la VRAIE
+    boîte de dialogue "Enregistrer sous" (limitation déjà connue du
+    projet : un dialogue natif Windows ne peut pas être piloté de façon
+    fiable par automatisation clavier/souris) — mais la commande Rust
+    elle-même et le chemin évènement sont les mêmes dans les deux cas,
+    seul le déclenchement diffère.
+- **Correctif de l'affichage de la sélection multi-cellules (2026-10-13,
+  même jour)**, remonté par l'utilisateur AVEC VIDÉO ("j'ai du mal a
+  selectionner les ligne et colonne") sur son document réel (CCTP CVC —
+  consulté en lecture seule pour l'enquête, jamais modifié). Investigation
+  menée par extraction d'images de la vidéo (`opencv-python-headless`,
+  même méthode que la fois précédente) : à chaque instant, une seule
+  cellule à la fois apparaît surlignée (juste son TEXTE, pas la cellule
+  entière) alors que la souris glisse verticalement sur plusieurs lignes —
+  jamais un vrai bloc bleu couvrant toute la plage visée.
+  - **Fausse piste explorée en premier, et bonne nouvelle au passage** :
+    exposition temporaire de l'instance `editor` sur `window` (retirée
+    après coup) pour inspecter `editor.state.selection` directement
+    pendant un glisser-sélectionner RÉEL (`page.mouse.move` en ~20-40
+    petits pas, pas un seul saut comme dans les tests précédents) — le
+    modèle de sélection sous-jacent est en fait **PARFAITEMENT correct** :
+    une vraie `CellSelection` grandit progressivement (2 cellules → 3 → 5)
+    exactement comme attendu, et `mergeCells` ensuite fusionne
+    correctement les 5 cellules en une seule (`rowspan="5"` vérifié sur la
+    cellule résultante, texte des 5 cellules bien concaténé). Le bug
+    n'était donc PAS dans la construction de la sélection (déjà corrigée
+    le même jour, voir plus haut) ni dans les commandes de tableau — **100%
+    un problème d'AFFICHAGE** de la surbrillance, qui donnait l'impression
+    fausse à l'utilisateur que son glisser ne fonctionnait pas.
+  - **Cause réelle** : `computeSelectionRects` (`selectionHighlight.ts`)
+    ne connaissait qu'un seul cas — une sélection de TEXTE classique
+    `[from, to]`, traitée comme une plage CONTINUE sur laquelle on pose un
+    `Range` DOM et on lit `Range.getClientRects()`. Une `CellSelection`
+    n'est PAS une plage continue : ses cellules peuvent être séparées dans
+    le document par le contenu d'autres colonnes non sélectionnées (glisser
+    verticalement traverse plusieurs `<tr>`). Passer `[selection.from,
+    selection.to]` (l'englobant) à cette fonction produisait un `Range` DOM
+    qui ne captait random qu'une partie du trajet (2 rectangles au lieu de
+    5, confirmé par instrumentation).
+  - **Fix** : nouvelle fonction dédiée `computeCellSelectionRects` dans
+    `selectionHighlight.ts`, un rectangle par CELLULE ENTIÈRE (pas par ligne
+    de texte) — réutilise `CellSelection.forEachCell` (déjà utilisée
+    ailleurs, voir `applyToSelectedCells`) pour itérer les cellules
+    réellement sélectionnées, retrouve le `<table>` cloné via son
+    `SRC_POS_ATTR` (porté par le TABLEAU ENTIER, premier bloc de niveau
+    supérieur, pas par chaque cellule individuellement), puis localise la
+    cellule correspondante dans le clone par SON INDEX [ligne, colonne]
+    (fiable : le clone est un `cloneNode(true)` exact du tableau entier,
+    même structure garantie) plutôt que par une nouvelle traduction de
+    coordonnées — la cellule CLONÉE étant déjà l'élément RÉELLEMENT
+    affiché à l'écran, on utilise directement son `getBoundingClientRect()`
+    (pas besoin de reporter un décalage depuis un "original" invisible,
+    contrairement à `caretPosition.ts`/au reste de cette fonction). `
+    computeSelectionRects` dispatch maintenant sur `selection instanceof
+    CellSelection` (nouveau paramètre : la vraie `selection`, plus
+    seulement `from`/`to`).
+  - **Piège rencontré PENDANT ce correctif, pas le bug lui-même** : la
+    première version de `computeCellSelectionRects` cherchait le clone via
+    `canvas.querySelector('table[data-src-pos="…"]')` — restreint à la
+    balise `<table>`. Résultat : `hasClone: false` dans les logs de debug,
+    alors que `hasOriginal: true`. Cause : `Table.configure({resizable:
+    true})` (voir `MarkdownEditor.tsx`) fait envelopper `<table>` par
+    Tiptap dans un `<div class="tableWrapper">` pour les poignées de
+    redimensionnement — c'est ce DIV, pas `<table>` lui-même, qui porte
+    `SRC_POS_ATTR` (attribut posé sur `view.nodeDOM(pos)`, qui pour un
+    nœud "table" renvoie le wrapper, pas l'élément `<table>` interne).
+    **À RETENIR pour tout futur code qui cherche le clone d'un tableau par
+    `SRC_POS_ATTR`** : chercher l'attribut SANS restreindre la balise, puis
+    redescendre avec `.querySelector('table')` si l'élément trouvé n'est
+    pas déjà `<table>` lui-même.
+  - **Vérifié par Playwright/CDP** avec un VRAI glisser à petits pas
+    (20-40 étapes intermédiaires, pas un saut unique comme dans les tests
+    précédents — plus proche d'un geste de souris réel) sur le document de
+    test habituel : 5 rectangles affichés pour une sélection verticale de
+    5 lignes dans une colonne (positions `top` croissantes, ~39px d'écart
+    — cohérent avec la hauteur d'une ligne), 2 rectangles pour une
+    sélection horizontale de 2 cellules dans une ligne. `npx tsc --noEmit`
+    propre.
+- **Présets de bordures, alignement vertical de cellule, et menu contextuel
+  clic-droit sur les tableaux (2026-10-13)**, sur demande explicite de
+  l'utilisateur après avoir regardé une deuxième fois les outils de tableau
+  de `CasualOffice/docs` (`packages/react/src/components/ui/
+  TableMoreDropdown.tsx`, `TableOptionsDropdown.tsx`, `TextContextMenu.tsx`
+  dans `../pagina-docx-engine`) : "oui ça c'est à faire, mais aussi c'est le
+  menu clic droit et la façon de sélection des cellules colonne ligne qui
+  est intéressante". **Vérifié qu'il n'existe PAS de poignée dédiée de
+  sélection ligne/colonne** dans leur code (pas de "marge cliquable" façon
+  Google Docs) — juste le glisser-sélectionner classique à travers les
+  cellules, déjà repris et corrigé le même jour (voir section
+  "Correctif de la fusion de cellules" plus bas) : rien de plus à reprendre
+  de ce côté-là, seuls les présets/alignement vertical/menu contextuel sont
+  de vraies nouveautés.
+  - **Alignement vertical de cellule** (haut/milieu/bas) : nouvel attribut
+    `verticalAlign` dans `TableCellStyle.ts` (même schéma que
+    `backgroundColor`/les 4 bordures déjà en place — `renderHTML` →
+    `{ style: "vertical-align: …" }`), `hasAdvancedStyle` dans
+    `TableMarkdown.ts` étendu pour en tenir compte (bascule HTML au
+    repli, comme les autres attributs avancés). Nouvelle méthode
+    `setCellVerticalAlign` sur `MarkdownEditorHandle`/`ToolbarActions`,
+    réutilise `applyToSelectedCells` (déjà existante) pour s'appliquer à
+    toute une sélection multi-cellules. 3 nouveaux boutons dans le groupe
+    "Tableau" de l'onglet "Format avancé".
+  - **Présets de bordures façon Word** ("Tout"/"Extérieur"/"Intérieur"/
+    "Aucune") dans `TableBorderDialog` — en plus des 4 cases à cocher
+    par côté déjà existantes, pas à leur place. Nécessite une vraie
+    géométrie de sélection (pas juste "appliquer le même patch à chaque
+    cellule", ce que fait `applyToSelectedCells`) : nouvelle fonction
+    `applyBorderPreset` dans `MarkdownEditor.tsx`, qui utilise
+    `TableMap` (importé de `@tiptap/pm/tables`, déjà utilisé en interne
+    par `CellSelection` — vérifié dans le code source de
+    `prosemirror-tables` que `TableMap.get(table).rectBetween(...)`
+    donne le rectangle {left,top,right,bottom} de la sélection ENTIÈRE et
+    `.findCell(offset)` celui d'UNE cellule) pour comparer, cellule par
+    cellule, sa position à celle du rectangle global : un côté est
+    "extérieur" si la cellule touche le bord correspondant du rectangle
+    de sélection, "intérieur" sinon (donc partagé avec une autre cellule
+    sélectionnée). Nouvelle fonction `resolveCellSelection` : construit
+    une vraie `CellSelection` à partir de la cellule unique sous le
+    curseur si ce n'en est pas déjà une (`CellSelection.create(doc,
+    cellPos, cellPos)`, un rectangle 1×1) — les présets "Tout"/"Aucune"
+    fonctionnent donc aussi bien sur une seule cellule que sur une vraie
+    sélection glissée. Nouvelle méthode `setCellBorderPreset` sur le
+    handle/`ToolbarActions`.
+  - **Menu contextuel clic-droit sur les cellules de tableau**
+    (`TableContextMenu`, nouveau composant dans `MarkdownEditor.tsx`) —
+    inspiré de `TextContextMenu.tsx` de CasualOffice/docs (qui injecte les
+    mêmes actions de tableau dans LEUR menu clic-droit générique), mais en
+    plus simple : Pagina n'avait jusqu'ici AUCUN menu contextuel du tout,
+    donc un menu DÉDIÉ qui n'apparaît QUE dans un tableau (le menu natif
+    du navigateur reste disponible partout ailleurs — texte normal,
+    uniquement intercepté quand le clic tombe dans une cellule via
+    `findCellPos`). 9 actions : insérer/supprimer ligne, insérer/supprimer
+    colonne, fusionner/scinder, supprimer le tableau — les mêmes commandes
+    natives de `@tiptap/extension-table` déjà exposées dans le ruban,
+    appelées ici directement sur l'instance `editor` (pas besoin de
+    repasser par `MarkdownEditorHandle`/`ToolbarActions`, ce composant y a
+    déjà un accès direct). Préserve une `CellSelection` déjà en place
+    (glisser-sélectionner PUIS clic droit) pour que "Fusionner" agisse
+    dessus, sinon positionne le curseur dans la cellule cliquée comme un
+    clic normal. **Seule pièce d'UI de ce fichier gérée en `useState`
+    React classique** plutôt qu'en refs/DOM impératif (tout le reste de
+    `MarkdownEditor.tsx` est délibérément impératif, voir l'architecture
+    de pagination) — un simple overlay ponctuel sans lien avec la
+    mécanique de repaint, donc sans risque pour cette convention.
+  - **Vérifié par Playwright/CDP** sur le document de test habituel
+    ("Nouveau document.md", jamais le document réel de l'utilisateur) :
+    les 9 actions du menu contextuel listées correctement, fermeture à
+    Échap confirmée ; alignement vertical "milieu" appliqué et vérifié
+    via `getComputedStyle` ; préset "Tout" (bordure solide sur les 4
+    côtés d'une cellule) et préset "Extérieur" sur une sélection
+    glissée de 4 cellules, tous deux vérifiés par `getComputedStyle`.
+    **Piège méthodologique rencontré** : un premier essai a échoué
+    (`actions?.setCellVerticalAlign is not a function`) — l'objet
+    `actions` de `App.tsx` (recréé dans un `useEffect` gardé par
+    `activeTab?.path`, voir le contrat `ToolbarActions`) était resté
+    périmé après l'accumulation de plusieurs cycles de HMR Vite pendant
+    cette session de travail très longue ; un redémarrage complet et
+    propre de `tauri dev` (pas un simple `page.reload()`, qui aurait pu
+    retomber sur le bug `shared_worker` déjà documenté) a suffi à
+    repartir d'un état frais et confirmer que tout fonctionne. `npx tsc
+    --noEmit` propre.
+- **Correctif majeur : "la page saute/descend quand on tape en haut de page,
+  le curseur disparaît" (2026-10-13)**, remonté par l'utilisateur ("je click
+  sur une ligne en haut de pages, et quand je commence a ecrire la pages
+  bouge des fois je ne voie plus le curseur mais ca ecrie, et defois je me
+  retrouve en bas de pages"). **Investigation la plus longue et la plus
+  instrumentée de tout le projet** — plusieurs fausses pistes éliminées une
+  par une avant la vraie cause, méthode à retenir pour la prochaine fois
+  qu'un bug de scroll/curseur résiste aux hypothèses habituelles :
+  1. **Vidéo fournie par l'utilisateur** (`.mp4`, chemin dans son dossier
+     Documents) : lue en extrayant des frames avec `opencv-python-headless`
+     (installé via pip pour l'occasion — aucun lecteur vidéo/`ffmpeg`
+     disponible sur la machine) plutôt qu'en essayant de "regarder" le
+     fichier directement (l'outil `Read` refuse tout binaire non
+     image/PDF). Comparer frame par frame a permis de confirmer
+     QUANTITATIVEMENT le bug en quelques secondes : entre deux frames
+     distantes de 0,1s, le compteur de mots passe de 1867 à 1868 (un
+     caractère vient d'être tapé) et la vue bascule du texte visible vers
+     une zone blanche portant le pied de page — sur la MÊME page (le
+     numéro de page affiché ne change pas), donc un déplacement de scroll
+     à l'intérieur de la page, pas un changement de page.
+  2. **Fausse piste éliminée : le "scroll anchoring" natif du navigateur.**
+     `paintPages.ts` fait un `canvas.replaceChildren(...)` à chaque frappe
+     (toutes les pages visibles sont détruites/recréées) — un terrain
+     classique pour ce mécanisme navigateur. `overflow-anchor: none` posé
+     sur `.xmd-page-wrap` (déjà documenté comme correctif à part entière
+     plus bas) : amélioration réelle mais **insuffisante** — le bug
+     persistait après ce correctif, confirmé par une nouvelle vidéo de
+     l'utilisateur prise APRÈS son application.
+  3. **Instrumentation live en direct, par itérations successives**
+     (injection de JS via `page.evaluate` sur la session Playwright/CDP,
+     scripts jetables supprimés après coup) — chaque hypothèse testée en
+     conditions réelles sur le document de l'utilisateur, jamais en
+     devinant :
+     - Écoute de l'évènement `scroll` sur `.xmd-page-wrap` seule : rien
+       capté sur plusieurs fenêtres de plusieurs minutes — PIÈGE
+       MÉTHODOLOGIQUE rencontré à répétition : un script Playwright lancé
+       en arrière-plan avec un délai fixe (`setTimeout`) peut tout à fait
+       expirer AVANT que l'utilisateur n'ait eu le temps de lire la
+       consigne et d'agir, surtout en changeant de fenêtre — vérifié a
+       posteriori via `ps aux` que le process Node était bien terminé.
+       **Toujours prévoir une fenêtre d'instrumentation large (5-6 min)
+       et confirmer explicitement avec l'utilisateur AVANT de lire le
+       log**, plutôt que de supposer qu'il a eu le temps d'agir.
+     - Une fois la fenêtre correctement synchronisée : le `scrollTop`
+       CHANGE bel et bien réellement (confirmé par petits incréments
+       progressifs, ex. 635 → 2337 → 3326 → 2883px) — mais AUCUN appel
+       JS à `Element.prototype.scrollIntoView` (patché pour logguer tout
+       appel, sur TOUT élément) ni AUCUNE écriture directe de
+       `wrap.scrollTop` (setter de la propriété redéfini pour logguer
+       toute assignation) ne sont jamais captés en parallèle — élimine
+       à la fois "un `scrollIntoView()` JS explicite quelque part" et
+       "une assignation directe à `scrollTop`".
+     - Fausse piste éliminée : un clic accidentel sur un lien d'ancre de
+       sommaire ou une référence de note de bas de page (les deux seuls
+       endroits du code qui appellent explicitement `scrollIntoView({
+       behavior: "smooth"} )`, dont le motif en petits paliers progressifs
+       ressemblait beaucoup au `scrollTop` observé) — instrumentation du
+       `mousedown` confirmant un clic strictement sur un `<P>` normal,
+       sans ancre ni note à proximité.
+  4. **Cause réelle, trouvée en relisant le code source de
+     `prosemirror-view`** (pas une supposition) : `EditorView.focus()`
+     utilise bien en interne `focusPreventScroll()` (confirmé en lisant
+     `node_modules/prosemirror-view/dist/index.js` — le projet le savait
+     déjà, voir plus bas, correctif du "feuilles qui bougent" du
+     2026-09-13), MAIS ce n'est que pour l'évènement de **focus initial**
+     (un seul appel, au premier clic). Hors, `EditorView.updateState()`
+     (appelée en interne à CHAQUE transaction, donc à CHAQUE caractère
+     tapé) appelle aussi `selectionToDOM(this)` — qui repositionne la
+     VRAIE sélection native du navigateur (`Selection.addRange`/
+     équivalent) dans la zone éditable à chaque frappe, **sans aucune
+     protection équivalente contre le scroll**. Déplacer une sélection de
+     texte native dans une zone `contentEditable` peut, indépendamment de
+     tout appel explicite à `focus()` ou `scrollIntoView()`, déclencher un
+     réflexe natif du moteur de rendu "faire défiler l'ancêtre scrollable
+     pour révéler la sélection" — un comportement bas niveau, pas une API
+     JS interceptable par un monkey-patch de `Element.prototype`.
+     **Le vice architectural exact** : `.xmd-live-editor-host` (la zone
+     invisible éditable) est positionnée en `position: absolute; top: 0`
+     — mais c'est un DESCENDANT DIRECT de `.xmd-page-wrap`, le conteneur
+     qui défile (`overflow-y: auto`) ! `top: 0` en `absolute` est relatif
+     au bloc englobant **non scrollé** (la position du contenu total,
+     pas du viewport visible) — dès que l'utilisateur défile vers le bas
+     du document (ex. scrollTop ≈ 2700px pour être sur la page 4), la
+     zone invisible se retrouve RÉELLEMENT, en coordonnées de document, à
+     des MILLIERS de pixels AU-DESSUS du viewport actuellement visible.
+     Taper un caractère y repositionne la sélection native → le navigateur
+     tente de "révéler" cette sélection bien réelle mais complètement hors
+     champ → fait défiler `.xmd-page-wrap` vers le haut du document pour
+     compenser → d'où le saut (parfois partiel, selon l'algorithme interne
+     du moteur de rendu pour choisir combien défiler, expliquant le
+     caractère "imprévisible" rapporté par l'utilisateur, "des fois... et
+     des fois...").
+  5. **Fix** (`MarkdownEditor.css`, `.xmd-live-editor-host`) :
+     `position: absolute` → `position: fixed`. Une fois `fixed`, la zone
+     invisible est ancrée au VIEWPORT lui-même (pas au contenu scrollable
+     de `.xmd-page-wrap`) — elle reste donc TOUJOURS verticalement dans
+     les limites du viewport (seul son décalage horizontal extrême,
+     `left: -5000px`, la rend invisible à l'écran), quel que soit le
+     niveau de défilement du document. Plus aucun ancêtre scrollable n'a
+     de raison de bouger pour "révéler" une sélection qui, à ses yeux, est
+     déjà dans les clous verticalement. `getBoundingClientRect()` (utilisé
+     partout dans `resolveClickPosition.ts`/`caretPosition.ts`/
+     `selectionHighlight.ts` pour traduire entre l'éditeur invisible et la
+     couche peinte) reste correct sans adaptation : il renvoie toujours des
+     coordonnées relatives au VIEWPORT, que l'élément soit en `absolute`
+     ou en `fixed` — changement de positionnement totalement transparent
+     pour tout le reste de l'architecture de pagination.
+  6. **Vérifié directement par l'utilisateur** sur son document réel après
+     application du correctif (HMR Vite, pas besoin de relancer l'app) :
+     clic en haut de page + frappe de plusieurs caractères → confirmé
+     "ça marche", plus de saut. `npx tsc --noEmit` propre.
+  - **À RETENIR pour toute future enquête de ce type** : `focusPreventScroll`
+    protège uniquement l'évènement de focus, PAS les repositionnements de
+    sélection ultérieurs (`selectionToDOM`, appelée à chaque transaction) —
+    si un élément contentEditable critique vit à l'intérieur d'un
+    conteneur qui défile, le positionner en `fixed` (ancré au viewport)
+    plutôt qu'en `absolute` (ancré au contenu scrollable) élimine la
+    classe ENTIÈRE de bugs de scroll involontaire liés à la sélection
+    native, pas seulement ceux liés au focus.
+- **Correctif de la fusion de cellules glissées-sélectionnées (2026-10-10)**,
+  remonté par l'utilisateur : "le curseur soit dans le tableau et au
+  changement de résolution de l'écran, la sélection n'est pas toujours
+  fiable dans le tableau, je pense que c'est un problème pour la fusion" —
+  en demandant explicitement d'aller regarder comment le projet open
+  source d'origine (`CasualOffice/docs`, forké dans
+  `../pagina-docx-engine`, sert de référence de pagination depuis le
+  début) traite ce cas précis.
+  - **Cause RÉELLE, plus fondamentale que "la résolution d'écran" en
+    elle-même** : notre glisser-sélectionner sur la couche peinte
+    (`onMouseDown`/`onMouseMove` dans `MarkdownEditor.tsx`) appelait
+    TOUJOURS `editor.commands.setTextSelection({from, to})`, même en
+    glissant à travers plusieurs cellules d'un tableau — ProseMirror
+    normalise alors ça en simple sélection de TEXTE qui chevauche les
+    cellules, JAMAIS en une vraie `CellSelection` (type dédié de
+    `prosemirror-tables`). Or `applyToSelectedCells` (utilisée par
+    `mergeCells`/`setCellBackgroundColor`/`setCellBorder`, voir plus bas
+    dans ce fichier) ne reconnaît et n'agit sur plusieurs cellules QUE si
+    `state.selection instanceof CellSelection` — sinon elle retombe sur "une
+    seule cellule, celle du curseur". Résultat : glisser-sélectionner
+    plusieurs cellules puis cliquer "Fusionner" n'avait, EN PRATIQUE,
+    jamais vraiment fonctionné de façon fiable, quelle que soit la
+    résolution d'écran — le changement de résolution rendait juste le
+    symptôme plus visible/reproductible par coïncidence (selon où
+    atterrissaient `from`/`to`), sans en être la cause.
+  - **Comparaison avec `CasualOffice/docs`** (`packages/react/src/
+    paged-editor/PagedEditor.tsx`) : leur architecture (éditeur invisible +
+    couche peinte, identique dans son principe à la nôtre) détecte
+    explicitement ce cas — au `mousedown`, ils retrouvent la position de la
+    CELLULE ancre (`findCellPosFromPmPos`, marche les ancêtres de la
+    position résolue jusqu'au nœud `tableCell`/`tableHeader`, renvoie
+    `$pos.before(depth)`) et la stockent dans une ref
+    (`cellDragAnchorPosRef`) ; à chaque `mousemove`, ils refont la même
+    recherche pour la position courante et, si elle diffère de l'ancre,
+    appellent `hiddenPMRef.current.setCellSelection(anchorCellPos,
+    currentCellPos)` — une vraie construction de `CellSelection.create(doc,
+    anchorCell, headCell)` — PLUTÔT qu'un `setTextSelection`.
+  - **Fix, repris à l'identique** : nouvelle fonction `findCellPos(doc,
+    pos)` dans `MarkdownEditor.tsx` (même algorithme que leur
+    `findCellPosFromPmPos`, adapté à notre type `Editor["state"]["doc"]`).
+    `onMouseDown` retient en plus la position de cellule de l'ancre
+    (`cellAnchorPos`) ; `onMouseMove` recalcule la cellule courante à
+    chaque déplacement et, si elle diffère de l'ancre, construit
+    `CellSelection.create(editor.state.doc, cellAnchorPos, cellPos)` et la
+    dispatche directement (`editor.state.tr.setSelection(sel)`) — repli sur
+    `setTextSelection` normal dans tous les autres cas (hors tableau, ou
+    `CellSelection.create` qui lève une exception si les deux cellules ne
+    sont pas dans le même tableau). `CellSelection` déjà importée de
+    `@tiptap/pm/tables` (ajoutée pour `applyToSelectedCells` lors de la
+    fonctionnalité précédente) — vérifié dans le code source installé de
+    `prosemirror-tables` que `CellSelection.create` attend exactement une
+    position "juste avant le nœud cellule" (`$pos.before(depth)`), ce que
+    `findCellPos` renvoie déjà — pas une supposition.
+  - **Sur le volet "résolution d'écran"** : vérifié que la correction de
+    largeur de l'éditeur invisible (`MarkdownEditor.tsx`, le bloc qui
+    aligne `liveHost.style.width` sur la largeur RÉELLEMENT rendue de
+    `.xmd-page-content`, voir plus bas dans ce fichier) est déjà recalculée
+    à CHAQUE `repaint()` (donc à chaque frappe) et surveillée par un
+    `ResizeObserver` — un vrai changement de taille de fenêtre la
+    redéclenche automatiquement. Un changement de mise à l'échelle DPI
+    Windows SEUL (déplacer la fenêtre vers un autre écran à résolution
+    différente, sans redimensionner la fenêtre elle-même) ne devrait PAS
+    perturber cette mesure : les navigateurs expriment les largeurs
+    `getBoundingClientRect()` en pixels CSS, indépendants du DPI par
+    construction — la dérive constatée par l'utilisateur est donc, selon
+    toute vraisemblance, entièrement expliquée par le bug de
+    `CellSelection` manquante ci-dessus, pas par un second problème de
+    mesure lié à l'écran.
+  - **Non revérifié visuellement par Playwright/CDP** à l'instant de ce
+    correctif (aucune fenêtre `tauri dev` disponible pendant cette
+    session) — `npx tsc --noEmit` propre. **À tester à la prochaine
+    occasion** : glisser-sélectionner plusieurs cellules d'un tableau
+    (idéalement sur deux résolutions/échelles d'affichage différentes),
+    cliquer "Fusionner" dans l'onglet Format avancé, confirmer que
+    exactement les cellules visuellement sélectionnées sont fusionnées.
+- **Installeur 0.4.6 (2026-10-02)**, sur demande explicite de l'utilisateur
+  ("fais moi les exe d'install"). Version choisie en accord avec lui
+  (incrément mineur, cohérent avec le rythme des précédents installeurs —
+  ajout de fonctionnalités sans rupture, pas un saut à 0.5.0) : `0.4.5` →
+  `0.4.6` dans les 3 endroits synchronisés (`package.json`,
+  `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`). Correctif
+  immédiatement précédent pris en compte : le bouton d'insertion de
+  tableau manquant dans le groupe "Tableau" de l'onglet "Format avancé"
+  (voir juste en dessous), remonté par l'utilisateur ("je n'arrive pas
+  faire des tableaux évolués" — en creusant, le vrai problème était qu'il
+  n'y avait tout simplement aucun moyen de CRÉER un tableau depuis cet
+  onglet, seulement des outils d'édition supposant un tableau déjà
+  présent). `npx tauri build` lancé après `npx tsc --noEmit` propre ; les
+  deux anciens installeurs `0.4.5` supprimés de `releases/`, remplacés par
+  `Pagina_0.4.6_x64-setup.exe`/`Pagina_0.4.6_x64_en-US.msi`, liens du
+  `README.md` mis à jour en conséquence.
+- **Édition de tableau avancée (HTML) dans l'onglet "Format avancé"
+  (2026-09-27, même jour que l'éditeur de tableau ci-dessous)**, sur
+  demande explicite de l'utilisateur : "on va faire la même chose en
+  Format avancé avec de l'écriture d'un tableau en HTML... on doit
+  pouvoir retrouver toutes les fonctions comme dans Word (fusion, couleur
+  des cellules, édition des bordures...)". Une question de clarification
+  posée avant de coder (niveau de finesse des bordures) — réponse :
+  "Complet façon Word : par côté" (haut/droite/bas/gauche indépendants,
+  pas une seule bordure globale).
+  - **Fusion/scission de cellules** : `mergeCells`/`splitCell` sont des
+    commandes déjà fournies nativement par `@tiptap/extension-table` (le
+    même paquet qui alimente déjà l'onglet contextuel "Tableau" côté
+    Markdown standard) — aucune nouvelle logique, juste exposées dans un
+    nouveau groupe "Tableau" de l'onglet "Format avancé".
+  - **Couleur de fond + bordures par côté** : nouvelle extension
+    `src/ui/Editor/extensions/TableCellStyle.ts` (`TableCellStyled`/
+    `TableHeaderStyled`, étendent `@tiptap/extension-table-cell`/
+    `-table-header` — remplacent les imports directs de ces paquets dans
+    `MarkdownEditor.tsx`) : ajoute les attributs `backgroundColor`,
+    `borderTop`/`borderRight`/`borderBottom`/`borderLeft` (chaînes CSS
+    complètes, ex. `"2px dashed #343334"`), chacun avec son propre
+    `renderHTML` retournant `{ style: "…" }` — **vérifié dans le code
+    source de `mergeAttributes` (`@tiptap/core`) que plusieurs
+    attributs retournant chacun une clé `style` sont correctement
+    FUSIONNÉS** (pas juste le dernier qui gagne), donc pas besoin d'un
+    seul `renderHTML` combiné à la main pour le nœud entier.
+  - **Application à une sélection multi-cellules** : `editor.commands.
+    updateAttributes` ne met à jour qu'un seul nœud (celui de la position
+    courante) — insuffisant pour "appliquer une bordure à toutes les
+    cellules sélectionnées" façon Word (glisser-sélectionner un
+    rectangle). Nouvelle fonction `applyToSelectedCells` (dans
+    `MarkdownEditor.tsx`) : si la sélection est une vraie `CellSelection`
+    (import `@tiptap/pm/tables`), parcourt `forEachCell` et pose
+    `tr.setNodeMarkup` sur chacune ; sinon (simple curseur), retrouve la
+    cellule ancêtre englobante et l'applique à elle seule. Contrairement à
+    la renumérotation automatique des titres, `addToHistory: false` n'est
+    PAS posé ici : c'est une action explicite de l'utilisateur, qui doit
+    rester annulable par Ctrl+Z comme les autres actions du ruban.
+  - **Repli HTML automatique à la sauvegarde** : le mécanisme existait déjà
+    dans `TableMarkdown.ts` (`isMarkdownSerializable`) pour la fusion de
+    cellules — un tableau avec `colspan`/`rowspan` > 1 bascule déjà en
+    `<table>` HTML brut plutôt qu'en syntaxe GFM (`Markdown.configure({html:
+    true})` déjà actif dans `MarkdownEditor.tsx`). **Étendu** : la même
+    fonction bascule maintenant AUSSI dès qu'une cellule a une
+    `backgroundColor` ou une bordure custom posée (nouvelle fonction
+    `hasAdvancedStyle`, même famille de test que `hasSpan` déjà présent) —
+    un tableau qui n'utilise AUCUNE de ces fonctions continue de
+    s'enregistrer en GFM classique comme avant, rien ne change pour les
+    tableaux simples ; c'est un `<table>` HTML STANDARD dans les deux cas
+    (pas un format propriétaire), donc toujours lisible ailleurs
+    (GitHub, VS Code, Obsidian…), juste plus en syntaxe Markdown pure.
+  - **UI** : nouveau groupe "Tableau" dans l'onglet "Format avancé"
+    (`Toolbar.tsx`) — boutons Fusionner/Scinder, un sélecteur de couleur de
+    fond (même schéma de swatch que "Couleur du texte", chevron décoratif),
+    et un lanceur `›` ouvrant le nouveau dialogue `TableBorderDialog`
+    (`src/ui/TableBorders/`, même gabarit visuel que `HeadingStyleDialog`/
+    `PageSetupDialog` — mais contrairement à eux, n'édite PAS une config
+    persistée dans `PageLayoutSettings` : chaque clic "Appliquer"/"Retirer"
+    agit IMMÉDIATEMENT sur la sélection courante de l'éditeur, rien n'est
+    mémorisé au-delà de la durée de vie du dialogue). Le dialogue expose
+    4 cases à cocher (un côté peut être décoché pour ne pas le toucher),
+    un style (continue/tiretée/pointillée/double), une épaisseur et une
+    couleur — "Retirer la bordure" pose `null` sur les côtés cochés,
+    "Appliquer" compose la chaîne CSS et appelle
+    `ToolbarActions.setCellBorder(sides, css)`.
+  - **`PaginaLight.tsx`** (même contrat `ToolbarActions`, doit rester
+    synchronisé) : les 4 nouvelles actions sont câblées sur les mêmes
+    méthodes du handle, bien que le groupe ne soit jamais visible en mode
+    `leger` (un seul onglet, pas de "Format avancé") — cohérent avec les
+    autres actions de Format avancé déjà câblées mais inutilisées côté UI
+    légère.
+  - **Vérification** : `npx tsc --noEmit` propre après chaque étape.
+    Vérification VISUELLE par Playwright/CDP tentée mais **PAS aboutie**
+    cette fois : la fenêtre `tauri dev` ouverte depuis le début de cette
+    session de travail (utilisée par l'utilisateur lui-même pour regarder
+    l'app, voir plus haut) est repassée en état minimisé/hors-focus
+    pendant la vérification (`window.innerWidth`/`innerHeight` mesurés à
+    146×20 via CDP, `elementFromPoint` renvoyant `null`) — impossible de
+    simuler des clics fiables dans cet état, et redimensionner/refocaliser
+    la fenêtre de force aurait pu perturber l'utilisateur en train de la
+    regarder. **Confiance placée à la place sur** : `mergeCells`/`splitCell`
+    sont des commandes NATIVES de `@tiptap/extension-table` (déjà éprouvées
+    ailleurs dans le projet, aucune logique réécrite) ; la fusion de
+    `style` par `mergeAttributes` vérifiée directement dans le code source
+    installé de `@tiptap/core` (pas une supposition) ; le mécanisme de
+    repli HTML (`isMarkdownSerializable`) est une extension d'un chemin
+    déjà testé et validé pour la fusion de cellules (voir plus haut dans ce
+    fichier, section "Complément de couverture Markdown"). **À revérifier
+    visuellement à la prochaine occasion avec une fenêtre disponible** :
+    fusion de cellules glissée-sélectionnées, couleur de fond appliquée,
+    dialogue Bordures (cocher/décocher un côté, bascule HTML confirmée par
+    lecture du `.md` après sauvegarde d'un tableau avec bordure).
+- **Éditeur de tableau Markdown, avec onglet de ruban contextuel façon
+  "Outils de tableau" de Word (2026-09-27)**, sur demande explicite de
+  l'utilisateur : plan complet exposé et validé avant tout code (une seule
+  question de clarification posée, "bascule automatique sur l'onglet
+  Tableau (comme Word)" — confirmé "oui").
+  - **Nouvel onglet contextuel "Tableau"** (`RibbonTab` étendu à
+    `"tableau"` dans `Toolbar.tsx`) : n'apparaît dans la barre d'onglets
+    QUE lorsque le curseur est dans un tableau (`EditorStats.insideTable`,
+    nouveau champ calculé via `editor.isActive("table")`, remonté depuis
+    `MarkdownEditor.tsx` aux 4 mêmes points que `activeBlockStyle` — dans
+    `onUpdate`, `getStats()`, `onSelectionUpdate`, et le suivi de page au
+    défilement). **Bascule automatique sur cet onglet au FRONT MONTANT
+    seulement** (`wasInsideTableRef`, comparaison avant/après à chaque
+    changement de `insideTable`) : entrer dans un tableau y bascule
+    toujours, mais si l'utilisateur clique ensuite sur un autre onglet SANS
+    sortir du tableau, on ne l'y reramène pas de force à la frappe
+    suivante — seule une vraie sortie du tableau (front descendant) referme
+    l'onglet et retombe sur "Accueil" (et seulement si "Tableau" était bien
+    affiché : revenir soi-même sur "Accueil" en restant dans le tableau
+    n'est pas contrarié). Non câblé en version légère (`leger` — voir
+    `PaginaLight.tsx`, qui n'a qu'un seul onglet de toute façon).
+  - **Sélecteur de taille par grille survolée** (`TableSizePicker`,
+    nouveau composant dans `Toolbar.tsx`, même schéma dropdown que
+    `HeadingPicker`/`VariablePicker`/`EmojiPicker` — état `open` +
+    `useRef`/`mousedown` pour fermer au clic extérieur) — remplace l'ancien
+    bouton plat qui insérait toujours un tableau 3×3 fixe. Grille 8×6,
+    survoler une cellule surligne toute la zone en haut-à-gauche du
+    pointeur (comme Word) et affiche un libellé "R × C" ; cliquer insère
+    exactement cette taille. `MarkdownEditorHandle.insertTable` change de
+    signature (`() => void` → `(rows: number, cols: number) => void`),
+    répercuté dans `ToolbarActions` et dans **`PaginaLight.tsx`** (même
+    contrat `ToolbarActions`, doit rester synchronisé) et `App.tsx`.
+  - **Commandes du nouvel onglet** — strictement des commandes déjà
+    fournies nativement par `@tiptap/extension-table` (juste exposées,
+    aucune logique nouvelle à écrire) : groupes "Lignes" (insérer
+    au-dessus/en dessous, supprimer), "Colonnes" (insérer à
+    gauche/droite, supprimer), "Alignement" (réutilise le composant
+    `AlignIcon` déjà existant + l'action `setTextAlign` déjà câblée sur
+    l'alignement de colonne via `TableMarkdown.ts`, voir plus bas dans ce
+    fichier — rien de neuf à sérialiser), "Tableau" (supprimer tout le
+    tableau). **Explicitement exclu, sur demande directe de
+    l'utilisateur** ("pas de forme évoluée pour l'instant (pas html)") :
+    fusion/scission de cellules, largeurs de colonne personnalisées — tout
+    ce qui nécessiterait de sortir du Markdown/GFM standard.
+  - **Vérifié par Playwright/CDP** contre l'app réelle relancée à neuf
+    (aucun dossier de travail ouvert — document "Nouveau document.md"
+    jamais enregistré, donc aucun risque pour un fichier réel de
+    l'utilisateur) : grille 8×6 correctement dénombrée, survol de la
+    cellule (3,4) affiche bien "3 × 4" et insère un tableau 3 lignes × 4
+    colonnes ; cliquer dans une cellule peinte fait apparaître l'onglet
+    "Tableau" ET le sélectionne automatiquement ; ajout d'une ligne
+    (3→4) et d'une colonne (4→5) confirmés par comptage réel des `<tr>`/
+    `<td>` peints ; alignement "Centrer" appliqué à la colonne
+    (`text-align: center` vérifié par `getComputedStyle`) ; suppression du
+    tableau fait disparaître l'onglet contextuel. Toutes les frappes de
+    test annulées (`Ctrl+Z` en boucle) avant de rendre la main, document
+    jamais sauvegardé sur disque.
 - **Ouvrir un fichier directement (sans dossier), Enregistrer sous, et
   association de fichiers Windows (2026-09-27)**, sur demande explicite de
   l'utilisateur : "ouvrir un dossier est un bon moyen d'ouvrir plusieurs
@@ -1875,6 +2923,40 @@ projets"). Constats et actions :
   observé avant le fix peut persister jusqu'à un vrai redémarrage de l'app.
 
 ### Pas commencé
+- **Avertissement avant la bascule automatique Markdown → HTML d'un
+  tableau (idée notée le 2026-10-14, pas encore spécifiée en détail)**,
+  sur remarque explicite de l'utilisateur : "à la création d'un tableau il
+  faut que ça reste natif en Markdown, puis s'il se personnalise (hors
+  centré, gauche ou droite du texte à l'intérieur des cellules), on passe
+  en HTML. Il faudrait une petite fenêtre d'avertissement avant la
+  transformation."
+  - **Déjà en place aujourd'hui** (voir `isMarkdownSerializable`/
+    `hasAdvancedStyle` dans `src/ui/Editor/extensions/TableMarkdown.ts`) :
+    un tableau nouvellement créé reste en syntaxe GFM standard tant qu'il
+    n'utilise QUE ce qui a un équivalent Markdown — l'alignement de colonne
+    gauche/centre/droite (`:---`/`:---:`/`---:`) EST déjà dans cette
+    catégorie et ne déclenche PAS la bascule HTML. Elle ne se déclenche
+    que pour la fusion de cellules (colspan/rowspan), la couleur de fond,
+    les bordures personnalisées, ou l'alignement VERTICAL de cellule —
+    exactement ce que l'utilisateur décrit comme "se personnalise".
+  - **Ce qui manque** : la bascule est actuellement SILENCIEUSE (se
+    produit à la sauvegarde, sans prévenir). Il faudrait une boîte de
+    dialogue de confirmation déclenchée AU MOMENT où l'utilisateur
+    applique la première mise en forme qui va forcer le repli HTML (pas à
+    la sauvegarde, trop tard pour que ce soit utile) — ex. intercepter
+    `setCellBackgroundColor`/`setCellBorder`/`setCellBorderPreset`/
+    `setCellVerticalAlign`/`mergeCells` dans `MarkdownEditor.tsx`, vérifier
+    AVANT d'appliquer si le tableau est actuellement encore 100% GFM
+    (`!hasAdvancedStyle(...)` et pas de span), et si oui afficher un
+    avertissement ("Ce tableau sera enregistré en HTML à partir de
+    maintenant — toujours lisible ailleurs mais plus en Markdown pur.
+    Continuer ?") avant de dispatcher la transaction.
+  - **Pas encore clarifié avec l'utilisateur** (à faire avant de coder) :
+    l'avertissement doit-il apparaître à CHAQUE action qui personnalise
+    (risque de lassant à répétition sur un même tableau déjà basculé en
+    HTML) ou seulement la toute PREMIÈRE fois pour un tableau donné
+    (comportement "bascule" plutôt que "par action") ? Une case "ne plus
+    demander pour ce document"/"ne plus jamais demander" ?
 - **~~En-têtes/pieds de page, marges, format papier/orientation~~ ET
   ~~variables dynamiques/édition en place/première page différente~~ FAIT
   (2026-09-13)** — voir section "Mise en page configurable par document"
