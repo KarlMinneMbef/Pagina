@@ -8,6 +8,18 @@
   background: #e6e6e6;
   padding: 32px 16px;
   position: relative;
+  /* `paintPages.ts` fait un `canvas.replaceChildren(...)` à CHAQUE frappe —
+   * tout l'arbre des pages (y compris celles visibles à l'écran) est détruit
+   * et recréé. Le "scroll anchoring" natif du navigateur (activé par défaut
+   * dès qu'un conteneur défile) essaie alors de deviner quel élément garder
+   * sous le viewport pour compenser, mais son ancre disparaît à chaque
+   * repaint — l'utilisateur voit la page sauter de façon imprévisible
+   * (parfois jusqu'en bas) en cliquant près du haut d'une page puis en
+   * tapant. Aucune utilité pour nous : nos pages ont une hauteur FIXE par
+   * construction (tout l'intérêt de cette architecture de pagination), le
+   * scroll n'a donc jamais besoin d'être "corrigé" par une heuristique du
+   * navigateur. */
+  overflow-anchor: none;
 }
 
 /* Zone RÉELLEMENT éditable (ProseMirror natif : curseur, sélection, undo/
@@ -26,7 +38,25 @@
  * intrinsèque des tableaux. `opacity:0` (pas `visibility:hidden`, qui
  * empêcherait le focus) + `pointer-events:none`. */
 .xmd-live-editor-host {
-  position: absolute;
+  /* `position: fixed` (pas `absolute`) — point CRITIQUE découvert le
+   * 2026-10-13 : en `absolute`, cette zone est épinglée près du haut du
+   * CONTENU TOTAL de `.xmd-page-wrap` (qui défile) — dès qu'on défile vers
+   * le bas du document, elle se retrouve réellement, en coordonnées
+   * document, à des milliers de px AU-DESSUS du viewport visible. Hors,
+   * ProseMirror resynchronise la vraie SÉLECTION NATIVE du navigateur dans
+   * cette zone à CHAQUE frappe (`selectionToDOM`, interne à
+   * `EditorView.updateState`) — contrairement au `focus()` explicite (déjà
+   * protégé par `focusPreventScroll`, voir plus bas), rien ne protège ce
+   * repositionnement de sélection contre le réflexe natif du navigateur
+   * "faire défiler l'ancêtre scrollable pour révéler la sélection", qui
+   * cible alors `.xmd-page-wrap` et le fait sauter vers le haut du
+   * document — exactement le bug remonté par l'utilisateur ("je clique en
+   * haut de page, je tape, la page descend/remonte, le curseur disparaît").
+   * En `fixed`, la zone reste ancrée au VIEWPORT lui-même, donc toujours
+   * verticalement "visible" aux yeux du navigateur (seul son décalage
+   * horizontal extrême la rend invisible à l'écran) — plus aucun ancêtre
+   * scrollable n'a besoin d'être ajusté pour la révéler. */
+  position: fixed;
   top: 0;
   left: -5000px;
   opacity: 0;
@@ -167,6 +197,47 @@
   padding: 0;
   background: #ffffff;
   color: #343334;
+}
+
+/* Menu contextuel clic-droit sur une cellule de tableau (voir
+ * `TableContextMenu` dans MarkdownEditor.tsx) — positionné en JS aux
+ * coordonnées exactes du clic (`position: fixed` + clientX/clientY). */
+.xmd-table-ctx-menu {
+  position: fixed;
+  z-index: 60;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  font-family: Arial, sans-serif;
+}
+
+.xmd-table-ctx-item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: #343334;
+  font-size: 13px;
+  padding: 7px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.xmd-table-ctx-item:hover {
+  background: #dfeff8;
+}
+
+.xmd-table-ctx-item-danger {
+  color: #b3261e;
+}
+
+.xmd-table-ctx-sep {
+  height: 1px;
+  background: #e6e6e6;
+  margin: 4px 2px;
 }
 
 /* Rectangles de surbrillance d'une sélection étendue (voir
@@ -438,10 +509,10 @@
 }
 
 .xmd-prosemirror pre {
-  background: #2b2b2b;
-  color: #f5f5f5;
+  background: #f6f8fa;
+  color: #24292e;
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow-x: auto;
 }
 
@@ -460,37 +531,41 @@
  * thème minimal fait main plutôt qu'importer une feuille de style
  * highlight.js complète (une centaine de classes `.hljs-*` inutilisées ici,
  * pour un thème qu'on veut cohérent avec la charte MBEF). Ne couvre que les
- * classes que lowlight `common` produit réellement. */
+ * classes que lowlight `common` produit réellement. Palette alignée sur le
+ * thème clair de GitHub (fond `#f6f8fa`, voir `.xmd-prosemirror pre`
+ * ci-dessus) — remplace l'ancien thème sombre (`#2b2b2b`), incohérent avec
+ * le reste de l'interface claire de Pagina (remonté par l'utilisateur,
+ * capture d'écran de GitHub comme référence). */
 .xmd-prosemirror .hljs-comment,
 .xmd-prosemirror .hljs-quote {
-  color: #8a8a8a;
+  color: #6a737d;
   font-style: italic;
 }
 .xmd-prosemirror .hljs-keyword,
 .xmd-prosemirror .hljs-selector-tag,
 .xmd-prosemirror .hljs-literal,
 .xmd-prosemirror .hljs-type {
-  color: #7fb8f0;
+  color: #d73a49;
 }
 .xmd-prosemirror .hljs-string,
 .xmd-prosemirror .hljs-attr,
 .xmd-prosemirror .hljs-template-tag {
-  color: #b5e08c;
+  color: #032f62;
 }
 .xmd-prosemirror .hljs-number,
 .xmd-prosemirror .hljs-symbol {
-  color: #e0b05e;
+  color: #005cc5;
 }
 .xmd-prosemirror .hljs-title,
 .xmd-prosemirror .hljs-name,
 .xmd-prosemirror .hljs-function,
 .xmd-prosemirror .hljs-section {
-  color: #e0a0e0;
+  color: #6f42c1;
 }
 .xmd-prosemirror .hljs-variable,
 .xmd-prosemirror .hljs-attribute,
 .xmd-prosemirror .hljs-tag {
-  color: #f0a0a0;
+  color: #22863a;
 }
 
 /* Marqueur de saut de page manuel : une fine ligne grise claire avec

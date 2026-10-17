@@ -1,0 +1,27 @@
+.rh-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 5;
+  /* Invisible par défaut, une ligne verte apparaît au survol/pendant le
+   * glisser — même principe qu'un séparateur redimensionnable classique
+   * (VS Code, Word volet de navigation...). */
+  background: transparent;
+}
+.rh-handle:hover,
+.rh-handle:active {
+  background: rgba(28, 90, 60, 0.25);
+}
+
+/* `0` plutôt qu'un décalage négatif : certains panneaux parents ont
+ * `overflow: hidden` (scroll interne), qui rognerait une poignée
+ * positionnée à cheval sur le bord. */
+.rh-handle-left {
+  left: 0;
+}
+
+.rh-handle-right {
+  right: 0;
+}

@@ -1,0 +1,83 @@
+/**
+ * Attributs "Format avancé" des cellules de tableau — couleur de fond et
+ * bordures par côté (haut/droite/bas/gauche), façon Word. Aucun équivalent
+ * en Markdown/GFM standard (voir `TableMarkdown.ts`, dont `isMarkdownSerializable`
+ * bascule automatiquement en `<table>` HTML dès qu'une cellule utilise l'un
+ * de ces attributs — même principe que pour la fusion de cellules, déjà géré
+ * là-bas) : ces deux fichiers doivent rester synchronisés.
+ *
+ * Étend `@tiptap/extension-table-cell`/`-table-header` (pas des nœuds
+ * réécrits à zéro comme `PageBreak`/`TocMarker` — il faut conserver tout le
+ * schéma/comportement des vraies cellules de tableau, juste ajouter des
+ * attributs). Chaque attribut a son propre `renderHTML` retournant
+ * `{ style: "…" }` — `mergeAttributes` de `@tiptap/core` fusionne
+ * correctement plusieurs `style` (vérifié dans son code source), donc pas
+ * besoin d'un seul renderHTML combiné à la main.
+ */
+import TableCellBase from "@tiptap/extension-table-cell";
+import TableHeaderBase from "@tiptap/extension-table-header";
+
+export type BorderSide = "borderTop" | "borderRight" | "borderBottom" | "borderLeft";
+
+const BORDER_SIDES: BorderSide[] = ["borderTop", "borderRight", "borderBottom", "borderLeft"];
+
+const CSS_BORDER_PROPERTY: Record<BorderSide, string> = {
+  borderTop: "border-top",
+  borderRight: "border-right",
+  borderBottom: "border-bottom",
+  borderLeft: "border-left",
+};
+
+function cellStyleAttributes() {
+  const attrs: Record<string, any> = {
+    backgroundColor: {
+      default: null,
+      parseHTML: (element: HTMLElement) => element.style.backgroundColor || null,
+      renderHTML: (attributes: any) => {
+        if (!attributes.backgroundColor) return {};
+        return { style: `background-color: ${attributes.backgroundColor};` };
+      },
+    },
+    /** Haut/milieu/bas — sans équivalent Markdown standard, comme le reste
+     * de ce fichier (voir `isMarkdownSerializable` dans `TableMarkdown.ts`,
+     * étendu en même temps que cet attribut pour forcer le repli HTML). */
+    verticalAlign: {
+      default: null,
+      parseHTML: (element: HTMLElement) => element.style.verticalAlign || null,
+      renderHTML: (attributes: any) => {
+        if (!attributes.verticalAlign) return {};
+        return { style: `vertical-align: ${attributes.verticalAlign};` };
+      },
+    },
+  };
+  for (const side of BORDER_SIDES) {
+    attrs[side] = {
+      default: null,
+      parseHTML: (element: HTMLElement) => (element.style as any)[side] || null,
+      renderHTML: (attributes: any) => {
+        const value = attributes[side];
+        if (!value) return {};
+        return { style: `${CSS_BORDER_PROPERTY[side]}: ${value};` };
+      },
+    };
+  }
+  return attrs;
+}
+
+export const TableCellStyled = TableCellBase.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      ...cellStyleAttributes(),
+    };
+  },
+});
+
+export const TableHeaderStyled = TableHeaderBase.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      ...cellStyleAttributes(),
+    };
+  },
+});

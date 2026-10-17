@@ -35,6 +35,7 @@ export function TitleBar({
   onOpenFiles,
   onSaveAs,
   onPrint,
+  onExportPdf,
 }: {
   documentTitle: string | null;
   disabled: boolean;
@@ -49,6 +50,9 @@ export function TitleBar({
   /** "Enregistrer sous" — écrit le document actif à un nouvel emplacement. */
   onSaveAs: () => void;
   onPrint: () => void;
+  /** Export PDF DIRECT (pas de boîte de dialogue d'impression système) —
+   * voir `handleExportPdf` dans App.tsx. */
+  onExportPdf: () => void;
 }) {
   return (
     <div className="tbar" data-tauri-drag-region>
@@ -86,8 +90,11 @@ export function TitleBar({
         <button className="tbar-icon-btn" onClick={onOpenFolder} title="Ouvrir un dossier">
           📂
         </button>
-        <button className="tbar-icon-btn" disabled={disabled} onClick={onPrint} title="Imprimer / Exporter PDF">
+        <button className="tbar-icon-btn" disabled={disabled} onClick={onPrint} title="Imprimer">
           🖨️
+        </button>
+        <button className="tbar-icon-btn" disabled={disabled} onClick={onExportPdf} title="Exporter en PDF…">
+          📑
         </button>
         {/* Décoratif, non fonctionnel — voir le commentaire d'en-tête. */}
         <button className="tbar-icon-btn tbar-customize" title="Personnaliser la barre d'outils (à venir)">

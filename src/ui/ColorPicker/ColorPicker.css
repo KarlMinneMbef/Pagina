@@ -1,0 +1,149 @@
+.cp-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.cp-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cp-panel {
+  position: absolute;
+  z-index: 60;
+  background: #fff;
+  border: 1px solid #d9d9d7;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  width: 232px;
+  font-size: 12px;
+  color: #343334;
+}
+
+/* Alignement horizontal/vertical calculé en JS selon l'espace disponible
+ * autour du déclencheur (voir ColorPicker.tsx) — évite que le panneau
+ * déborde hors de la fenêtre quand le déclencheur est près d'un bord. */
+.cp-panel-h-left {
+  left: 0;
+}
+.cp-panel-h-right {
+  left: auto;
+  right: 0;
+}
+.cp-panel-v-down {
+  top: calc(100% + 4px);
+}
+.cp-panel-v-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.cp-automatic {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #343334;
+  text-align: left;
+}
+.cp-automatic:hover {
+  background: #f0f0ee;
+}
+
+.cp-automatic-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid #d9d9d7;
+  flex-shrink: 0;
+}
+
+.cp-sep {
+  height: 1px;
+  background: #e5e5e3;
+  margin: 6px 0;
+}
+
+.cp-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b6b69;
+  margin: 8px 0 4px;
+}
+.cp-section-label:first-of-type {
+  margin-top: 2px;
+}
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.cp-grid:has(+ .cp-section-label) {
+  margin-bottom: 6px;
+}
+
+.cp-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+.cp-swatch:hover {
+  outline: 2px solid #1c5a3c;
+  outline-offset: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.cp-custom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cp-custom-hash {
+  color: #8a8a87;
+  padding-left: 4px;
+}
+
+.cp-custom-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+.cp-custom-apply {
+  padding: 4px 8px;
+  background: #1c5a3c;
+  color: #fff;
+  border: 1px solid #1c5a3c;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cp-custom-apply:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.cp-custom-apply:hover:not(:disabled) {
+  background: #164a30;
+}

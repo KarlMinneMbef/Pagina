@@ -53,8 +53,8 @@ Tout ce qui n'a pas d'équivalent Markdown standard est encodé en commentaires 
 ## Installation (Windows)
 
 Les installeurs prêts à l'emploi se trouvent dans [`releases/`](releases/) :
-- [`Pagina_0.4.5_x64-setup.exe`](releases/Pagina_0.4.5_x64-setup.exe) — installation manuelle simple.
-- [`Pagina_0.4.5_x64_en-US.msi`](releases/Pagina_0.4.5_x64_en-US.msi) — pour un déploiement centralisé (GPO/Intune).
+- [`Pagina_0.4.8_x64-setup.exe`](releases/Pagina_0.4.8_x64-setup.exe) — installation manuelle simple.
+- [`Pagina_0.4.8_x64_en-US.msi`](releases/Pagina_0.4.8_x64_en-US.msi) — pour un déploiement centralisé (GPO/Intune).
 
 Aucun certificat de signature de code n'est configuré : Windows SmartScreen affichera un avertissement « éditeur non reconnu » au premier lancement — cliquer sur « Informations complémentaires → Exécuter quand même ».
 
@@ -73,7 +73,7 @@ En développement actif.
 ## Feuille de route
 
 - **Correcteur orthographique** intégré à l'éditeur.
-- **Conception de tableaux Markdown** plus visuelle (ajout/suppression de lignes-colonnes, redimensionnement à la souris déjà partiellement présent, fusion de cellules).
+- **Édition de tableaux avancée** : fusion/scission de cellules, largeurs de colonne personnalisées (hors Markdown standard, volontairement exclues pour l'instant — voir l'onglet de ruban contextuel "Tableau" déjà disponible pour l'édition standard : ajout/suppression de lignes-colonnes, alignement, insertion par grille façon Word).
 - **Export HTML**, en plus du PDF déjà disponible — un fichier autonome, mise en page incluse, pour publication web ou partage sans lecteur PDF.
 - **Un vrai format `.xmd`** (au-delà du simple fichier `.md` actuel) : suivi des versions du document, historique des modifications, commentaires de relecture, et une gestion d'images plus aboutie (dossier `images/` dédié par document, copie automatique au collage/glisser) — packagé pour rester portable.
 - **Module d'édition assistée par IA** : sélection d'un passage de texte, correction/reformulation proposée par un modèle, validation façon "suivi des modifications" Word.

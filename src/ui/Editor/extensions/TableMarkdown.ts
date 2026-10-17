@@ -26,6 +26,20 @@ function hasSpan(node: any): boolean {
   return node.attrs.colspan > 1 || node.attrs.rowspan > 1;
 }
 
+/** Couleur de fond / bordures par côté (voir `TableCellStyle.ts`, onglet
+ * "Format avancé") : sans équivalent GFM, forcent le même repli HTML que la
+ * fusion de cellules. */
+function hasAdvancedStyle(node: any): boolean {
+  return !!(
+    node.attrs.backgroundColor ||
+    node.attrs.borderTop ||
+    node.attrs.borderRight ||
+    node.attrs.borderBottom ||
+    node.attrs.borderLeft ||
+    node.attrs.verticalAlign
+  );
+}
+
 function childNodes(node: any): any[] {
   const nodes: any[] = [];
   node.forEach((child: any) => nodes.push(child));
@@ -37,12 +51,18 @@ function isMarkdownSerializable(node: any): boolean {
   const firstRow = rows[0];
   const bodyRows = rows.slice(1);
 
-  if (childNodes(firstRow).some((cell) => cell.type.name !== "tableHeader" || hasSpan(cell) || cell.childCount > 1)) {
+  if (
+    childNodes(firstRow).some(
+      (cell) => cell.type.name !== "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || cell.childCount > 1,
+    )
+  ) {
     return false;
   }
   if (
     bodyRows.some((row) =>
-      childNodes(row).some((cell) => cell.type.name === "tableHeader" || hasSpan(cell) || cell.childCount > 1),
+      childNodes(row).some(
+        (cell) => cell.type.name === "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || cell.childCount > 1,
+      ),
     )
   ) {
     return false;
