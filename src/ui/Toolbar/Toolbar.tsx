@@ -450,14 +450,14 @@ export function Toolbar({
       {!leger && tab === "insertion" && (
         <div className="tb-ribbon">
           <RibbonGroup label="Pages" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
-            <BigButton
-              disabled={disabled}
-              onClick={() => actions?.insertPageBreak()}
-              title="Saut de page (Ctrl+Entrée) — commentaire HTML invisible, compatible partout"
-              icon={<IconPageBreak size={28} />}
-              label="Saut de page"
-            />
             <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertPageBreak()}
+                title="Saut de page (Ctrl+Entrée) — commentaire HTML invisible, compatible partout"
+                icon={<IconPageBreak size={15} />}
+                label="Saut de page"
+              />
               <StackButton
                 disabled={disabled}
                 onClick={() => actions?.insertFootnote()}
