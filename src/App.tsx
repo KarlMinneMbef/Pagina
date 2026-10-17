@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
+import { confirm as confirmDialog, message as messageDialog } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { FileExplorer } from "./ui/FileExplorer/FileExplorer";
 import { TitleBar } from "./ui/TitleBar/TitleBar";
@@ -12,13 +12,22 @@ import { MarkdownPreview } from "./ui/Editor/MarkdownPreview";
 import { StatusBar, type ViewMode } from "./ui/StatusBar/StatusBar";
 import { PageSetupDialog } from "./ui/PageSetup/PageSetupDialog";
 import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
+import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
-import { printWindow, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
+import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
 import { useWorkspaceStore } from "./core/store/workspaceStore";
 import { useTabsStore } from "./core/store/tabsStore";
 import "./App.css";
 
-const EMPTY_STATS: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph" };
+const EMPTY_STATS: EditorStats = {
+  words: 0,
+  characters: 0,
+  pageCount: 1,
+  currentPage: 1,
+  activeBlockStyle: "paragraph",
+  insideTable: false,
+  tableSelectionShape: null,
+};
 
 function App() {
   const restoreLastWorkspace = useWorkspaceStore((s) => s.restoreLastWorkspace);
@@ -48,12 +57,30 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [headingStylesOpen, setHeadingStylesOpen] = useState(false);
+  // Panneau latéral contextuel de mise en forme de tableau (voir
+  // TablePropertiesPanel.tsx) — remplace l'ancienne boîte de dialogue
+  // modale `TableBorderDialog`. S'ouvre automatiquement au FRONT MONTANT de
+  // `stats.insideTable` (même principe que la bascule d'onglet ruban
+  // "Tableau" dans Toolbar.tsx) ; une fermeture manuelle n'est pas annulée
+  // tant que le curseur reste dans le même tableau.
+  const [tablePanelOpen, setTablePanelOpen] = useState(false);
+  const wasInsideTableRef = useRef(false);
 
   useEffect(() => {
     restoreLastWorkspace();
     restoreSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const wasInside = wasInsideTableRef.current;
+    wasInsideTableRef.current = stats.insideTable;
+    if (stats.insideTable && !wasInside) {
+      setTablePanelOpen(true);
+    } else if (!stats.insideTable && wasInside) {
+      setTablePanelOpen(false);
+    }
+  }, [stats.insideTable]);
 
   // Ouverture depuis l'Explorateur Windows (double-clic sur un .md/.xmd
   // associé à Pagina, ou "Ouvrir avec") — voir `startup_files.rs` côté Rust.
@@ -174,24 +201,56 @@ function App() {
     await saveTabAs(activeTab.path, newPath);
   };
 
-  // Impression / export PDF : on imprime directement la couche déjà peinte
-  // par la vue Pages (paintPages.ts) — les mêmes boîtes A4 à taille fixe que
-  // ce que l'utilisateur voit à l'écran, avec la même police/mise en page.
-  // Pas de moteur de pagination séparé (Paged.js a été abandonné : instable
-  // dans la WebView2 de Tauri, et redondant avec notre propre pagination
-  // déjà fiable — voir CLAUDE.md). Une feuille de style @media print (voir
-  // App.css) masque tout le reste de l'interface et force l'affichage de
-  // la couche peinte même si l'utilisateur est en vue Markdown/Code au
-  // moment d'imprimer. "Enregistrer au format PDF" dans la boîte de dialogue
-  // d'impression système EST notre export PDF (mêmes pages, rien de plus).
+  // Impression / export PDF : on imprime (ou on exporte) directement la
+  // couche déjà peinte par la vue Pages (paintPages.ts) — les mêmes boîtes
+  // A4 à taille fixe que ce que l'utilisateur voit à l'écran, avec la même
+  // police/mise en page. Pas de moteur de pagination séparé (Paged.js a été
+  // abandonné : instable dans la WebView2 de Tauri, et redondant avec notre
+  // propre pagination déjà fiable — voir CLAUDE.md). Une feuille de style
+  // @media print (voir App.css) masque tout le reste de l'interface et
+  // force l'affichage de la couche peinte même si l'utilisateur est en vue
+  // Markdown/Code au moment d'imprimer/exporter.
   //
-  // `printWindow()` (commande Rust native), PAS `window.print()` : voir
-  // `src-tauri/src/print_commands.rs` — `window.print()` ne fait jamais
-  // rien de visible sur cette version de Tauri/wry (boucle infinie interne
-  // entre le JS et l'IPC, sans jamais atteindre un vrai appel natif).
+  // `printWindow()`/`exportPdf()` (commandes Rust natives), PAS
+  // `window.print()` : voir `src-tauri/src/print_commands.rs` —
+  // `window.print()` ne fait jamais rien de visible sur cette version de
+  // Tauri/wry (boucle infinie interne entre le JS et l'IPC, sans jamais
+  // atteindre un vrai appel natif).
   const handlePrint = () => {
     if (!activeTab) return;
     void printWindow();
+  };
+
+  // Export PDF DIRECT (pas de boîte de dialogue d'impression système) —
+  // demandé par l'utilisateur après avoir trouvé l'impression "pas super" :
+  // "Imprimer > Enregistrer au format PDF" exige de naviguer la boîte de
+  // dialogue système à chaque export ; ce bouton écrit directement le PDF
+  // à l'emplacement choisi, sans aucune boîte de dialogue intermédiaire
+  // au-delà du "Enregistrer sous" — même rendu/mise en page que l'impression
+  // (voir `exportPdf` dans `fileService.ts`).
+  //
+  // La commande Rust `export_pdf` revient IMMÉDIATEMENT (elle se contente de
+  // LANCER l'écriture du PDF) — le vrai résultat arrive plus tard via
+  // l'évènement `"pdf-export-result"` (voir `print_commands.rs` : une
+  // première version qui attendait ce résultat de façon SYNCHRONE à
+  // l'intérieur de la commande restait bloquée indéfiniment dans cette
+  // configuration Tauri/wry, abandonnée). On écoute donc cet évènement ICI
+  // pour afficher une confirmation/erreur une fois l'écriture réellement
+  // terminée.
+  const handleExportPdf = async () => {
+    if (!activeTab) return;
+    const defaultName = activeTab.title.replace(/\.(md|xmd)$/i, "") + ".pdf";
+    const path = await pickPdfSaveLocation(defaultName);
+    if (!path) return;
+    const unlisten = await listen<string | null>("pdf-export-result", async (event) => {
+      unlisten();
+      if (event.payload) {
+        await messageDialog(`Échec de l'export PDF : ${event.payload}`, { title: "Pagina", kind: "error" });
+      } else {
+        await messageDialog(`PDF enregistré : ${path}`, { title: "Pagina", kind: "info" });
+      }
+    });
+    await exportPdf(path);
   };
 
   const handleCloseTab = async (path: string) => {
@@ -226,6 +285,9 @@ function App() {
     setActions({
       undo: () => handle.undo(),
       redo: () => handle.redo(),
+      copySelection: () => handle.copySelection(),
+      cutSelection: () => handle.cutSelection(),
+      pasteClipboard: () => handle.pasteClipboard(),
       toggleBold: () => handle.toggleBold(),
       toggleItalic: () => handle.toggleItalic(),
       toggleUnderline: () => handle.toggleUnderline(),
@@ -239,18 +301,33 @@ function App() {
       toggleCode: () => handle.toggleCode(),
       setCodeBlockLanguage: (language) => handle.setCodeBlockLanguage(language),
       setLink: () => handle.setLink(),
-      insertImage: () => {
-        const url = window.prompt("URL de l'image :", "https://");
-        if (url) handle.insertImage(url);
-      },
-      insertTable: () => handle.insertTable(),
+      insertTable: (rows, cols) => handle.insertTable(rows, cols),
+      addRowBefore: () => handle.addRowBefore(),
+      addRowAfter: () => handle.addRowAfter(),
+      deleteRow: () => handle.deleteRow(),
+      addColumnBefore: () => handle.addColumnBefore(),
+      addColumnAfter: () => handle.addColumnAfter(),
+      deleteColumn: () => handle.deleteColumn(),
+      deleteTable: () => handle.deleteTable(),
+      mergeCells: () => handle.mergeCells(),
+      splitCell: () => handle.splitCell(),
+      toggleHeaderRow: () => handle.toggleHeaderRow(),
+      setCellBackgroundColor: (color: string | null) => handle.setCellBackgroundColor(color),
+      setCellBorder: (sides, css) => handle.setCellBorder(sides, css),
+      setCellBorderPreset: (preset, css) => handle.setCellBorderPreset(preset, css),
+      setGridLineBorder: (lines, css) => handle.setGridLineBorder(lines, css),
+      setCellVerticalAlign: (align) => handle.setCellVerticalAlign(align),
       insertHorizontalRule: () => handle.insertHorizontalRule(),
       insertPageBreak: () => handle.insertPageBreak(),
       setFontFamily: (family) => handle.setFontFamily(family),
       unsetFontFamily: () => handle.unsetFontFamily(),
       setFontSize: (size) => handle.setFontSize(size),
       unsetFontSize: () => handle.unsetFontSize(),
+      increaseFontSize: () => handle.increaseFontSize(),
+      decreaseFontSize: () => handle.decreaseFontSize(),
+      changeCase: () => handle.changeCase(),
       setColor: (color) => handle.setColor(color),
+      unsetColor: () => handle.unsetColor(),
       toggleHighlight: () => handle.toggleHighlight(),
       setTextAlign: (align) => handle.setTextAlign(align),
       toggleSubscript: () => handle.toggleSubscript(),
@@ -283,6 +360,7 @@ function App() {
         onOpenFiles={() => void handleOpenFiles()}
         onSaveAs={() => void handleSaveAs()}
         onPrint={handlePrint}
+        onExportPdf={() => void handleExportPdf()}
       />
       <Toolbar
         actions={actions}
@@ -290,6 +368,7 @@ function App() {
         sidebarOpen={sidebarOpen}
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
+        insideTable={stats.insideTable}
         activeBlockStyle={stats.activeBlockStyle}
       />
       <div className="app-body">
@@ -356,6 +435,14 @@ function App() {
             onZoomChange={(z) => setZoom(clampZoom(z))}
           />
         </div>
+        {tablePanelOpen && activeTab && (
+          <TablePropertiesPanel
+            actions={actions}
+            disabled={!activeTab}
+            shape={stats.tableSelectionShape}
+            onClose={() => setTablePanelOpen(false)}
+          />
+        )}
       </div>
       {pageSetupOpen && activeTab && (
         <PageSetupDialog

@@ -36,7 +36,7 @@ export interface PaginaLightProps {
 }
 
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5];
-const STATS_INITIALES: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph" };
+const STATS_INITIALES: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph", insideTable: false, tableSelectionShape: null };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
 
@@ -89,6 +89,9 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
     setActions({
       undo: () => handle.undo(),
       redo: () => handle.redo(),
+      copySelection: () => handle.copySelection(),
+      cutSelection: () => handle.cutSelection(),
+      pasteClipboard: () => handle.pasteClipboard(),
       toggleBold: () => handle.toggleBold(),
       toggleItalic: () => handle.toggleItalic(),
       toggleUnderline: () => handle.toggleUnderline(),
@@ -102,15 +105,33 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       toggleCode: () => handle.toggleCode(),
       setCodeBlockLanguage: (language) => handle.setCodeBlockLanguage(language),
       setLink: () => handle.setLink(),
-      insertImage: () => {}, // bouton masqué en version légère
-      insertTable: () => handle.insertTable(),
+      insertTable: (rows, cols) => handle.insertTable(rows, cols),
+      addRowBefore: () => handle.addRowBefore(),
+      addRowAfter: () => handle.addRowAfter(),
+      deleteRow: () => handle.deleteRow(),
+      addColumnBefore: () => handle.addColumnBefore(),
+      addColumnAfter: () => handle.addColumnAfter(),
+      deleteColumn: () => handle.deleteColumn(),
+      deleteTable: () => handle.deleteTable(),
+      mergeCells: () => handle.mergeCells(),
+      splitCell: () => handle.splitCell(),
+      toggleHeaderRow: () => handle.toggleHeaderRow(),
+      setCellBackgroundColor: (color: string | null) => handle.setCellBackgroundColor(color),
+      setCellBorder: (sides, css) => handle.setCellBorder(sides, css),
+      setCellBorderPreset: (preset, css) => handle.setCellBorderPreset(preset, css),
+      setGridLineBorder: (lines, css) => handle.setGridLineBorder(lines, css),
+      setCellVerticalAlign: (align) => handle.setCellVerticalAlign(align),
       insertHorizontalRule: () => handle.insertHorizontalRule(),
       insertPageBreak: () => handle.insertPageBreak(),
       setFontFamily: (family) => handle.setFontFamily(family),
       unsetFontFamily: () => handle.unsetFontFamily(),
       setFontSize: (size) => handle.setFontSize(size),
       unsetFontSize: () => handle.unsetFontSize(),
+      increaseFontSize: () => handle.increaseFontSize(),
+      decreaseFontSize: () => handle.decreaseFontSize(),
+      changeCase: () => handle.changeCase(),
       setColor: (color) => handle.setColor(color),
+      unsetColor: () => handle.unsetColor(),
       toggleHighlight: () => handle.toggleHighlight(),
       setTextAlign: (align) => handle.setTextAlign(align),
       toggleSubscript: () => handle.toggleSubscript(),

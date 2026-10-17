@@ -103,6 +103,74 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Refonte complète du ruban façon Word 2024 (2026-10-17, même
+  journée)** : deux onglets (Accueil absorbe « Format avancé », Insertion
+  absorbe « Extras »), icônes SVG exclusives (grille 24x24, stroke 1.6,
+  currentColor — module `src/ui/Toolbar/icons.tsx`, tracés imposés par
+  la maquette, à ne pas redessiner), typologie A/B/C (`.tb-big-btn`
+  grande icône 28px + libellé ; `.tb-stack-btn` petite icône + libellé
+  empilé ; `.tb-btn-icon` icône seule + TOOLTIP obligatoire), grandes
+  icônes lettrées conservées (G/I/S/x²/x₂/Aa/A + barres couleur).
+  - **Accueil** : Presse-papiers (Coller A, Couper/Copier B — NOUVELLES
+    actions `copySelection`/`cutSelection`/`pasteClipboard` dans
+    `MarkdownEditorHandle`, sérialisation Markdown de la sélection via
+    `storage.markdown.serializer` puis API Clipboard), Police (menus +
+    Agrandir/Réduire NOUVEAUX via `FONT_SIZE_STEPS` partagé exporté,
+    Modifier la casse NOUVEAU cycle minuscules→MAJUSCULES→Casse de
+    titre→minuscules, Couleur, Surlignage, Effacer), Paragraphe (+4
+    alignements SVG, lanceur Mise en page), Styles (galerie conservée,
+    lanceur), **Explorateur en fin de bandeau** (type A,
+    `onToggleSidebar`, séparé par un espaceur flexible).
+  - **Insertion** : Pages (Saut de page A, Note de bas de page B),
+    Tableaux et éléments (Tableau A via TableSizePicker restylé,
+    Séparateur/Bloc de code B, Langage), Liens (Lien A), En-tête et
+    pied (En-tête A, Pied B, Variable ▾ B avec icône), Sommaire
+    (Marqueur A, Mettre à jour B), Diagrammes et formules (Mermaid A,
+    formules B, Emoji ▾ B avec le visage SVG fourni, PAS d'emoji comme
+    icône de déclencheur).
+  - **Panneau contextuel générique** (`ContextualRibbonPanel`) : « Outils
+    de tableau » apparaît DANS le ruban (droite, fond distinct,
+    étiquette « Contextuel · Tableau ») quand `stats.insideTable` —
+    7 commandes (lignes/colonnes au-dessus/dessous/gauche/droite,
+    supprimer ligne/colonne, fusionner, basculer ligne d'en-tête —
+    NOUVEAU `toggleHeaderRow`). L'ANCIEN `TablePropertiesPanel` latéral
+    (couleurs/bordures/alignement vertical) est CONSERVÉ : aucune
+    commande ne devait disparaître.
+  - **`insertImage` SUPPRIMÉ** (bouton, action ToolbarActions, entrée du
+    handle, prompt URL, câblage App/PaginaLight) — l'EXTENSION Image de
+    Tiptap reste enregistrée pour que les documents existants avec
+    images restent lisibles (les images reviendront en phase 2 via le
+    dossier images/ du conteneur .xmd). Aucun drag & drop/coliage
+    n'insérait de lien fichier (vérifié : aucun handler à supprimer).
+  - **Deux bugs préexistants corrigés au passage** (révélés par la
+    vérification systématique du .md relu après chaque commande) :
+    1. `ParagraphMarkdown.ts` perdait l'attribut `textAlign` à la
+       sauvegarde (sérialiseur inline maison sans repli HTML) → repli
+       `<p style="text-align: …">` via DOMSerializer quand le
+       paragraphe est aligné ;
+    2. le bouton « Modifier la casse » (repère désactivé avant) a été
+       implémenté avec un cycle complet — le premier essai ne retombait
+       jamais en minuscules (détection titre AVANT détection minuscule).
+  - **Piège WebView2 rencontré** : `navigator.clipboard.readText()`
+    déclenche une demande de permission native qui GÈLE la fenêtre
+    jusqu'à réponse (« Autoriser ») — en test CDP elle déracine
+    `contexts()[0].pages()[0]` (la « page » devient
+    edge://permission-request-dialog ; toujours cibler la page de
+    l'app par son URL localhost:1420). `pasteClipboard` garde un repli
+    presse-papiers INTERNE (dernier Copier/Couper de l'app) si la
+    permission est refusée.
+  - Vérifié par Playwright/CDP en fenêtre réelle : **70/70 contrôles
+    OK** (création d'un fichier test jetable, chaque commande → Ctrl+S
+    → relecture du .md sur disque, structure du ruban, tooltips, panneau
+    contextuel apparaît/disparaît, GFM préservé par les commandes de
+    tableau, repli HTML valide pour la fusion/bascule d'en-tête). Note :
+    insérer une ligne AU-DESSUS de la ligne d'en-tête rend la 1re ligne
+    non en-tête → repli HTML (aucune représentation GFM) — comportement
+    attendu, pas un bug. `npx tsc --noEmit` propre, `npm run build` sans
+    nouveau warning, `cargo check` propre (aucun changement Rust),
+    38 tests Vitest existants toujours verts.
+- **Refonte complète du ruban — suite : voir l'entrée ci-dessus
+  (2026-10-17).**
 - **Explorateur de fichiers — Fonctionnalité 7 : ergonomie complémentaire
   (2026-10-17)**, fin du chantier explorateur (7/7 fonctionnalités).
   - **Sélection** : le simple clic sur un fichier ne fait plus QUE

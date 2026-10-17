@@ -1,19 +1,68 @@
 /**
- * Ruban principal, façon Word : une barre d'onglets (Accueil / Format avancé)
- * au-dessus de groupes de commandes légendés. Reste volontairement mince :
- * n'appelle que des commandes exposées par l'éditeur actif (voir
- * MarkdownEditorHandle) ou des actions globales (enregistrer). Ne connaît
- * pas le filesystem.
+ * Ruban principal, façon Word 2024 : deux onglets (Accueil / Insertion), des
+ * groupes de commandes légendés, et un panneau contextuel (« Outils de
+ * tableau ») qui apparaît à droite du ruban quand le curseur est dans un
+ * élément riche. Reste volontairement mince : n'appelle que des commandes
+ * exposées par l'éditeur actif (voir `MarkdownEditorHandle`) ou des actions
+ * globales. Ne connaît pas le filesystem.
  *
- * Séparation des deux onglets (voulue explicitement) :
- * - "Accueil" : uniquement des commandes qui produisent du Markdown standard
- *   (CommonMark/GFM) ou un marqueur HTML universellement lisible
- *   (`<!-- pagebreak -->`) — rien ici ne dépend d'un rendu HTML particulier.
- * - "Format avancé" : tout ce qui n'a pas d'équivalent en Markdown standard
- *   et est sérialisé en `<span style="…">` dans le fichier .md (toujours
- *   lisible ailleurs, mais plus de la syntaxe Markdown pure).
+ * Typologie des boutons (comme Word) :
+ * - Type A (`.tb-big-btn`) : grande icône ~28px + libellé dessous
+ *   (Coller, Saut de page, Tableau, Lien, En-tête, Sommaire, Mermaid,
+ *   Explorateur…).
+ * - Type B (`.tb-stack-btn`) : petite icône ~15px + libellé à droite,
+ *   empilées verticalement dans le groupe (Couper, Copier, Note de bas de
+ *   page, Séparateur, Bloc de code, Pied de page, Variable, Mettre à jour,
+ *   Formules, Emoji…).
+ * - Type C (`.tb-btn-icon`) : petite icône seule avec TOOLTIP OBLIGATOIRE
+ *   (Gras, Italique, alignements, listes…).
+ * Toutes les icônes sont des SVG vectoriels (voir `icons.tsx`) — les
+ * exceptions lettrées (G/I/S/x²/x₂/Aa/A) restent en texte stylé, comme dans
+ * Word.
  */
 import { useEffect, useRef, useState } from "react";
+import { ColorPicker } from "../ColorPicker/ColorPicker";
+import type { GridLine } from "../Editor/MarkdownEditor";
+import { FONT_SIZE_STEPS } from "../Editor/MarkdownEditor";
+import {
+  IconAlignCenter,
+  IconAlignJustify,
+  IconAlignLeft,
+  IconAlignRight,
+  IconBlockquote,
+  IconBulletList,
+  IconClearFormat,
+  IconCodeBlock,
+  IconCodeInline,
+  IconColLeft,
+  IconColRight,
+  IconCopy,
+  IconCut,
+  IconDeleteColumn,
+  IconDeleteRow,
+  IconEmoji,
+  IconExplorer,
+  IconFooter,
+  IconFootnote,
+  IconHeader,
+  IconHorizontalRule,
+  IconLink,
+  IconMathBlock,
+  IconMathInline,
+  IconMermaid,
+  IconOrderedList,
+  IconPageBreak,
+  IconPaste,
+  IconRowAbove,
+  IconRowBelow,
+  IconTable,
+  IconTableHeader,
+  IconTaskList,
+  IconTocMarker,
+  IconTocRefresh,
+  IconVariable,
+  IconMergeCells,
+} from "./icons";
 import "./Toolbar.css";
 
 /** Variables disponibles dans l'en-tête/pied de page — voir
@@ -30,7 +79,8 @@ const HEADER_FOOTER_VARIABLES: { label: string; token: string }[] = [
 
 /** Emoji courants — insérés comme caractère Unicode réel (pas un code
  * `:smile:` à convertir), donc lisibles tels quels dans n'importe quel
- * autre outil Markdown, sans dépendance à un rendu spécial. */
+ * autre outil Markdown, sans dépendance à un rendu spécial. Le DÉCLENCHEUR
+ * du menu porte l'icône SVG fournie (visage), pas un emoji. */
 const EMOJI_LIST = [
   "😀", "😉", "😂", "🙂", "😍", "🤔", "😢", "😮", "👍", "👎",
   "🙏", "👏", "💪", "✅", "❌", "⚠️", "❗", "❓", "💡", "🔥",
@@ -49,44 +99,72 @@ const HEADING_PREVIEW_SIZE: Record<1 | 2 | 3 | 4 | 5 | 6, number> = {
 export interface ToolbarActions {
   undo: () => void;
   redo: () => void;
+  // --- Presse-papiers ---
+  copySelection: () => void;
+  cutSelection: () => void;
+  pasteClipboard: () => void;
+  // --- Police ---
   toggleBold: () => void;
   toggleItalic: () => void;
   toggleUnderline: () => void;
   toggleStrike: () => void;
-  toggleHeading: (level: 1 | 2 | 3 | 4 | 5 | 6) => void;
-  setParagraph: () => void;
-  toggleBulletList: () => void;
-  toggleOrderedList: () => void;
-  toggleBlockquote: () => void;
-  toggleCodeBlock: () => void;
-  toggleCode: () => void;
-  setCodeBlockLanguage: (language: string) => void;
-  setLink: () => void;
-  insertImage: () => void;
-  insertTable: () => void;
-  insertHorizontalRule: () => void;
-  insertPageBreak: () => void;
   setFontFamily: (family: string) => void;
   unsetFontFamily: () => void;
   setFontSize: (size: string) => void;
   unsetFontSize: () => void;
+  increaseFontSize: () => void;
+  decreaseFontSize: () => void;
+  changeCase: () => void;
   setColor: (color: string) => void;
+  unsetColor: () => void;
   toggleHighlight: () => void;
-  setTextAlign: (align: "left" | "center" | "right" | "justify") => void;
-  toggleSubscript: () => void;
-  toggleSuperscript: () => void;
-  toggleTaskList: () => void;
   clearFormatting: () => void;
+  // --- Paragraphe ---
+  toggleBulletList: () => void;
+  toggleOrderedList: () => void;
+  toggleTaskList: () => void;
+  toggleBlockquote: () => void;
+  setTextAlign: (align: "left" | "center" | "right" | "justify") => void;
+  // --- Styles ---
+  toggleHeading: (level: 1 | 2 | 3 | 4 | 5 | 6) => void;
+  setParagraph: () => void;
+  // --- Insertion ---
+  setLink: () => void;
+  insertTable: (rows: number, cols: number) => void;
+  insertHorizontalRule: () => void;
+  toggleCodeBlock: () => void;
+  setCodeBlockLanguage: (language: string) => void;
+  insertPageBreak: () => void;
+  insertFootnote: () => void;
   editHeader: () => void;
   editFooter: () => void;
   insertHeaderFooterVariable: (token: string) => void;
   insertTocMarker: () => void;
   generateToc: () => void;
-  insertFootnote: () => void;
   insertMermaidDiagram: () => void;
   insertInlineMath: () => void;
   insertBlockMath: () => void;
   insertEmoji: (emoji: string) => void;
+  // --- Code en ligne (groupe Police) ---
+  toggleCode: () => void;
+  toggleSubscript: () => void;
+  toggleSuperscript: () => void;
+  // --- Tableau (panneau contextuel) ---
+  addRowBefore: () => void;
+  addRowAfter: () => void;
+  deleteRow: () => void;
+  addColumnBefore: () => void;
+  addColumnAfter: () => void;
+  deleteColumn: () => void;
+  deleteTable: () => void;
+  mergeCells: () => void;
+  splitCell: () => void;
+  toggleHeaderRow: () => void;
+  setCellBackgroundColor: (color: string | null) => void;
+  setCellBorder: (sides: ("top" | "right" | "bottom" | "left")[], css: string | null) => void;
+  setCellBorderPreset: (preset: "all" | "outside" | "inside" | "none", css: string | null) => void;
+  setGridLineBorder: (lines: GridLine[], css: string | null) => void;
+  setCellVerticalAlign: (align: "top" | "middle" | "bottom") => void;
 }
 
 const FONT_FAMILIES = [
@@ -98,7 +176,9 @@ const FONT_FAMILIES = [
   { label: "Verdana", value: "Verdana, sans-serif" },
 ];
 
-const FONT_SIZES = ["8pt", "9pt", "10pt", "11pt", "12pt", "14pt", "16pt", "18pt", "24pt", "36pt"];
+/** Échelle partagée avec l'éditeur (voir `FONT_SIZE_STEPS` dans
+ * MarkdownEditor.tsx — les boutons Agrandir/Réduire y font référence). */
+const FONT_SIZES = FONT_SIZE_STEPS.map((pt) => `${pt}pt`);
 
 /** Doit correspondre aux clés de `common` de lowlight (voir
  * `createLowlight(common)` dans MarkdownEditor.tsx) — vérifié une fois via
@@ -111,7 +191,7 @@ const CODE_BLOCK_LANGUAGE_OPTIONS = [
   "r", "lua", "perl", "graphql", "makefile", "ini", "diff",
 ];
 
-type RibbonTab = "accueil" | "avance" | "extras";
+type RibbonTab = "accueil" | "insertion";
 
 export function Toolbar({
   actions,
@@ -119,6 +199,7 @@ export function Toolbar({
   sidebarOpen,
   onOpenPageSetup,
   onOpenHeadingStyles,
+  insideTable = false,
   activeBlockStyle = "paragraph",
   leger = false,
 }: {
@@ -127,9 +208,13 @@ export function Toolbar({
   sidebarOpen: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
+  /** Vrai quand le curseur est dans une cellule de tableau : affiche le
+   * panneau contextuel « Outils de tableau » à droite du ruban actif
+   * (voir `EditorStats.insideTable` dans MarkdownEditor.tsx). */
+  insideTable?: boolean;
   /** Version LÉGÈRE (intégration dans une autre application, ex. MBEF Platform) : uniquement l'onglet
-   * « Accueil », sans bouton Explorateur, sans bouton Image, sans lanceurs de dialogues (mise en page,
-   * styles de titres). Sans effet (false) dans Pagina elle-même. */
+   * « Accueil », sans bouton Explorateur, sans lanceurs de dialogues (mise en page,
+   * styles de titres), sans panneau contextuel. Sans effet (false) dans Pagina elle-même. */
   leger?: boolean;
   /** Style de bloc sous le curseur — surligne le bon bouton de la galerie
    * "Styles" (voir `EditorStats.activeBlockStyle` dans MarkdownEditor.tsx). */
@@ -138,203 +223,56 @@ export function Toolbar({
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
 
+  const showAccueil = leger || tab === "accueil";
+
   return (
     <div className="tb-ribbon-stack">
 
       {/* Barre d'onglets du ruban (absente en version légère : un seul onglet). */}
       {!leger && <div className="tb-tabbar">
         <button
-          className={`tb-tab${tab === "accueil" ? " tb-tab-active" : ""}`}
+          className={`tb-tab${showAccueil ? " tb-tab-active" : ""}`}
           onClick={() => setTab("accueil")}
         >
           Accueil
         </button>
         <button
-          className={`tb-tab${tab === "avance" ? " tb-tab-active" : ""}`}
-          onClick={() => setTab("avance")}
-          title="Mise en forme sans équivalent en Markdown standard (enregistrée en HTML dans le .md)"
+          className={`tb-tab${tab === "insertion" ? " tb-tab-active" : ""}`}
+          onClick={() => setTab("insertion")}
         >
-          Format avancé
-        </button>
-        <button
-          className={`tb-tab${tab === "extras" ? " tb-tab-active" : ""}`}
-          onClick={() => setTab("extras")}
-          title="Diagrammes, formules mathématiques, emoji"
-        >
-          Extras
+          Insertion
         </button>
       </div>}
 
-      {(leger || tab === "accueil") && (
+      {showAccueil && (
         <div className="tb-ribbon">
-          {!leger && <button
-            className="tb-big-icon"
-            onClick={onToggleSidebar}
-            title={sidebarOpen ? "Masquer l'explorateur" : "Afficher l'explorateur"}
-          >
-            <span className="tb-big-icon-glyph">🗀</span>
-            <span className="tb-big-icon-label">Explorateur</span>
-          </button>}
-
-          <RibbonGroup
-            label="Police"
-            launcher={leger ? undefined : { title: "Autres réglages de police (à venir)" }}
-          >
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBold()} title="Gras (Ctrl+B)">
-              <b>G</b>
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleItalic()} title="Italique (Ctrl+I)">
-              <i>I</i>
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleStrike()} title="Texte barré">
-              <s>S</s>
-            </button>
-            <button
-              className="tb-btn-icon"
+          <RibbonGroup label="Presse-papiers" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
               disabled={disabled}
-              onClick={() => actions?.toggleCode()}
-              title="Code en ligne — distinct du bloc de code (dans une phrase, ex. `variable`)"
-            >
-              {"</>"}
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleHighlight()} title="Surlignage">
-              🖍️
-            </button>
-          </RibbonGroup>
-
-          <RibbonGroup
-            label="Paragraphe"
-            launcher={leger ? undefined : { onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
-          >
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
-              ☰•
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
-              ☰1
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
-              ☑
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
-              ❝
-            </button>
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.insertPageBreak()}
-              title="Saut de page (Ctrl+Entrée) — commentaire HTML invisible, compatible partout"
-            >
-              ⤓
-            </button>
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.insertFootnote()}
-              title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
-            >
-              [^]
-            </button>
-          </RibbonGroup>
-
-          <RibbonGroup
-            label="Styles"
-            launcher={leger ? undefined : { onClick: onOpenHeadingStyles, title: "Styles de titres (police, couleur, numérotation automatique par niveau)" }}
-          >
-            <StyleGallery
-              disabled={disabled}
-              active={activeBlockStyle}
-              onPick={(level) => actions?.toggleHeading(level)}
-              onPickParagraph={() => actions?.setParagraph()}
+              onClick={() => actions?.pasteClipboard()}
+              title="Coller le contenu du presse-papiers (le Markdown collé est converti)"
+              icon={<IconPaste size={28} />}
+              label="Coller"
             />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.cutSelection()}
+                title="Couper la sélection (copie en Markdown, puis supprime)"
+                icon={<IconCut size={15} />}
+                label="Couper"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.copySelection()}
+                title="Copier la sélection en Markdown"
+                icon={<IconCopy size={15} />}
+                label="Copier"
+              />
+            </div>
           </RibbonGroup>
 
-          <RibbonGroup label="Liens et médias">
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setLink()} title="Lien">
-              🔗
-            </button>
-            {!leger && <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.insertImage()} title="Image">
-              🖼️
-            </button>}
-          </RibbonGroup>
-
-          <RibbonGroup label="Éléments">
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.insertTable()} title="Tableau">
-              ▦
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.insertHorizontalRule()} title="Séparateur">
-              ─
-            </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleCodeBlock()} title="Bloc de code">
-              {"</>"}
-            </button>
-            <select
-              className="tb-select tb-select-narrow"
-              disabled={disabled}
-              defaultValue=""
-              title="Langage du bloc de code (curseur dans un bloc de code)"
-              onChange={(e) => {
-                if (e.target.value) actions?.setCodeBlockLanguage(e.target.value);
-              }}
-            >
-              <option value="">Langage</option>
-              {/* Doit correspondre aux clés de `common` de lowlight (voir
-               * `MarkdownEditor.tsx`, `createLowlight(common)`) — sinon la
-               * coloration syntaxique ne s'applique pas silencieusement. */}
-              {CODE_BLOCK_LANGUAGE_OPTIONS.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
-              ))}
-            </select>
-          </RibbonGroup>
-
-          <RibbonGroup label="En-tête et pied de page">
-            <button
-              className="tb-btn"
-              disabled={disabled}
-              onClick={() => actions?.editHeader()}
-              title="Modifier l'en-tête (identique à cliquer directement sur l'en-tête d'une page)"
-            >
-              En-tête
-            </button>
-            <button
-              className="tb-btn"
-              disabled={disabled}
-              onClick={() => actions?.editFooter()}
-              title="Modifier le pied de page (identique à cliquer directement sur le pied de page d'une page)"
-            >
-              Pied de page
-            </button>
-            <VariablePicker disabled={disabled} onPick={(token) => actions?.insertHeaderFooterVariable(token)} />
-          </RibbonGroup>
-
-          <RibbonGroup label="Sommaire">
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.insertTocMarker()}
-              title="Insérer un marqueur de sommaire (commentaire HTML invisible, compatible partout)"
-            >
-              ☰+
-            </button>
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.generateToc()}
-              title="Générer/mettre à jour le sommaire (remplace le marqueur par la liste réelle des titres)"
-            >
-              ↻
-            </button>
-          </RibbonGroup>
-        </div>
-      )}
-
-      {!leger && tab === "avance" && (
-        <div className="tb-ribbon">
-          <RibbonGroup
-            label="Police"
-            title="Ces réglages n'existent pas en Markdown standard : ils sont enregistrés sous forme de balises HTML dans le fichier .md (toujours lisibles ailleurs, mais pas en syntaxe Markdown pure)."
-          >
+          <RibbonGroup label="Police">
             <div className="tb-group-row">
               <select
                 className="tb-select"
@@ -370,146 +308,442 @@ export function Toolbar({
                   </option>
                 ))}
               </select>
-              {/* TODO : "agrandir/réduire la police" n'existe pas encore comme
-               * action (pas de notion de "police actuelle + 1 taille" côté
-               * éditeur, seulement un choix direct dans la liste ci-dessus) —
-               * boutons posés ici en pur repère visuel façon Word, sans
-               * logique, en attendant qu'on définisse le comportement exact
-               * (quelle liste de tailles, arrondi...). */}
-              <button className="tb-btn-icon" disabled title="Agrandir la police (à venir)">
-                A˄
+              {/* Boutons lettrés "A + chevron", comme Word (voir exceptions
+               * admises du cahier des charges icônes). */}
+              <button
+                className="tb-btn-icon"
+                disabled={disabled}
+                onClick={() => actions?.increaseFontSize()}
+                title="Agrandir la police (pas suivant dans l'échelle des tailles)"
+              >
+                <span className="tb-letter">A<span className="tb-caret-up">˄</span></span>
               </button>
-              <button className="tb-btn-icon" disabled title="Réduire la police (à venir)">
-                A˅
+              <button
+                className="tb-btn-icon"
+                disabled={disabled}
+                onClick={() => actions?.decreaseFontSize()}
+                title="Réduire la police (pas précédent dans l'échelle des tailles)"
+              >
+                <span className="tb-letter">A<span className="tb-caret-down">˅</span></span>
               </button>
-              {/* TODO : "changement de casse" (MAJUSCULES/minuscules/Cas de
-               * titre) n'existe pas non plus comme action côté éditeur —
-               * même traitement que ci-dessus, pur repère visuel. */}
-              <button className="tb-btn-icon" disabled title="Modifier la casse (à venir)">
-                Aa
+              <button
+                className="tb-btn-icon"
+                disabled={disabled}
+                onClick={() => actions?.changeCase()}
+                title="Modifier la casse (MAJUSCULES → Casse de titre → minuscules)"
+              >
+                <span className="tb-letter">Aa</span>
               </button>
               <button
                 className="tb-btn-icon"
                 disabled={disabled}
                 onClick={() => actions?.clearFormatting()}
-                title="Effacer toute la mise en forme avancée"
+                title="Effacer toute la mise en forme"
               >
-                🧹
+                <IconClearFormat size={16} />
               </button>
             </div>
             <div className="tb-group-row">
+              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBold()} title="Gras (Ctrl+B)">
+                <span className="tb-letter tb-letter-bold">G</span>
+              </button>
+              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleItalic()} title="Italique (Ctrl+I)">
+                <span className="tb-letter tb-letter-italic">I</span>
+              </button>
               <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleUnderline()} title="Souligné (Ctrl+U)">
-                <u>S</u>
+                <span className="tb-letter tb-letter-underline">S</span>
+              </button>
+              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleStrike()} title="Texte barré">
+                <span className="tb-letter tb-letter-strike">S</span>
               </button>
               <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleSubscript()} title="Indice">
-                X₂
+                <span className="tb-letter">x<span className="tb-letter-sub">2</span></span>
               </button>
               <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleSuperscript()} title="Exposant">
-                X²
+                <span className="tb-letter">x<span className="tb-letter-sup">2</span></span>
               </button>
-              {/* Le petit chevron est purement visuel (façon Word) : toute la
-               * zone du bouton ouvre déjà le même sélecteur de couleur natif
-               * (input[type=color] superposé, voir .tb-color-swatch) — pas
-               * un second contrôle, juste une meilleure affordance. */}
-              <label className="tb-btn-icon tb-color-swatch" title="Couleur du texte">
-                A
-                <span className="tb-swatch-caret">▾</span>
-                <input
-                  type="color"
-                  disabled={disabled}
-                  defaultValue="#343334"
-                  onChange={(e) => actions?.setColor(e.target.value)}
-                />
-              </label>
               <button
-                className="tb-btn-icon tb-btn-with-caret"
+                className="tb-btn-icon"
+                disabled={disabled}
+                onClick={() => actions?.toggleCode()}
+                title="Code en ligne — distinct du bloc de code (dans une phrase, ex. `variable`)"
+              >
+                <IconCodeInline size={16} />
+              </button>
+              <ColorPicker
+                disabled={disabled}
+                title="Couleur du texte"
+                triggerClassName="tb-btn-icon tb-btn-with-caret"
+                trigger={
+                  <>
+                    <span className="tb-letter">A</span>
+                    <span className="tb-swatch-caret">▾</span>
+                  </>
+                }
+                onAutomatic={() => actions?.unsetColor()}
+                automaticSwatch="#343334"
+                onChange={(color) => actions?.setColor(color)}
+              />
+              <button
+                className="tb-btn-icon"
                 disabled={disabled}
                 onClick={() => actions?.toggleHighlight()}
                 title="Surlignage"
               >
-                🖍️
-                <span className="tb-swatch-caret">▾</span>
+                <span className="tb-letter tb-letter-highlight">
+                  S<span className="tb-highlight-bar" />
+                </span>
               </button>
             </div>
           </RibbonGroup>
 
-          <RibbonGroup label="Alignement" title="Sans équivalent en Markdown standard, sérialisé en HTML.">
+          <RibbonGroup
+            label="Paragraphe"
+            launcher={leger ? undefined : { onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
+          >
+            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
+              <IconBulletList size={16} />
+            </button>
+            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
+              <IconOrderedList size={16} />
+            </button>
+            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
+              <IconTaskList size={16} />
+            </button>
+            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
+              <IconBlockquote size={16} />
+            </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
-              <AlignIcon variant="left" />
+              <IconAlignLeft size={16} />
             </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
-              <AlignIcon variant="center" />
+              <IconAlignCenter size={16} />
             </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
-              <AlignIcon variant="right" />
+              <IconAlignRight size={16} />
             </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
-              <AlignIcon variant="justify" />
+              <IconAlignJustify size={16} />
             </button>
           </RibbonGroup>
+
+          <RibbonGroup
+            label="Styles"
+            launcher={leger ? undefined : { onClick: onOpenHeadingStyles, title: "Styles de titres (police, couleur, numérotation automatique par niveau)" }}
+          >
+            <StyleGallery
+              disabled={disabled}
+              active={activeBlockStyle}
+              onPick={(level) => actions?.toggleHeading(level)}
+              onPickParagraph={() => actions?.setParagraph()}
+            />
+          </RibbonGroup>
+
+          {/* Explorateur : grande icône séparée, à la FIN du bandeau Accueil
+           * (pas un onglet, pas un groupe). */}
+          {!leger && (
+            <>
+              <div className="tb-ribbon-spacer" />
+              <BigButton
+                onClick={onToggleSidebar}
+                title={sidebarOpen ? "Masquer l'explorateur" : "Afficher l'explorateur"}
+                icon={<IconExplorer size={28} />}
+                label="Explorateur"
+              />
+            </>
+          )}
+
+          {!leger && insideTable && actions && (
+            <ContextualRibbonPanel disabled={disabled} actions={actions} />
+          )}
         </div>
       )}
 
-      {!leger && tab === "extras" && (
+      {!leger && tab === "insertion" && (
         <div className="tb-ribbon">
-          <RibbonGroup label="Diagrammes">
-            <button
-              className="tb-btn"
+          <RibbonGroup label="Pages" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.insertPageBreak()}
+              title="Saut de page (Ctrl+Entrée) — commentaire HTML invisible, compatible partout"
+              icon={<IconPageBreak size={28} />}
+              label="Saut de page"
+            />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertFootnote()}
+                title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
+                icon={<IconFootnote size={15} />}
+                label="Note de bas de page"
+              />
+            </div>
+          </RibbonGroup>
+
+          <RibbonGroup label="Tableaux et éléments" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <TableSizePicker disabled={disabled} onPick={(rows, cols) => actions?.insertTable(rows, cols)} />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertHorizontalRule()}
+                title="Séparateur horizontal"
+                icon={<IconHorizontalRule size={15} />}
+                label="Séparateur"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.toggleCodeBlock()}
+                title="Bloc de code"
+                icon={<IconCodeBlock size={15} />}
+                label="Bloc de code"
+              />
+            </div>
+            <div className="tb-stack">
+              <select
+                className="tb-stack-select"
+                disabled={disabled}
+                defaultValue=""
+                title="Langage du bloc de code (curseur dans un bloc de code)"
+                onChange={(e) => {
+                  if (e.target.value) actions?.setCodeBlockLanguage(e.target.value);
+                }}
+              >
+                <option value="">Langage…</option>
+                {/* Doit correspondre aux clés de `common` de lowlight (voir
+                 * `MarkdownEditor.tsx`, `createLowlight(common)`) — sinon la
+                 * coloration syntaxique ne s'applique pas silencieusement. */}
+                {CODE_BLOCK_LANGUAGE_OPTIONS.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </RibbonGroup>
+
+          <RibbonGroup label="Liens et médias" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.setLink()}
+              title="Lien"
+              icon={<IconLink size={28} />}
+              label="Lien"
+            />
+          </RibbonGroup>
+
+          <RibbonGroup label="En-tête et pied" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.editHeader()}
+              title="Modifier l'en-tête (identique à cliquer directement sur l'en-tête d'une page)"
+              icon={<IconHeader size={28} />}
+              label="En-tête"
+            />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.editFooter()}
+                title="Modifier le pied de page (identique à cliquer directement sur le pied de page d'une page)"
+                icon={<IconFooter size={15} />}
+                label="Pied de page"
+              />
+              <VariablePicker disabled={disabled} onPick={(token) => actions?.insertHeaderFooterVariable(token)} />
+            </div>
+          </RibbonGroup>
+
+          <RibbonGroup label="Sommaire" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.insertTocMarker()}
+              title="Insérer un marqueur de sommaire (commentaire HTML invisible, compatible partout)"
+              icon={<IconTocMarker size={28} />}
+              label="Marqueur"
+            />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.generateToc()}
+                title="Générer/mettre à jour le sommaire (remplace le marqueur par la liste réelle des titres)"
+                icon={<IconTocRefresh size={15} />}
+                label="Mettre à jour"
+              />
+            </div>
+          </RibbonGroup>
+
+          <RibbonGroup label="Diagrammes et formules" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
               disabled={disabled}
               onClick={() => actions?.insertMermaidDiagram()}
               title="Insérer un diagramme Mermaid (source éditable, aperçu rendu en direct)"
-            >
-              ⛓ Mermaid
-            </button>
+              icon={<IconMermaid size={28} />}
+              label="Mermaid"
+            />
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertInlineMath()}
+                title="Formule en ligne (dans une phrase)"
+                icon={<IconMathInline size={15} />}
+                label="Formule en ligne"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertBlockMath()}
+                title="Formule en bloc (seule sur sa ligne, centrée)"
+                icon={<IconMathBlock size={15} />}
+                label="Formule en bloc"
+              />
+            </div>
+            <div className="tb-stack">
+              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
+            </div>
           </RibbonGroup>
 
-          <RibbonGroup label="Mathématiques" title="Formules LaTeX, rendues via KaTeX.">
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.insertInlineMath()}
-              title="Formule en ligne (dans une phrase)"
-            >
-              x²
-            </button>
-            <button
-              className="tb-btn-icon"
-              disabled={disabled}
-              onClick={() => actions?.insertBlockMath()}
-              title="Formule en bloc (seule sur sa ligne, centrée)"
-            >
-              ∑
-            </button>
-          </RibbonGroup>
-
-          <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
+          {insideTable && actions && (
+            <ContextualRibbonPanel disabled={disabled} actions={actions} />
+          )}
         </div>
       )}
+
     </div>
   );
 }
 
-/** Icône standard "barres alignées" (façon Word/Google Docs) — remplace les
- * anciens glyphes texte (⯇≡/≡/≡⯈/☰), peu lisibles à 13px. Barres dessinées en
- * SVG (`fill="currentColor"`, hérite la couleur du bouton) plutôt qu'un
- * caractère Unicode : rendu identique quelle que soit la police système. */
-function AlignIcon({ variant }: { variant: "left" | "center" | "right" | "justify" }) {
-  // 4 barres, largeurs décroissantes façon icône standard ; position (x) de
-  // chaque barre selon l'alignement représenté.
-  const widths = [16, 11, 16, 8];
-  const bars = widths.map((w) => {
-    let x = 0;
-    if (variant === "center") x = (16 - w) / 2;
-    else if (variant === "right") x = 16 - w;
-    const width = variant === "justify" ? 16 : w;
-    return { x: variant === "justify" ? 0 : x, width };
-  });
+/** Bouton de type A : grande icône (~28px) + libellé dessous. */
+function BigButton({
+  icon,
+  label,
+  title,
+  onClick,
+  disabled = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
-      {bars.map((bar, i) => (
-        <rect key={i} x={bar.x} y={i * 3.2} width={bar.width} height="1.6" rx="0.8" />
-      ))}
-    </svg>
+    <button type="button" className="tb-big-btn" onClick={onClick} disabled={disabled} title={title}>
+      <span className="tb-big-btn-icon">{icon}</span>
+      <span className="tb-big-btn-label">{label}</span>
+    </button>
+  );
+}
+
+/** Bouton de type B : petite icône (~15px) + libellé à droite. */
+function StackButton({
+  icon,
+  label,
+  title,
+  onClick,
+  disabled = false,
+  className = "",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`tb-stack-btn ${className}`.trim()}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+    >
+      <span className="tb-stack-btn-icon">{icon}</span>
+      <span className="tb-stack-btn-label">{label}</span>
+    </button>
+  );
+}
+
+/** Panneau contextuel générique : s'affiche DANS le ruban (à droite du
+ * ruban actif) quand le curseur est dans un élément riche. Premier cas :
+ * tableau (`kind="table"`). L'architecture (liste de colonnes de boutons
+ * type B + étiquette « Contextuel · … ») est conçue pour être réutilisée
+ * pour d'autres éléments riches plus tard (Mermaid, formule) sans
+ * modification du ruban lui-même. */
+function ContextualRibbonPanel({
+  disabled,
+  actions,
+}: {
+  disabled: boolean;
+  actions: ToolbarActions;
+}) {
+  return (
+    <div className="tb-contextual">
+      <div className="tb-contextual-columns">
+        <div className="tb-stack">
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.addRowBefore()}
+            title="Insérer une ligne au-dessus"
+            icon={<IconRowAbove size={15} />}
+            label="Ligne au-dessus"
+          />
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.addRowAfter()}
+            title="Insérer une ligne en dessous"
+            icon={<IconRowBelow size={15} />}
+            label="Ligne en dessous"
+          />
+        </div>
+        <div className="tb-stack">
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.addColumnBefore()}
+            title="Insérer une colonne à gauche"
+            icon={<IconColLeft size={15} />}
+            label="Colonne à gauche"
+          />
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.addColumnAfter()}
+            title="Insérer une colonne à droite"
+            icon={<IconColRight size={15} />}
+            label="Colonne à droite"
+          />
+        </div>
+        <div className="tb-stack">
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.deleteRow()}
+            title="Supprimer la ligne"
+            icon={<IconDeleteRow size={15} />}
+            label="Supprimer ligne"
+          />
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.deleteColumn()}
+            title="Supprimer la colonne"
+            icon={<IconDeleteColumn size={15} />}
+            label="Supprimer colonne"
+          />
+        </div>
+        <div className="tb-stack">
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.mergeCells()}
+            title="Fusionner les cellules sélectionnées"
+            icon={<IconMergeCells size={15} />}
+            label="Fusionner"
+          />
+          <StackButton
+            disabled={disabled}
+            onClick={() => actions.toggleHeaderRow()}
+            title="Basculer la ligne d'en-tête"
+            icon={<IconTableHeader size={15} />}
+            label="Ligne d'en-tête"
+          />
+        </div>
+      </div>
+      <div className="tb-contextual-caption">Contextuel · Tableau</div>
+    </div>
   );
 }
 
@@ -519,20 +753,22 @@ function RibbonGroup({
   label,
   title,
   launcher,
+  buttonsClassName = "tb-group-buttons",
   children,
 }: {
   label: string;
   title?: string;
   /** Icône "lanceur" affichée juste après le libellé du groupe (façon Word,
-   * la petite flèche qui ouvre une boîte de dialogue détaillée). Sans
-   * `onClick`, c'est un pur repère visuel — TODO en attendant une boîte de
-   * dialogue dédiée (voir Police/Paragraphe, qui n'en ont pas encore). */
+   * la petite flèche qui ouvre une boîte de dialogue détaillée). */
   launcher?: { onClick?: () => void; title?: string };
+  /** Variante de disposition des boutons (grille 2 lignes par défaut,
+   * ou flex pour les groupes type A + piles type B). */
+  buttonsClassName?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="tb-group">
-      <div className="tb-group-buttons">{children}</div>
+      <div className={buttonsClassName}>{children}</div>
       <div className="tb-group-caption" title={title}>
         {label}
         {launcher && (
@@ -553,8 +789,8 @@ function RibbonGroup({
 
 /** Galerie de styles de paragraphe (Normal / Titre 1 / Titre 2 / autres
  * niveaux via le chevron), façon groupe "Styles" de Word — remplace
- * l'ancien menu déroulant "Titre ▾". Le bouton du style courant (sous le
- * curseur) est mis en évidence. */
+ * l'ancien menu déroulant "Titre ▾". Le bouton du style courant (sous
+ * le curseur) est mis en évidence. */
 function StyleGallery({
   disabled,
   active,
@@ -670,13 +906,17 @@ function VariablePicker({ disabled, onPick }: { disabled: boolean; onPick: (toke
   return (
     <div className="tb-heading-picker" ref={rootRef}>
       <button
-        className="tb-btn tb-heading-picker-trigger"
+        className="tb-stack-btn tb-heading-picker-trigger tb-stack-btn-with-caret"
         disabled={disabled}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((o) => !o)}
         title="Insérer une variable dans l'en-tête/le pied de page (numéro de page, date...)"
       >
-        Variable ▾
+        <span className="tb-stack-btn-icon">
+          <IconVariable size={15} />
+        </span>
+        <span className="tb-stack-btn-label">Variable</span>
+        <span className="tb-stack-caret">▾</span>
       </button>
       {open && (
         <div className="tb-heading-menu">
@@ -699,9 +939,92 @@ function VariablePicker({ disabled, onPick }: { disabled: boolean; onPick: (toke
   );
 }
 
+const TABLE_PICKER_MAX_COLS = 8;
+const TABLE_PICKER_MAX_ROWS = 6;
+
+/** Sélecteur de taille de tableau façon Word : une grille survolée, la
+ * portion en haut à gauche du pointeur se surligne, un libellé "R × C"
+ * indique la taille qui serait insérée, cliquer insère exactement cette
+ * taille. Le DÉCLENCHEUR est un bouton de type A (grande icône Tableau +
+ * libellé), façon groupe "Tableaux" de l'onglet Insertion. */
+function TableSizePicker({
+  disabled,
+  onPick,
+}: {
+  disabled: boolean;
+  onPick: (rows: number, cols: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState<{ rows: number; cols: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const closeAndReset = () => {
+    setOpen(false);
+    setHover(null);
+  };
+
+  return (
+    <div className="tb-table-picker tb-heading-picker" ref={rootRef}>
+      <button
+        type="button"
+        className="tb-big-btn tb-btn-with-caret"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        title="Tableau — choisir la taille dans la grille"
+      >
+        <span className="tb-big-btn-icon">
+          <IconTable size={28} />
+        </span>
+        <span className="tb-big-btn-label">Tableau</span>
+        <span className="tb-swatch-caret">▾</span>
+      </button>
+      {open && (
+        <div className="tb-table-size-menu" onMouseLeave={() => setHover(null)}>
+          <div className="tb-table-size-grid">
+            {Array.from({ length: TABLE_PICKER_MAX_ROWS }, (_, r) =>
+              Array.from({ length: TABLE_PICKER_MAX_COLS }, (_, c) => {
+                const rows = r + 1;
+                const cols = c + 1;
+                const active = !!hover && rows <= hover.rows && cols <= hover.cols;
+                return (
+                  <button
+                    key={`${rows}x${cols}`}
+                    type="button"
+                    className={`tb-table-size-cell${active ? " tb-table-size-cell-active" : ""}`}
+                    onMouseEnter={() => setHover({ rows, cols })}
+                    onClick={() => {
+                      onPick(rows, cols);
+                      closeAndReset();
+                    }}
+                  />
+                );
+              })
+            )}
+          </div>
+          <div className="tb-table-size-label">
+            {hover ? `${hover.rows} × ${hover.cols}` : "Taille du tableau"}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Menu d'insertion d'emoji — grille plutôt qu'une liste verticale (les
  * libellés textuels des autres menus n'ont pas de sens ici, l'emoji EST
- * son propre libellé). */
+ * son propre libellé). Le DÉCLENCHEUR porte l'icône SVG fournie (visage),
+ * pas un emoji. */
 function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: string) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -720,12 +1043,16 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
   return (
     <div className="tb-heading-picker" ref={rootRef}>
       <button
-        className="tb-btn tb-heading-picker-trigger"
+        className="tb-stack-btn tb-heading-picker-trigger tb-stack-btn-with-caret"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         title="Insérer un emoji"
       >
-        😀 Emoji ▾
+        <span className="tb-stack-btn-icon">
+          <IconEmoji size={15} />
+        </span>
+        <span className="tb-stack-btn-label">Emoji</span>
+        <span className="tb-stack-caret">▾</span>
       </button>
       {open && (
         <div className="tb-emoji-menu">

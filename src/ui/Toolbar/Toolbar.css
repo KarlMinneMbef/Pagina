@@ -44,11 +44,14 @@
   background: #003f2b;
 }
 
-/* Gros bouton (façon "Coller" dans Word) : occupe toute la hauteur des 2
- * lignes de commandes, pour la bascule de l'explorateur — c'est l'action la
- * plus fréquente après la frappe elle-même, elle mérite mieux qu'une petite
- * icône perdue dans la barre d'accès rapide. */
-.tb-big-icon {
+/* Espaceur souple qui pousse les éléments suivants (Explorateur, panneau
+ * contextuel) vers la fin du bandeau. */
+.tb-ribbon-spacer {
+  flex: 1;
+}
+
+/* --- Bouton de type A : grande icône (~28px) + libellé dessous --- */
+.tb-big-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -58,24 +61,203 @@
   border: 1px solid transparent;
   color: #ffffff;
   border-radius: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   cursor: pointer;
   align-self: stretch;
+  font-family: Arial, sans-serif;
+  min-width: 52px;
 }
 
-.tb-big-icon:hover {
+.tb-big-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.15);
 }
 
-.tb-big-icon-glyph {
-  font-size: 22px;
-  line-height: 1;
+.tb-big-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
-.tb-big-icon-label {
+.tb-big-btn-icon {
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.tb-big-btn-label {
   font-size: 10px;
   white-space: nowrap;
 }
+
+/* --- Bouton de type B : petite icône (~15px) + libellé à droite,
+ * empilé verticalement dans une pile `.tb-stack` --- */
+.tb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  align-self: stretch;
+}
+
+.tb-stack-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
+}
+
+.tb-stack-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tb-stack-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tb-stack-btn-icon {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.tb-stack-btn-label {
+  line-height: 1;
+}
+
+.tb-stack-btn-with-caret {
+  position: relative;
+}
+
+.tb-stack-caret {
+  font-size: 8px;
+  margin-left: 1px;
+}
+
+/* Sélecteur posé dans une pile type B (ex. "Langage…" du bloc de code),
+ * même hauteur/apparence qu'un bouton de pile. */
+.tb-stack-select {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+  max-width: 96px;
+}
+
+.tb-stack-select option {
+  color: #343334;
+  background: #ffffff;
+}
+
+/* --- Boutons lettrés (exceptions admises : G/I/S/x²/x₂/Aa/A) --- */
+.tb-letter {
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.tb-letter-bold {
+  font-weight: 700;
+}
+
+.tb-letter-italic {
+  font-style: italic;
+}
+
+.tb-letter-underline {
+  text-decoration: underline;
+}
+
+.tb-letter-strike {
+  text-decoration: line-through;
+}
+
+.tb-letter-sub {
+  font-size: 9px;
+  vertical-align: -3px;
+}
+
+.tb-letter-sup {
+  font-size: 9px;
+  vertical-align: 4px;
+}
+
+/* A + chevron haut/bas (agrandir/réduire la police). */
+.tb-caret-up,
+.tb-caret-down {
+  font-size: 8px;
+  margin-left: 1px;
+}
+
+.tb-caret-up {
+  vertical-align: 3px;
+}
+
+.tb-caret-down {
+  vertical-align: -3px;
+}
+
+/* S + barre jaune (surlignage). */
+.tb-letter-highlight {
+  position: relative;
+  padding-bottom: 2px;
+}
+
+.tb-highlight-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #ffd60a;
+  border-radius: 1px;
+}
+
+/* --- Panneau contextuel (« Outils de tableau ») : à droite du ruban
+ * actif, DANS le ruban, fond légèrement distinct + étiquette dédiée. */
+.tb-contextual {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2px 10px 0;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.07);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px 4px 0 0;
+}
+
+.tb-contextual-columns {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex: 1;
+  padding-bottom: 4px;
+}
+
+.tb-contextual-caption {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-style: italic;
+  white-space: nowrap;
+  text-align: center;
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: default;
+}
+
+/* Espaceur souple qui pousse les éléments suivants (Explorateur, panneau
+ * contextuel) vers la fin du bandeau. */
 
 /* Un groupe occupe toute la hauteur disponible ; ses boutons se répartissent
  * dans une grille à 2 LIGNES (remplie colonne par colonne, comme le groupe
@@ -104,6 +286,14 @@
   gap: 3px;
   flex: 1;
   padding-bottom: 4px;
+}
+
+/* Variante flex : pour les groupes mélangeant un gros bouton type A et des
+ * piles verticales de boutons type B (Presse-papiers, Pages, Tableaux…). */
+.tb-group-buttons-flex {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
 }
 
 /* Une "ligne" explicite à l'intérieur d'un groupe (voir le groupe "Police"
@@ -214,27 +404,6 @@
 }
 .tb-style-btn-active:hover:not(:disabled) {
   background: #ffffff;
-}
-
-.tb-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: #ffffff;
-  padding: 5px 9px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  font-family: Arial, sans-serif;
-  white-space: nowrap;
-}
-
-.tb-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.tb-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* Bouton carré icône seule (avec info-bulle) : c'est ce qui donne son
@@ -349,11 +518,46 @@
   background: #dfeff8;
 }
 
-.tb-sep {
-  width: 1px;
-  align-self: stretch;
-  background: rgba(255, 255, 255, 0.25);
-  margin: 2px 6px;
+/* Sélecteur de taille de tableau (grille survolée façon Word). */
+.tb-table-size-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  z-index: 60;
+}
+
+.tb-table-size-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  grid-template-rows: repeat(6, 16px);
+  gap: 2px;
+}
+
+.tb-table-size-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #c9c9c7;
+  background: #ffffff;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tb-table-size-cell-active {
+  background: #2f52a0;
+  border-color: #2f52a0;
+}
+
+.tb-table-size-label {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: #343334;
+  font-family: Arial, sans-serif;
 }
 
 .tb-select {
@@ -376,31 +580,3 @@
   background: #ffffff;
 }
 
-.tb-color-swatch {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
-  font-weight: bold;
-  font-size: 12px;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.tb-color-swatch input[type="color"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.tb-color-swatch:has(input:disabled) {
-  opacity: 0.4;
-  cursor: default;
-}
