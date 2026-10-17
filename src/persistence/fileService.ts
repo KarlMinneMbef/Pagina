@@ -89,6 +89,13 @@ export async function watchWorkspace(root: string): Promise<void> {
   return invoke("watch_workspace", { root });
 }
 
+/** Arrête le watcher courant (appelé avant watch_workspace du NOUVEAU
+ * dossier lors d'un changement de workspace — l'ancien watcher Rust
+ * resterait sinon actif sur un dossier qui n'est plus affiché). */
+export async function unwatchWorkspace(): Promise<void> {
+  return invoke("unwatch_workspace");
+}
+
 /**
  * Ouvre la boîte de dialogue d'impression système. N'utilise PAS
  * `window.print()` : sur cette version de Tauri/wry (Windows/WebView2),
@@ -101,6 +108,28 @@ export async function watchWorkspace(root: string): Promise<void> {
  */
 export async function printWindow(): Promise<void> {
   return invoke("print_window");
+}
+
+/** Boîte de dialogue "Enregistrer sous" pour l'export PDF — retourne le
+ * chemin choisi, ou `null` si l'utilisateur annule. */
+export async function pickPdfSaveLocation(defaultName: string): Promise<string | null> {
+  return save({
+    defaultPath: defaultName,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    title: "Exporter en PDF",
+  });
+}
+
+/**
+ * Export PDF DIRECT (pas de boîte de dialogue d'impression système) —
+ * écrit un PDF sur disque à `path` en se basant sur le même rendu
+ * `@media print`/`@page` que l'impression (voir `printWindow` ci-dessus),
+ * via l'API COM native WebView2 `ICoreWebView2_7::PrintToPdf`
+ * (`src-tauri/src/print_commands.rs`) — aucun passage par la boîte de
+ * dialogue système, contrairement à "Imprimer > Enregistrer au format PDF".
+ */
+export async function exportPdf(path: string): Promise<void> {
+  return invoke("export_pdf", { path });
 }
 
 // --- mapping snake_case (Rust/serde) -> camelCase (TS) ---

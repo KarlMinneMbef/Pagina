@@ -103,6 +103,44 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 6 : rafraîchissement disque
+  robuste (2026-10-17)**, suite du chantier explorateur.
+  - **Debounce 300 ms côté JS** dans `workspaceStore.ts`
+    (`debouncedRefreshTree` appelé par le listener
+    `workspace://changed`) : une rafale d'évènements disque ne
+    déclenche QU'UNE relecture `read_workspace_tree` (les appels
+    directs à `refreshTree` — création, renommage… — restent
+    immédiats).
+  - **`unwatch_workspace` (nouvelle commande Rust)** : `watcher.rs`
+    réécrit — le `RecommendedWatcher` vit désormais dans un état géré
+    Tauri (`WatcherState`, `Mutex<Option<RecommendedWatcher>>`,
+    enregistré via `.manage()` dans `lib.rs`) au lieu d'un thread
+    détaché impossible à arrêter. Le thread de boucle d'évènements ne
+    détient PAS le watcher : `unwatch_workspace` le drop, ce qui ferme
+    le channel et termine proprement la boucle. `openWorkspace`
+    appelle `unwatchWorkspace()` AVANT `watchWorkspace(nouveauRoot)`
+    dès qu'on change de dossier (l'ancien watcher resterait sinon actif
+    sur un dossier qui n'est plus affiché).
+  - **Onglet « (introuvable) »** : `refreshTree` compare les chemins
+    des onglets (sous le workspace root uniquement, jamais les onglets
+    ouverts hors workspace) avec l'arbre relu ; les fichiers disparus
+    sont marqués via `tabsStore.markMissingPaths` — l'onglet reste
+    OUVERT (contenu/dirty conservés), `TabBar` affiche
+    `titre (introuvable)` ; la marque disparaît si le fichier revient.
+  - **Message d'arbre vide corrigé** : « Aucun fichier .md / .xmd »
+    n'apparaît que s'il n'y a NI fichiers NI dossiers à toute
+    profondeur (`flattenTree(tree).length === 0` au lieu de
+    `tree.length === 0`, robuste même si le pruning Rust des dossiers
+    vides venait à changer).
+  - Tests : `FileExplorer.refresh.test.tsx` (6 cas : debounce 300 ms,
+    ordre unwatch→watch au changement de workspace, onglet introuvable
+    conservé puis démarqué au retour du fichier, onglet hors workspace
+    jamais marqué, rendu TabBar « (introuvable) », message d'arbre
+    vide). Piège de test : `watcherStarted` est une variable de MODULE
+    dans workspaceStore — elle persiste entre les tests d'un même
+    fichier, le `beforeEach` ne réinitialise donc pas le watcher (les
+    tests d'ordre d'appels doivent en tenir compte). `cargo check`
+    propre.
 - **Explorateur de fichiers — Fonctionnalité 5 : tooltip chemin complet
   (2026-10-17)**, suite du chantier explorateur. Chaque ligne (dossier
   ou fichier, arbre normal ET vue aplatie de recherche) porte

@@ -316,7 +316,7 @@ export function FileExplorer({
         )}
         {loading && <div className="fx-empty">Chargement…</div>}
         {error && <div className="fx-error">{error}</div>}
-        {root && !loading && !search && tree.length === 0 && !error && (
+        {root && !loading && !search && flattenTree(tree).length === 0 && !error && (
           <div className="fx-empty">Aucun fichier .md / .xmd dans ce dossier.</div>
         )}
         {search && matches.length === 0 && !loading && (
