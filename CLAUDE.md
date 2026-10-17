@@ -103,6 +103,49 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 2 : menu contextuel +
+  dialogues inline (2026-10-17)**, suite du chantier explorateur.
+  - **Boutons « Nouveau fichier/dossier » supprimés** de l'en-tête de
+    section, **tous les window.prompt/alert éliminés** de
+    `FileExplorer.tsx` (ils échouent silencieusement dans WebView2) :
+    tout passe désormais par un clic droit + composants React maison.
+  - **Menu contextuel** (`TreeMenu.tsx`, classe `fx-menu`) : dossier →
+    5 actions (Nouveau fichier, Nouveau dossier, Renommer, Dupliquer,
+    Supprimer) ; fichier → 3 actions (Renommer, Dupliquer, Supprimer) ;
+    fond de l'arbre → création à la racine. Fermeture au clic extérieur
+    (`pointerdown` sur document) et à Échap ; navigation clavier
+    flèches/Entrée ; **positionnement inversé près des bords** (mesure
+    `getBoundingClientRect` dans un `useLayoutEffect`, même logique que
+    le correctif ColorPicker).
+  - **`NameDialog.tsx`** (création/renommage, classe `fx-dialog`) :
+    validation nom vide interdit + caractères `\ / : * ? " < > |`
+    refusés avec message d'erreur explicite, Entrée valide, Échap
+    annule. **`ConfirmDialog.tsx`** pour la suppression, avec message
+    renforcé si un onglet dirty serait perdu.
+  - **Stores** : `workspaceStore` gagne `renameEntry(from, to)`,
+    `deleteEntry(path)`, `duplicateEntry(path)` (encapsulent appel
+    fileService + refreshTree + propagation tabsStore) et
+    `createNewFile/createNewFolder` acceptent un `dirPath` optionnel
+    (création dans un sous-dossier) ; `joinPath` est exporté.
+    `tabsStore` gagne `renameTabPaths(from, to)` : met à jour chemin et
+    titre de tout onglet sous `from` (fichier OU dossier, préfixe
+    `\\` ou `/`) en conservant contenu/dirty/mise en page ;
+    `deleteEntry` ferme proprement les onglets du chemin supprimé.
+  - Tests : `FileExplorer.contextmenu.test.tsx` (7 cas : 5 actions vs 3
+    vs racine, caractère invalide sans appel `rename_path`, renommage
+    valide avec onglet dirty conservé, confirmation avant fermeture
+    d'onglet, fermeture du menu extérieur/Échap, navigation clavier,
+    duplication). Vérifié par Playwright/CDP sur le workspace réel
+    (menus racine et fichier, dialogue de renommage, erreur caractères
+    interdits, Échap sans rien modifier).
+  - **Piège CDP rencontré** : quand la fenêtre de l'app est RÉDUITE,
+    le viewport WebView2 tombe à ~146x20px et Playwright échoue avec
+    "<html> intercepts pointer events" — restaurer la fenêtre d'abord
+    (script `restore-window.ps1` à la racine, non tracké :
+    ShowWindow SW_RESTORE via P/Invoke). Autre piège : le HMR de Vite
+    qui hot-swappe `workspaceStore.ts` RÉINITIALISE le singleton
+    Zustand (root perdu, App ne remonte pas) → `page.reload()` via CDP
+    restaure le workspace depuis localStorage.
 - **Explorateur de fichiers — Fonctionnalité 1 : recherche dans
   l'arborescence (2026-10-17)**, première étape du chantier explorateur
   (7 fonctionnalités prévues dans l'ordre : recherche, menu contextuel,

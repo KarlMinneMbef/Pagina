@@ -116,27 +116,6 @@
   white-space: nowrap;
 }
 
-.fx-section-actions {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.fx-section-btn {
-  background: transparent;
-  border: none;
-  color: #6b6b69;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  line-height: 1;
-}
-.fx-section-btn:hover {
-  background: #d9d9d7;
-  color: #343334;
-}
-
 .fx-body {
   flex: 1;
   overflow-y: auto;
@@ -190,4 +169,131 @@
 .fx-name {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- Menu contextuel (clic droit) --- */
+.fx-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 170px;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+}
+
+.fx-menu-item {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  color: #343334;
+  padding: 5px 14px;
+  cursor: pointer;
+}
+
+.fx-menu-item:hover,
+.fx-menu-item:focus-visible {
+  background: #dfeff8;
+  outline: none;
+}
+
+/* --- Dialogues inline (création, renommage, confirmation) --- */
+.fx-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fx-dialog {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  padding: 14px 16px;
+  width: min(340px, calc(100vw - 32px));
+}
+
+.fx-dialog-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.fx-dialog-message {
+  font-size: 13px;
+  color: #4a494a;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.fx-dialog-input {
+  width: 100%;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #343334;
+  box-sizing: border-box;
+}
+
+.fx-dialog-input:focus {
+  outline: none;
+  border-color: #24ac6e;
+}
+
+.fx-dialog-error {
+  color: #eb5b1f;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.fx-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fx-dialog-btn {
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #343334;
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.fx-dialog-btn:hover {
+  background: #f4f4f3;
+}
+
+.fx-dialog-submit {
+  background: #24ac6e;
+  border-color: #24ac6e;
+  color: #ffffff;
+}
+
+.fx-dialog-submit:hover {
+  filter: brightness(1.05);
+  background: #24ac6e;
+}
+
+.fx-dialog-danger {
+  background: #eb5b1f;
+  border-color: #eb5b1f;
+  color: #ffffff;
+}
+
+.fx-dialog-danger:hover {
+  filter: brightness(1.05);
+  background: #eb5b1f;
 }
