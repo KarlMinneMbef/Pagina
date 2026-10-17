@@ -128,14 +128,19 @@ projets"). Constats et actions :
     (Marqueur A, Mettre à jour B), Diagrammes et formules (Mermaid A,
     formules B, Emoji ▾ B avec le visage SVG fourni, PAS d'emoji comme
     icône de déclencheur).
-  - **Panneau contextuel générique** (`ContextualRibbonPanel`) : « Outils
-    de tableau » apparaît DANS le ruban (droite, fond distinct,
-    étiquette « Contextuel · Tableau ») quand `stats.insideTable` —
-    7 commandes (lignes/colonnes au-dessus/dessous/gauche/droite,
-    supprimer ligne/colonne, fusionner, basculer ligne d'en-tête —
-    NOUVEAU `toggleHeaderRow`). L'ANCIEN `TablePropertiesPanel` latéral
-    (couleurs/bordures/alignement vertical) est CONSERVÉ : aucune
-    commande ne devait disparaître.
+  - **Outils de tableau contextuels : dans le PANNEAU LATÉRAL, pas dans le
+    bandeau** (correction 2026-10-17 après incompréhension : une première
+    interprétation de « panneau contextuel à droite du ruban » avait posé
+    un panneau DANS le bandeau du ruban — l'utilisateur a tranché que ce
+    n'était pas la bonne place, c'est une ERREUR à ne pas refaire). Les
+    outils de tableau restent ceux du panneau latéral
+    `TablePropertiesPanel` (droite du document, ouverture automatique à
+    l'entrée dans un tableau), qui gagne au passage : la commande
+    « Basculer la ligne d'en-tête » (`toggleHeaderRow`, nouvelle action
+    Tiptap exposée) et les vraies icônes SVG (tracés fournis par la
+    maquette, `icons.tsx`) à la place des glyphes texte (⬒+/⬓−…). Le
+    composant `ContextualRibbonPanel` du bandeau a été SUPPRIMÉ
+    entièrement (composant, CSS, prop `insideTable` du ruban).
   - **`insertImage` SUPPRIMÉ** (bouton, action ToolbarActions, entrée du
     handle, prompt URL, câblage App/PaginaLight) — l'EXTENSION Image de
     Tiptap reste enregistrée pour que les documents existants avec
@@ -353,11 +358,18 @@ projets"). Constats et actions :
     depuis un appel d'outil (y compris `tools.process.start` ou
     `Start-Process` PowerShell) sont TUÉS dès la fin de l'appel — pour
     lancer `tauri dev` avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
-    =--remote-debugging-port=9222` de façon durable, passer par le
-    Planificateur de tâches : `run-tauri-dev.cmd` à la racine (non tracké)
-    + `schtasks /create /tn pagina-dev-cdp /tr <chemin> /sc once /st
-    23:59` puis `schtasks /run /tn pagina-dev-cdp` ; log dans
-    `tauri-dev.log`.
+    =--remote-debugging-port=9222` de façon durable, le Planificateur de
+    tâches a fonctionné un temps (`schtasks /create /tn pagina-dev-cdp
+    /tr <chemin> /sc once /st 23:59` puis `/run`) puis s'est MIS EN FILE
+    D'ATTENTE INDEFINIMENT sans jamais exécuter (même une tâche trivial
+    `echo > fichier`, cause inconnue, service Schedule pourtant RUNNING).
+    Contournement VALIDÉ (2026-10-17, à préférer désormais) : création
+    du processus via WMI, dont le parent (WmiPrvSE) est hors de l'arbre
+    du shell — `powershell Invoke-CimMethod -ClassName Win32_Process
+    -MethodName Create -Arguments @{ CommandLine = 'cmd /c
+    "C:\...\run-tauri-dev.cmd"' }` (`run-tauri-dev.cmd` + log
+    `tauri-dev.log` à la racine, non trackés). Après un kill/redémarrage
+    de l'app le bug CDP `shared_worker` (documenté plus bas) disparaît.
 - **Correctif : le panneau `ColorPicker` débordait hors de l'écran
   (2026-10-14, même jour)**, remonté par l'utilisateur avec une capture
   d'écran montrant le sélecteur de "Couleur de bordure" tronqué sur le bord
