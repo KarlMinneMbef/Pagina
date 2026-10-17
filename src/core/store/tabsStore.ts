@@ -45,6 +45,11 @@ interface TabsState {
    * quels, `dirty:false` puisqu'on vient de l'écrire) — l'ancien onglet
    * reste ouvert inchangé, comme dans la plupart des éditeurs. */
   saveTabAs: (path: string, newPath: string) => Promise<void>;
+  /** Renommage disque d'un fichier OU d'un dossier : met à jour le chemin de
+   * tout onglet sous `from` (le fichier lui-même, ou les fichiers contenus
+   * dans le dossier) vers `to`, en conservant contenu, dirty et mise en
+   * page. Appelé par `workspaceStore.renameEntry`. */
+  renameTabPaths: (from: string, to: string) => void;
   restoreSession: () => Promise<void>;
 }
 
@@ -156,6 +161,29 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       pendingContent: { ...s.pendingContent, [newPath]: content },
       activePath: newPath,
     }));
+    persist(get());
+  },
+
+  renameTabPaths: (from: string, to: string) => {
+    const under = (p: string) =>
+      p === from || p.startsWith(from + "\\") || p.startsWith(from + "/");
+    set((s) => {
+      if (!s.tabs.some((t) => under(t.path))) return s;
+      const remap = (p: string) =>
+        p === from ? to : to + p.slice(from.length);
+      const tabs = s.tabs.map((t) =>
+        under(t.path)
+          ? { ...t, path: remap(t.path), title: titleFromPath(remap(t.path)) }
+          : t
+      );
+      const pendingContent: Record<string, string> = {};
+      for (const [k, v] of Object.entries(s.pendingContent)) {
+        pendingContent[under(k) ? remap(k) : k] = v;
+      }
+      const activePath =
+        s.activePath && under(s.activePath) ? remap(s.activePath) : s.activePath;
+      return { tabs, pendingContent, activePath };
+    });
     persist(get());
   },
 

@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FileNode } from "../../core/types";
-import { useWorkspaceStore } from "../../core/store/workspaceStore";
+import { useWorkspaceStore, joinPath } from "../../core/store/workspaceStore";
+import { useTabsStore } from "../../core/store/tabsStore";
 import { useHorizontalResize } from "../ResizeHandle/useHorizontalResize";
 import { ResizeHandle } from "../ResizeHandle/ResizeHandle";
+import { TreeMenu, type TreeMenuAction } from "./TreeMenu";
+import { NameDialog } from "./NameDialog";
+import { ConfirmDialog } from "./ConfirmDialog";
 import "./FileExplorer.css";
 
 function FileIcon({ isDir, name, expanded }: { isDir: boolean; name: string; expanded?: boolean }) {
@@ -18,6 +22,7 @@ function TreeNode({
   activePath,
   expandedOverrides,
   onToggleDir,
+  onNodeContextMenu,
 }: {
   node: FileNode;
   depth: number;
@@ -27,6 +32,7 @@ function TreeNode({
    * de premier niveau sont dépliés par défaut (voir FileExplorer). */
   expandedOverrides: Map<string, boolean>;
   onToggleDir: (path: string, defaultExpanded: boolean) => void;
+  onNodeContextMenu: (e: React.MouseEvent, node: FileNode) => void;
 }) {
   const defaultExpanded = depth < 1;
   const expanded = expandedOverrides.has(node.path)
@@ -40,6 +46,7 @@ function TreeNode({
           className="fx-row"
           style={{ paddingLeft: 8 + depth * 14 }}
           onClick={() => onToggleDir(node.path, defaultExpanded)}
+          onContextMenu={(e) => onNodeContextMenu(e, node)}
         >
           <span className="fx-caret">{expanded ? "▾" : "▸"}</span>
           <FileIcon isDir name={node.name} expanded={expanded} />
@@ -56,6 +63,7 @@ function TreeNode({
                 activePath={activePath}
                 expandedOverrides={expandedOverrides}
                 onToggleDir={onToggleDir}
+                onNodeContextMenu={onNodeContextMenu}
               />
             ))}
           </div>
@@ -69,6 +77,7 @@ function TreeNode({
       className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}`}
       style={{ paddingLeft: 8 + depth * 14 + 14 }}
       onClick={() => onOpenFile(node.path)}
+      onContextMenu={(e) => onNodeContextMenu(e, node)}
     >
       <FileIcon isDir={false} name={node.name} />
       <span className="fx-name">{node.name}</span>
@@ -106,7 +115,7 @@ export function FileExplorer({
    * correspondante dans l'arborescence (barre d'accent + fond clair). */
   activePath?: string | null;
 }) {
-  const { root, tree, loading, error, openFolderPicker, createNewFile, createNewFolder } = useWorkspaceStore();
+  const { root, tree, loading, error, openFolderPicker, createNewFile, createNewFolder, renameEntry, deleteEntry, duplicateEntry } = useWorkspaceStore();
 
   const workspaceName = root ? root.split(/[\\/]/).filter(Boolean).pop() ?? root : null;
 
@@ -139,17 +148,93 @@ export function FileExplorer({
     return flattenTree(tree).filter((n) => n.name.toLowerCase().includes(q));
   }, [tree, search]);
 
-  const handleNewFile = () => {
-    const name = window.prompt("Nom du nouveau fichier :", "Nouveau document.md");
-    if (!name) return;
-    void createNewFile(name.trim()).then(onOpenFile).catch((e) => window.alert(`Impossible de créer le fichier : ${e}`));
+  // --- Menu contextuel + dialogues (aucun window.prompt/confirm : ils
+  // échouent silencieusement dans WebView2, voir CLAUDE.md) ---
+  const [menu, setMenu] = useState<{ x: number; y: number; node: FileNode | null } | null>(null);
+  const [dialog, setDialog] = useState<
+    { kind: "newFile" | "newFolder" | "rename"; node: FileNode | null } | null
+  >(null);
+  const [confirmDelete, setConfirmDelete] = useState<FileNode | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const openNodeContextMenu = (e: React.MouseEvent, node: FileNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ x: e.clientX, y: e.clientY, node });
   };
 
-  const handleNewFolder = () => {
-    const name = window.prompt("Nom du nouveau dossier :");
-    if (!name) return;
-    void createNewFolder(name.trim()).catch((e) => window.alert(`Impossible de créer le dossier : ${e}`));
+  const menuActions: TreeMenuAction[] = useMemo(() => {
+    if (!menu) return [];
+    const node = menu.node;
+    if (!node) {
+      // Fond de l'arbre (racine) : création seulement.
+      return [
+        { id: "newFile", label: "Nouveau fichier", onAction: () => setDialog({ kind: "newFile", node: null }) },
+        { id: "newFolder", label: "Nouveau dossier", onAction: () => setDialog({ kind: "newFolder", node: null }) },
+      ];
+    }
+    const rename = { id: "rename", label: "Renommer", onAction: () => setDialog({ kind: "rename", node }) };
+    const duplicate = {
+      id: "duplicate",
+      label: "Dupliquer",
+      onAction: () => { void duplicateEntry(node.path).catch((e) => setActionError(String(e))); },
+    };
+    const del = { id: "delete", label: "Supprimer", onAction: () => setConfirmDelete(node) };
+    if (node.isDir) {
+      return [
+        { id: "newFile", label: "Nouveau fichier", onAction: () => setDialog({ kind: "newFile", node }) },
+        { id: "newFolder", label: "Nouveau dossier", onAction: () => setDialog({ kind: "newFolder", node }) },
+        rename,
+        duplicate,
+        del,
+      ];
+    }
+    return [rename, duplicate, del];
+  }, [menu, duplicateEntry]);
+
+  const dialogTitles: Record<"newFile" | "newFolder" | "rename", { title: string; submitLabel: string }> = {
+    newFile: { title: "Nouveau fichier", submitLabel: "Créer" },
+    newFolder: { title: "Nouveau dossier", submitLabel: "Créer" },
+    rename: { title: "Renommer", submitLabel: "Renommer" },
   };
+
+  const runAction = (p: Promise<unknown>) => {
+    void p.catch((e) => setActionError(String(e)));
+  };
+
+  const submitDialog = (name: string) => {
+    if (!dialog) return;
+    const node = dialog.node;
+    setDialog(null);
+    setActionError(null);
+    if (dialog.kind === "newFile") {
+      runAction(createNewFile(name, node?.path).then(onOpenFile));
+    } else if (dialog.kind === "newFolder") {
+      runAction(createNewFolder(name, node?.path));
+    } else if (node) {
+      const from = node.path;
+      const sepIdx = Math.max(from.lastIndexOf("\\"), from.lastIndexOf("/"));
+      const parent = sepIdx > 0 ? from.slice(0, sepIdx) : from;
+      const to = joinPath(parent, name);
+      if (to !== from) runAction(renameEntry(from, to));
+    }
+  };
+
+  // Message de confirmation de suppression : renforcé si un onglet modifié
+  // (dirty) serait perdu avec le fichier/dossier supprimé.
+  const tabs = useTabsStore((s) => s.tabs);
+  const deleteTargetHasDirtyTab = (() => {
+    if (!confirmDelete) return false;
+    const p = confirmDelete.path;
+    return tabs.some(
+      (t) => t.dirty && (t.path === p || t.path.startsWith(p + "\\") || t.path.startsWith(p + "/"))
+    );
+  })();
+  const confirmDeleteMessage = !confirmDelete
+    ? ""
+    : deleteTargetHasDirtyTab
+      ? `« ${confirmDelete.name} » a des modifications non enregistrées qui seront perdues. Supprimer quand même ?`
+      : `Supprimer « ${confirmDelete.name} » ?`;
 
   const { width, onHandleMouseDown } = useHorizontalResize(260, { min: 180, max: 520, anchor: "left" });
 
@@ -190,19 +275,24 @@ export function FileExplorer({
 
       {root && (
         <div className="fx-section-label">
-          <span className="fx-section-name">{workspaceName}</span>
-          <span className="fx-section-actions">
-            <button className="fx-section-btn" onClick={handleNewFolder} title="Nouveau dossier">
-              🗀+
-            </button>
-            <button className="fx-section-btn" onClick={handleNewFile} title="Nouveau fichier">
-              🗋+
-            </button>
+          <span className="fx-section-name" title={root}>
+            {workspaceName}
           </span>
         </div>
       )}
 
-      <div className="fx-body">
+      <div
+        className="fx-body"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setMenu({ x: e.clientX, y: e.clientY, node: null });
+        }}
+      >
+        {actionError && (
+          <div className="fx-error" role="alert" onClick={() => setActionError(null)}>
+            {actionError}
+          </div>
+        )}
         {!root && !loading && (
           <div className="fx-empty">Aucun dossier ouvert. Cliquez sur « Ouvrir… ».</div>
         )}
@@ -245,10 +335,43 @@ export function FileExplorer({
               activePath={activePath ?? null}
               expandedOverrides={expandedOverrides}
               onToggleDir={toggleDir}
+              onNodeContextMenu={openNodeContextMenu}
             />
           ))
         )}
       </div>
+
+      {menu && (
+        <TreeMenu x={menu.x} y={menu.y} actions={menuActions} onClose={() => setMenu(null)} />
+      )}
+      {dialog && (
+        <NameDialog
+          title={dialogTitles[dialog.kind].title}
+          submitLabel={dialogTitles[dialog.kind].submitLabel}
+          initialName={
+            dialog.kind === "newFile"
+              ? "Nouveau document.md"
+              : dialog.kind === "rename"
+                ? dialog.node?.name ?? ""
+                : ""
+          }
+          onSubmit={submitDialog}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Confirmer la suppression"
+          message={confirmDeleteMessage}
+          onConfirm={() => {
+            const node = confirmDelete;
+            setConfirmDelete(null);
+            setActionError(null);
+            runAction(deleteEntry(node.path));
+          }}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

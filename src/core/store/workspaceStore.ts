@@ -2,12 +2,16 @@ import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import type { FileNode } from "../types";
 import { DEFAULT_PAGE_LAYOUT, withDocumentConfig } from "../pageLayout";
+import { useTabsStore } from "./tabsStore";
 import {
   pickWorkspaceFolder,
   readWorkspaceTree,
   watchWorkspace,
   createFile,
   createFolder,
+  renamePath,
+  deletePath,
+  duplicatePath,
 } from "../../persistence/fileService";
 
 const LAST_WORKSPACE_KEY = "xmd.lastWorkspaceRoot";
@@ -22,13 +26,23 @@ interface WorkspaceState {
   openWorkspace: (root: string) => Promise<void>;
   refreshTree: () => Promise<void>;
   restoreLastWorkspace: () => Promise<void>;
-  /** Crée un nouveau fichier .md à la racine du workspace et retourne son chemin. */
-  createNewFile: (fileName: string) => Promise<string>;
-  /** Crée un nouveau sous-dossier à la racine du workspace. */
-  createNewFolder: (folderName: string) => Promise<void>;
+  /** Crée un nouveau fichier .md (racine du workspace, ou `dirPath` pour un
+   * sous-dossier) et retourne son chemin complet. */
+  createNewFile: (fileName: string, dirPath?: string) => Promise<string>;
+  /** Crée un nouveau sous-dossier (racine du workspace, ou `dirPath`). */
+  createNewFolder: (folderName: string, dirPath?: string) => Promise<void>;
+  /** Renomme un fichier ou un dossier sur disque, met à jour l'arbre et
+   * propage aux onglets ouverts (chemin/titre conservés : contenu et dirty). */
+  renameEntry: (from: string, to: string) => Promise<void>;
+  /** Supprime un fichier ou un dossier sur disque, met à jour l'arbre et
+   * ferme proprement les onglets concernés. */
+  deleteEntry: (path: string) => Promise<void>;
+  /** Duplique un fichier ou un dossier sur disque, met à jour l'arbre et
+   * retourne le chemin de la copie. */
+  duplicateEntry: (path: string) => Promise<string>;
 }
 
-function joinPath(root: string, name: string): string {
+export function joinPath(root: string, name: string): string {
   const sep = root.includes("\\") ? "\\" : "/";
   return root.endsWith(sep) ? `${root}${name}` : `${root}${sep}${name}`;
 }
@@ -87,13 +101,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 
-  createNewFile: async (fileName: string) => {
+  createNewFile: async (fileName: string, dirPath?: string) => {
     const { root } = get();
     if (!root) throw new Error("Aucun dossier de travail ouvert.");
     const name = fileName.toLowerCase().endsWith(".md") || fileName.toLowerCase().endsWith(".xmd")
       ? fileName
       : `${fileName}.md`;
-    const path = joinPath(root, name);
+    const path = joinPath(dirPath ?? root, name);
     // Documente la config de mise en page utilisée à la création du fichier
     // (police, marges, format papier, en-tête/pied de page) — invisible
     // dans tout autre outil Markdown (voir pageLayout.ts).
@@ -102,11 +116,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     return path;
   },
 
-  createNewFolder: async (folderName: string) => {
+  createNewFolder: async (folderName: string, dirPath?: string) => {
     const { root } = get();
     if (!root) throw new Error("Aucun dossier de travail ouvert.");
-    const path = joinPath(root, folderName);
+    const path = joinPath(dirPath ?? root, folderName);
     await createFolder(path);
     await get().refreshTree();
+  },
+
+  renameEntry: async (from: string, to: string) => {
+    await renamePath(from, to);
+    // Propage aux onglets AVANT le refresh pour que le rafraîchissement de
+    // l'UI ne remonte jamais un état d'onglet périmé.
+    useTabsStore.getState().renameTabPaths(from, to);
+    await get().refreshTree();
+  },
+
+  deleteEntry: async (path: string) => {
+    await deletePath(path);
+    const tabs = useTabsStore.getState();
+    for (const t of [...tabs.tabs]) {
+      const under =
+        t.path === path || t.path.startsWith(path + "\\") || t.path.startsWith(path + "/");
+      if (under) tabs.closeTab(t.path);
+    }
+    await get().refreshTree();
+  },
+
+  duplicateEntry: async (path: string) => {
+    const newPath = await duplicatePath(path);
+    await get().refreshTree();
+    return newPath;
   },
 }));
