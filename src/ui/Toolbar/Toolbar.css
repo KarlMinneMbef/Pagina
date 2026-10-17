@@ -49,7 +49,6 @@
 .tb-ribbon-spacer {
   flex: 1;
 }
-
 /* --- Bouton de type A : grande icône (~28px) + libellé dessous --- */
 .tb-big-btn {
   display: flex;
@@ -93,7 +92,7 @@
 .tb-stack {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   justify-content: center;
   align-self: stretch;
 }
@@ -111,6 +110,7 @@
   font-size: 11px;
   font-family: Arial, sans-serif;
   white-space: nowrap;
+  line-height: 1.1;
 }
 
 .tb-stack-btn:hover:not(:disabled) {
@@ -122,14 +122,39 @@
   cursor: default;
 }
 
+/* Boîte d'icône de taille FIXE : icône et libellé sont centrés sur le même
+ * axe vertical quel que soit le tracé, et tous les boutons B d'une pile
+ * partagent exactement la même hauteur/ligne de base (alignement de la
+ * colonne d'icônes, notamment « Variable » et « Pied de page »). */
 .tb-stack-btn-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
   display: flex;
   align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
 .tb-stack-btn-label {
-  line-height: 1;
+  line-height: 1.1;
+}
+
+/* Taille d'icône STRICTEMENT uniforme par typologie, imposée au conteneur —
+ * quelle que soit la valeur d'attribut passée au SVG dans icons.tsx. */
+.tb-big-btn-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.tb-stack-btn-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.tb-btn-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .tb-stack-btn-with-caret {
@@ -142,16 +167,19 @@
 }
 
 /* Sélecteur posé dans une pile type B (ex. "Langage…" du bloc de code),
- * même hauteur/apparence qu'un bouton de pile. */
+ * même hauteur/apparence qu'un bouton de pile. Padding droit suffisant
+ * pour la flèche native du select + largeur minimale pour que le plus long
+ * langage de la liste (javascript/typescript) ne soit jamais coupé. */
 .tb-stack-select {
   background: transparent;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 4px;
-  padding: 3px 4px;
+  padding: 3px 20px 3px 6px;
   font-size: 11px;
   font-family: Arial, sans-serif;
-  max-width: 96px;
+  min-width: 88px;
+  max-width: 118px;
 }
 
 .tb-stack-select option {
@@ -264,17 +292,25 @@
  * "Police" de Word : Police/Taille en haut, G/I/S/couleur/surlignage en bas)
  * et sa légende reste collée tout en bas — jamais au milieu, et toujours à
  * la même hauteur que la légende du groupe voisin, quel que soit le nombre
- * de boutons qu'il contient. */
+ * de boutons qu'il contient.
+ * Séparateur vertical entre groupes : net et identique PARTOUT (le fond est
+ * #003f2b, une opacité trop faible rendait certaines frontières invisibles). */
 .tb-group {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: 2px 8px 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  border-right: 1px solid rgba(255, 255, 255, 0.28);
+  /* Jamais de rétrécissement des groupes/boutons dans une rangée trop
+   * pleine : c'est ce qui tronquait les libellés aux largeurs étroites.
+   * Le ruban déborde alors (masqué) au lieu de couper le texte, comme
+   * Word. */
+  flex-shrink: 0;
 }
 
-.tb-group:last-child {
-  border-right: none;
+.tb-big-btn,
+.tb-stack {
+  flex-shrink: 0;
 }
 
 .tb-group-buttons {
@@ -289,11 +325,13 @@
 }
 
 /* Variante flex : pour les groupes mélangeant un gros bouton type A et des
- * piles verticales de boutons type B (Presse-papiers, Pages, Tableaux…). */
+ * piles verticales de boutons type B (Presse-papiers, Pages, Tableaux…).
+ * Même écart horizontal (3px) que la grille : espacement uniforme entre
+ * boutons d'un même groupe, quelle que soit la variante. */
 .tb-group-buttons-flex {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 3px;
 }
 
 /* Une "ligne" explicite à l'intérieur d'un groupe (voir le groupe "Police"
