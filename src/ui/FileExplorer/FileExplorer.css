@@ -155,6 +155,16 @@
   background: #d6eee0;
 }
 
+/* Ligne sélectionnée (simple clic ou flèches clavier) — distincte de
+ * l'onglet actif : c'est la cible de Suppr/F2/Entrée. */
+.fx-row-selected {
+  background: #dfeff8;
+  outline: 1px solid #9ecfe8;
+}
+.fx-row-active.fx-row-selected {
+  box-shadow: inset 3px 0 0 #24ac6e;
+}
+
 .fx-caret {
   width: 10px;
   display: inline-block;

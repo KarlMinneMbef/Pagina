@@ -103,6 +103,34 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 7 : ergonomie complémentaire
+  (2026-10-17)**, fin du chantier explorateur (7/7 fonctionnalités).
+  - **Sélection** : le simple clic sur un fichier ne fait plus QUE
+    sélectionner (`selectedPath` dans `FileExplorer`, classe
+    `fx-row-selected`, distincte de `fx-row-active` = onglet actif) ;
+    **ouverture par double-clic** uniquement. Clic sur un dossier :
+    déplie/replie + sélectionne.
+  - **Navigation clavier** : `.fx-body` a `tabIndex 0`/`role="tree"` ;
+    flèches haut/bas déplacent la sélection dans la liste des lignes
+    VISIBLES (`flattenVisible` respecte l'état déplié ; en recherche,
+    c'est la vue aplatie), Entrée ouvre un fichier / déplie-replie un
+    dossier, **Suppr** ouvre la même confirmation que le menu
+    contextuel, **F2** la boîte de renommage. La sélection reste active
+    en mode recherche. `scrollIntoView({block:"nearest"})` suit le
+    défilement (appel optionnel — absent de jsdom).
+  - Tests : `FileExplorer.keyboard.test.tsx` (6 cas : double-clic une
+    seule fois avec le bon chemin, simple clic sans ouverture, Suppr →
+    modale, F2 fichier ET dossier, flèches + Entrée, recherche).
+    Vérifié par Playwright/CDP en fenêtre réelle de façon NON
+    destructive (double-clic sur le fichier déjà ouvert — aucun nouvel
+    onglet ; Suppr et F2 annulés par Échap ; lignes du workspace
+    inchangées après tous les tests). `npm run build` propre (seul
+    l'avertissement de taille de chunk préexistant, lié à
+    Tiptap/mermaid, subsiste).
+  - **Note UX** : après fermeture d'une modale (Suppr/F2/renommage), le
+    focus DOM retombe sur body — les touches clavier ne portent plus
+    sur l'arbre tant qu'on n'a pas recliqué dedans. Comportement
+    standard, à améliorer éventuellement (restauration du focus).
 - **Explorateur de fichiers — Fonctionnalité 6 : rafraîchissement disque
   robuste (2026-10-17)**, suite du chantier explorateur.
   - **Debounce 300 ms côté JS** dans `workspaceStore.ts`
@@ -3104,8 +3132,9 @@ projets"). Constats et actions :
 - Bascule automatique `.md` → `.xmd` à l'ajout d'une ressource, avec toast de
   notification.
 - Thème sombre.
-- Renommer / dupliquer / supprimer / déplacer (drag & drop) dans l'explorateur
-  (seule l'ouverture et la création à la racine sont implémentées).
+- ~~Renommer / dupliquer / supprimer~~ dans l'explorateur **FAIT
+  (2026-10-17, chantier explorateur complet)** — il ne reste que le
+  DÉPLACER (drag & drop) non implémenté.
 - Détachement d'onglet en fenêtre séparée (explicitement optionnel/bonus dans
   le cahier des charges).
 
@@ -3139,7 +3168,10 @@ projets"). Constats et actions :
 4. Sommaire automatique.
 5. Gestion des images mode atelier (copie réelle dans `images/`).
 6. Mode paquet `.mdpack` + bascule automatique `.xmd`.
-7. Actions manquantes de l'explorateur (renommer/dupliquer/supprimer/déplacer).
+7. ~~Actions manquantes de l'explorateur (renommer/dupliquer/supprimer)~~
+   **Fait (2026-10-17)** — chantier explorateur complet : recherche,
+   menu contextuel, badge modifié, tri, tooltip, rafraîchissement
+   robuste, ergonomie clavier. Reste le déplacement (drag & drop).
 8. Thème sombre.
 
 ## Feuille de route produit (hors périmètre V1, ne pas développer maintenant)

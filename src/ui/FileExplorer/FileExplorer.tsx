@@ -24,6 +24,8 @@ function TreeNode({
   onToggleDir,
   onNodeContextMenu,
   dirtyPaths,
+  selectedPath,
+  onSelect,
 }: {
   node: FileNode;
   depth: number;
@@ -36,6 +38,9 @@ function TreeNode({
   onNodeContextMenu: (e: React.MouseEvent, node: FileNode) => void;
   /** Chemins des onglets modifiés (non enregistrés) — badge • sur la ligne. */
   dirtyPaths: Set<string>;
+  /** Nœud sélectionné (simple clic ou flèches clavier) dans l'arbre. */
+  selectedPath: string | null;
+  onSelect: (path: string) => void;
 }) {
   const defaultExpanded = depth < 1;
   const expanded = expandedOverrides.has(node.path)
@@ -46,10 +51,14 @@ function TreeNode({
     return (
       <div>
         <div
-          className="fx-row"
+          className={`fx-row${node.path === selectedPath ? " fx-row-selected" : ""}`}
           style={{ paddingLeft: 8 + depth * 14 }}
           title={node.path}
-          onClick={() => onToggleDir(node.path, defaultExpanded)}
+          data-path={node.path}
+          onClick={() => {
+            onToggleDir(node.path, defaultExpanded);
+            onSelect(node.path);
+          }}
           onContextMenu={(e) => onNodeContextMenu(e, node)}
         >
           <span className="fx-caret">{expanded ? "▾" : "▸"}</span>
@@ -69,6 +78,8 @@ function TreeNode({
                 onToggleDir={onToggleDir}
                 onNodeContextMenu={onNodeContextMenu}
                 dirtyPaths={dirtyPaths}
+                selectedPath={selectedPath}
+                onSelect={onSelect}
               />
             ))}
           </div>
@@ -79,10 +90,14 @@ function TreeNode({
 
   return (
     <div
-      className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}`}
+      className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}${
+        node.path === selectedPath ? " fx-row-selected" : ""
+      }`}
       style={{ paddingLeft: 8 + depth * 14 + 14 }}
       title={node.path}
-      onClick={() => onOpenFile(node.path)}
+      data-path={node.path}
+      onClick={() => onSelect(node.path)}
+      onDoubleClick={() => onOpenFile(node.path)}
       onContextMenu={(e) => onNodeContextMenu(e, node)}
     >
       <FileIcon isDir={false} name={node.name} />
@@ -102,6 +117,26 @@ function flattenTree(nodes: FileNode[], out: FileNode[] = []): FileNode[] {
   for (const n of nodes) {
     out.push(n);
     if (n.children) flattenTree(n.children, out);
+  }
+  return out;
+}
+
+/** Nœuds VISIBLES à plat (respecte l'état déplié/replié des dossiers) —
+ * sert à la navigation clavier dans l'arbre normal. */
+function flattenVisible(
+  nodes: FileNode[],
+  depth: number,
+  expandedOverrides: Map<string, boolean>,
+  out: FileNode[] = []
+): FileNode[] {
+  for (const n of nodes) {
+    out.push(n);
+    if (n.isDir && n.children) {
+      const expanded = expandedOverrides.has(n.path)
+        ? expandedOverrides.get(n.path)!
+        : depth < 1;
+      if (expanded) flattenVisible(n.children, depth + 1, expandedOverrides, out);
+    }
   }
   return out;
 }
@@ -254,6 +289,57 @@ export function FileExplorer({
       ? `« ${confirmDelete.name} » a des modifications non enregistrées qui seront perdues. Supprimer quand même ?`
       : `Supprimer « ${confirmDelete.name} » ?`;
 
+  // Nœud sélectionné (simple clic / flèches) — cible de Suppr, F2, Entrée.
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+
+  // Liste des lignes visibles pour la navigation clavier : vue aplatie de
+  // recherche si active, sinon l'arbre en respectant l'état déplié.
+  const visibleNodes = useMemo(
+    () => (search ? matches : flattenVisible(tree, 0, expandedOverrides)),
+    [search, matches, tree, expandedOverrides]
+  );
+
+  const selectNode = (path: string) => {
+    setSelectedPath(path);
+  };
+
+  // Fait suivre le défilement quand la sélection sort de la zone visible
+  // (appel optionnel : scrollIntoView n'existe pas sous jsdom).
+  useEffect(() => {
+    if (!selectedPath || typeof CSS === "undefined" || !CSS.escape) return;
+    const el = document.querySelector(`.fx-row[data-path="${CSS.escape(selectedPath)}"]`);
+    el?.scrollIntoView?.({ block: "nearest" });
+  }, [selectedPath]);
+
+  const handleTreeKeyDown = (e: React.KeyboardEvent) => {
+    if (visibleNodes.length === 0) return;
+    const idx = visibleNodes.findIndex((n) => n.path === selectedPath);
+    const selected = idx >= 0 ? visibleNodes[idx] : null;
+    const move = (delta: number) => {
+      e.preventDefault();
+      const next = visibleNodes[Math.min(Math.max(idx + delta, 0), visibleNodes.length - 1)];
+      if (next) setSelectedPath(next.path);
+    };
+    if (e.key === "ArrowDown") {
+      move(1);
+    } else if (e.key === "ArrowUp") {
+      move(-1);
+    } else if (e.key === "Enter" && selected) {
+      e.preventDefault();
+      if (selected.isDir) {
+        toggleDir(selected.path, true);
+      } else {
+        onOpenFile(selected.path);
+      }
+    } else if (e.key === "Delete" && selected) {
+      e.preventDefault();
+      setConfirmDelete(selected);
+    } else if (e.key === "F2" && selected) {
+      e.preventDefault();
+      setDialog({ kind: "rename", node: selected });
+    }
+  };
+
   const { width, onHandleMouseDown } = useHorizontalResize(260, { min: 180, max: 520, anchor: "left" });
 
   return (
@@ -301,6 +387,10 @@ export function FileExplorer({
 
       <div
         className="fx-body"
+        tabIndex={0}
+        role="tree"
+        aria-label="Arborescence du dossier de travail"
+        onKeyDown={handleTreeKeyDown}
         onContextMenu={(e) => {
           e.preventDefault();
           setMenu({ x: e.clientX, y: e.clientY, node: null });
@@ -328,9 +418,13 @@ export function FileExplorer({
             return (
               <div
                 key={node.path}
-                className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}`}
+                className={`fx-row fx-file${node.path === activePath ? " fx-row-active" : ""}${
+                  node.path === selectedPath ? " fx-row-selected" : ""
+                }`}
                 title={node.path}
-                onClick={node.isDir ? undefined : () => onOpenFile(node.path)}
+                data-path={node.path}
+                onClick={() => selectNode(node.path)}
+                onDoubleClick={node.isDir ? undefined : () => onOpenFile(node.path)}
               >
                 <FileIcon isDir={node.isDir} name={node.name} />
                 <span className="fx-name">{node.name}</span>
@@ -361,6 +455,8 @@ export function FileExplorer({
               onToggleDir={toggleDir}
               onNodeContextMenu={openNodeContextMenu}
               dirtyPaths={dirtyPaths}
+              selectedPath={selectedPath}
+              onSelect={selectNode}
             />
           ))
         )}
