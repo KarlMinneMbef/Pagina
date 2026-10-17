@@ -103,6 +103,18 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 3 : badge « modifié »
+  (2026-10-17)**, suite du chantier explorateur. Point orange (•,
+  `title="Modifié (non enregistré)"`, classe `fx-dirty-badge`) sur
+  toute ligne de FICHIER (pas les dossiers) dont l'onglet correspondant
+  dans `tabsStore` est dirty — `FileExplorer` s'abonne à `tabs` et
+  calcule un `Set` de chemins dirty, passé à `TreeNode` et aux lignes
+  de la vue aplatie de recherche. Temps réel garanti par l'abonnement
+  Zustand : recalculé à chaque `updateContent` (frappe) et
+  `saveTab`/undo. Vérifié par Vitest (4 cas : badge onglet dirty puis
+  retrait après saveTab, jamais de badge sans onglet, badge en vue
+  aplatie, apparition à la frappe) et par Playwright/CDP en fenêtre
+  réelle (1 espace tapée → 1 badge, Ctrl+Z → 0 badge, sans sauvegarde).
 - **Explorateur de fichiers — Fonctionnalité 2 : menu contextuel +
   dialogues inline (2026-10-17)**, suite du chantier explorateur.
   - **Boutons « Nouveau fichier/dossier » supprimés** de l'en-tête de

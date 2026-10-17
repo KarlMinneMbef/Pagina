@@ -23,6 +23,7 @@ function TreeNode({
   expandedOverrides,
   onToggleDir,
   onNodeContextMenu,
+  dirtyPaths,
 }: {
   node: FileNode;
   depth: number;
@@ -33,6 +34,8 @@ function TreeNode({
   expandedOverrides: Map<string, boolean>;
   onToggleDir: (path: string, defaultExpanded: boolean) => void;
   onNodeContextMenu: (e: React.MouseEvent, node: FileNode) => void;
+  /** Chemins des onglets modifiés (non enregistrés) — badge • sur la ligne. */
+  dirtyPaths: Set<string>;
 }) {
   const defaultExpanded = depth < 1;
   const expanded = expandedOverrides.has(node.path)
@@ -64,6 +67,7 @@ function TreeNode({
                 expandedOverrides={expandedOverrides}
                 onToggleDir={onToggleDir}
                 onNodeContextMenu={onNodeContextMenu}
+                dirtyPaths={dirtyPaths}
               />
             ))}
           </div>
@@ -81,6 +85,11 @@ function TreeNode({
     >
       <FileIcon isDir={false} name={node.name} />
       <span className="fx-name">{node.name}</span>
+      {dirtyPaths.has(node.path) && (
+        <span className="fx-dirty-badge" title="Modifié (non enregistré)">
+          •
+        </span>
+      )}
     </div>
   );
 }
@@ -223,6 +232,12 @@ export function FileExplorer({
   // Message de confirmation de suppression : renforcé si un onglet modifié
   // (dirty) serait perdu avec le fichier/dossier supprimé.
   const tabs = useTabsStore((s) => s.tabs);
+  // Badge « modifié » : chemins des onglets dirty, recalculé à chaque
+  // frappe (updateContent) et à l'enregistrement (saveTab).
+  const dirtyPaths = useMemo(
+    () => new Set(tabs.filter((t) => t.dirty).map((t) => t.path)),
+    [tabs]
+  );
   const deleteTargetHasDirtyTab = (() => {
     if (!confirmDelete) return false;
     const p = confirmDelete.path;
@@ -315,6 +330,11 @@ export function FileExplorer({
               >
                 <FileIcon isDir={node.isDir} name={node.name} />
                 <span className="fx-name">{node.name}</span>
+                {!node.isDir && dirtyPaths.has(node.path) && (
+                  <span className="fx-dirty-badge" title="Modifié (non enregistré)">
+                    •
+                  </span>
+                )}
                 {/* Chemin relatif en second — masqué à la racine où il
                  * redoublerait inutilement le nom du fichier. */}
                 {rel !== node.name && (
@@ -336,6 +356,7 @@ export function FileExplorer({
               expandedOverrides={expandedOverrides}
               onToggleDir={toggleDir}
               onNodeContextMenu={openNodeContextMenu}
+              dirtyPaths={dirtyPaths}
             />
           ))
         )}

@@ -171,6 +171,15 @@
   text-overflow: ellipsis;
 }
 
+/* Badge « modifié » : point sur les fichiers dont l'onglet est dirty. */
+.fx-dirty-badge {
+  color: #eb5b1f;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: -2px;
+}
+
 /* --- Menu contextuel (clic droit) --- */
 .fx-menu {
   position: fixed;
