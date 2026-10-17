@@ -103,6 +103,15 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Explorateur de fichiers — Fonctionnalité 5 : tooltip chemin complet
+  (2026-10-17)**, suite du chantier explorateur. Chaque ligne (dossier
+  ou fichier, arbre normal ET vue aplatie de recherche) porte
+  `title={node.path}` — le chemin absolu complet distingue les fichiers
+  homonymes ; l'ellipsis CSS existante (`.fx-name`) tronque visuellement
+  si le panneau est trop étroit, le title reste entier. Tests :
+  `FileExplorer.tooltip.test.tsx` (title de chaque ligne + vue aplatie).
+  Vérification Playwright/CDP en fenêtre réelle non rejouée à la demande
+  de l'utilisateur pour ce point (couvert par les tests unitaires).
 - **Explorateur de fichiers — Fonctionnalité 4 : tri de l'arborescence
   (2026-10-17)**, suite du chantier explorateur. Dossiers avant les
   fichiers, puis ordre alphabétique **insensible à la casse ET aux
