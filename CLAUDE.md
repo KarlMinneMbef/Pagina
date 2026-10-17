@@ -121,13 +121,25 @@ projets"). Constats et actions :
     alignements SVG, lanceur Mise en page), Styles (galerie conservée,
     lanceur), **Explorateur en fin de bandeau** (type A,
     `onToggleSidebar`, séparé par un espaceur flexible).
-  - **Insertion** : Pages (Saut de page A, Note de bas de page B),
-    Tableaux et éléments (Tableau A via TableSizePicker restylé,
+  - **Insertion** : Pages (Saut de page B — passé en petite icône +
+    libellé à droite sur demande de l'utilisateur, comme Note de bas de
+    page), Tableaux et éléments (Tableau A via TableSizePicker restylé,
     Séparateur/Bloc de code B, Langage), Liens (Lien A), En-tête et
     pied (En-tête A, Pied B, Variable ▾ B avec icône), Sommaire
     (Marqueur A, Mettre à jour B), Diagrammes et formules (Mermaid A,
     formules B, Emoji ▾ B avec le visage SVG fourni, PAS d'emoji comme
     icône de déclencheur).
+  - **Finitions CSS (2026-10-17, même journée)** : alignement vertical
+    type B (boîte d'icône à taille fixe 15x15 + line-height harmonisé,
+    delta mesuré 0,00 px), tailles d'icônes IMPOSÉES au conteneur par
+    typologie (`.tb-big-btn-icon svg` 28, `.tb-stack-btn-icon svg` 15,
+    `.tb-btn-icon svg` 16 — l'attribut passé au SVG ne peut plus diverger),
+    gaps uniformes 3 px (groupe grille et flex, piles type B),
+    séparateurs de groupes en `rgba(255,255,255,0.28)` partout (l'opacité
+    0.15 d'avant rendait certaines frontières invisibles), sélecteur
+    « Langage » avec min-width + padding flèche, `flex-shrink: 0` sur
+    groupes/boutons pour ne JAMAIS tronquer un libellé (un ruban trop
+    étroit déborde au lieu de couper, comme Word).
   - **Outils de tableau contextuels : dans le PANNEAU LATÉRAL, pas dans le
     bandeau** (correction 2026-10-17 après incompréhension : une première
     interprétation de « panneau contextuel à droite du ruban » avait posé
@@ -174,8 +186,6 @@ projets"). Constats et actions :
     attendu, pas un bug. `npx tsc --noEmit` propre, `npm run build` sans
     nouveau warning, `cargo check` propre (aucun changement Rust),
     38 tests Vitest existants toujours verts.
-- **Refonte complète du ruban — suite : voir l'entrée ci-dessus
-  (2026-10-17).**
 - **Explorateur de fichiers — Fonctionnalité 7 : ergonomie complémentaire
   (2026-10-17)**, fin du chantier explorateur (7/7 fonctionnalités).
   - **Sélection** : le simple clic sur un fichier ne fait plus QUE
@@ -315,7 +325,7 @@ projets"). Constats et actions :
   - **Piège CDP rencontré** : quand la fenêtre de l'app est RÉDUITE,
     le viewport WebView2 tombe à ~146x20px et Playwright échoue avec
     "<html> intercepts pointer events" — restaurer la fenêtre d'abord
-    (script `restore-window.ps1` à la racine, non tracké :
+    (script `restore-window.ps1` à la racine (tracké) :
     ShowWindow SW_RESTORE via P/Invoke). Autre piège : le HMR de Vite
     qui hot-swappe `workspaceStore.ts` RÉINITIALISE le singleton
     Zustand (root perdu, App ne remonte pas) → `page.reload()` via CDP
@@ -368,7 +378,7 @@ projets"). Constats et actions :
     du shell — `powershell Invoke-CimMethod -ClassName Win32_Process
     -MethodName Create -Arguments @{ CommandLine = 'cmd /c
     "C:\...\run-tauri-dev.cmd"' }` (`run-tauri-dev.cmd` + log
-    `tauri-dev.log` à la racine, non trackés). Après un kill/redémarrage
+    `tauri-dev.log` à la racine, log ignoré). Après un kill/redémarrage
     de l'app le bug CDP `shared_worker` (documenté plus bas) disparaît.
 - **Correctif : le panneau `ColorPicker` débordait hors de l'écran
   (2026-10-14, même jour)**, remonté par l'utilisateur avec une capture
