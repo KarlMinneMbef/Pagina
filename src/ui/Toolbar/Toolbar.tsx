@@ -19,6 +19,11 @@
  * Toutes les icônes sont des SVG vectoriels (voir `icons.tsx`) — les
  * exceptions lettrées (G/I/S/x²/x₂/Aa/A) restent en texte stylé, comme dans
  * Word.
+ *
+ * Les OUTILS DE TABLEAU contextuels ne sont PAS dans le ruban : ils vivent
+ * dans le panneau latéral `TablePropertiesPanel` (à droite du document,
+ * comme l'explorateur à gauche) qui s'ouvre automatiquement quand le
+ * curseur entre dans un tableau.
  */
 import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
@@ -34,12 +39,8 @@ import {
   IconClearFormat,
   IconCodeBlock,
   IconCodeInline,
-  IconColLeft,
-  IconColRight,
   IconCopy,
   IconCut,
-  IconDeleteColumn,
-  IconDeleteRow,
   IconEmoji,
   IconExplorer,
   IconFooter,
@@ -53,15 +54,11 @@ import {
   IconOrderedList,
   IconPageBreak,
   IconPaste,
-  IconRowAbove,
-  IconRowBelow,
   IconTable,
-  IconTableHeader,
   IconTaskList,
   IconTocMarker,
   IconTocRefresh,
   IconVariable,
-  IconMergeCells,
 } from "./icons";
 import "./Toolbar.css";
 
@@ -199,7 +196,6 @@ export function Toolbar({
   sidebarOpen,
   onOpenPageSetup,
   onOpenHeadingStyles,
-  insideTable = false,
   activeBlockStyle = "paragraph",
   leger = false,
 }: {
@@ -208,10 +204,6 @@ export function Toolbar({
   sidebarOpen: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
-  /** Vrai quand le curseur est dans une cellule de tableau : affiche le
-   * panneau contextuel « Outils de tableau » à droite du ruban actif
-   * (voir `EditorStats.insideTable` dans MarkdownEditor.tsx). */
-  insideTable?: boolean;
   /** Version LÉGÈRE (intégration dans une autre application, ex. MBEF Platform) : uniquement l'onglet
    * « Accueil », sans bouton Explorateur, sans lanceurs de dialogues (mise en page,
    * styles de titres), sans panneau contextuel. Sans effet (false) dans Pagina elle-même. */
@@ -452,10 +444,6 @@ export function Toolbar({
               />
             </>
           )}
-
-          {!leger && insideTable && actions && (
-            <ContextualRibbonPanel disabled={disabled} actions={actions} />
-          )}
         </div>
       )}
 
@@ -598,10 +586,6 @@ export function Toolbar({
               <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
             </div>
           </RibbonGroup>
-
-          {insideTable && actions && (
-            <ContextualRibbonPanel disabled={disabled} actions={actions} />
-          )}
         </div>
       )}
 
@@ -658,92 +642,6 @@ function StackButton({
       <span className="tb-stack-btn-icon">{icon}</span>
       <span className="tb-stack-btn-label">{label}</span>
     </button>
-  );
-}
-
-/** Panneau contextuel générique : s'affiche DANS le ruban (à droite du
- * ruban actif) quand le curseur est dans un élément riche. Premier cas :
- * tableau (`kind="table"`). L'architecture (liste de colonnes de boutons
- * type B + étiquette « Contextuel · … ») est conçue pour être réutilisée
- * pour d'autres éléments riches plus tard (Mermaid, formule) sans
- * modification du ruban lui-même. */
-function ContextualRibbonPanel({
-  disabled,
-  actions,
-}: {
-  disabled: boolean;
-  actions: ToolbarActions;
-}) {
-  return (
-    <div className="tb-contextual">
-      <div className="tb-contextual-columns">
-        <div className="tb-stack">
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.addRowBefore()}
-            title="Insérer une ligne au-dessus"
-            icon={<IconRowAbove size={15} />}
-            label="Ligne au-dessus"
-          />
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.addRowAfter()}
-            title="Insérer une ligne en dessous"
-            icon={<IconRowBelow size={15} />}
-            label="Ligne en dessous"
-          />
-        </div>
-        <div className="tb-stack">
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.addColumnBefore()}
-            title="Insérer une colonne à gauche"
-            icon={<IconColLeft size={15} />}
-            label="Colonne à gauche"
-          />
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.addColumnAfter()}
-            title="Insérer une colonne à droite"
-            icon={<IconColRight size={15} />}
-            label="Colonne à droite"
-          />
-        </div>
-        <div className="tb-stack">
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.deleteRow()}
-            title="Supprimer la ligne"
-            icon={<IconDeleteRow size={15} />}
-            label="Supprimer ligne"
-          />
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.deleteColumn()}
-            title="Supprimer la colonne"
-            icon={<IconDeleteColumn size={15} />}
-            label="Supprimer colonne"
-          />
-        </div>
-        <div className="tb-stack">
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.mergeCells()}
-            title="Fusionner les cellules sélectionnées"
-            icon={<IconMergeCells size={15} />}
-            label="Fusionner"
-          />
-          <StackButton
-            disabled={disabled}
-            onClick={() => actions.toggleHeaderRow()}
-            title="Basculer la ligne d'en-tête"
-            icon={<IconTableHeader size={15} />}
-            label="Ligne d'en-tête"
-          />
-        </div>
-      </div>
-      <div className="tb-contextual-caption">Contextuel · Tableau</div>
-    </div>
   );
 }
 

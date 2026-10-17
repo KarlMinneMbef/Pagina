@@ -252,38 +252,6 @@
   border-radius: 1px;
 }
 
-/* --- Panneau contextuel (« Outils de tableau ») : à droite du ruban
- * actif, DANS le ruban, fond légèrement distinct + étiquette dédiée. */
-.tb-contextual {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 2px 10px 0;
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.07);
-  border-left: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 4px 4px 0 0;
-}
-
-.tb-contextual-columns {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-  flex: 1;
-  padding-bottom: 4px;
-}
-
-.tb-contextual-caption {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.75);
-  font-style: italic;
-  white-space: nowrap;
-  text-align: center;
-  padding-top: 3px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: default;
-}
-
 /* Espaceur souple qui pousse les éléments suivants (Explorateur, panneau
  * contextuel) vers la fin du bandeau. */
 

@@ -368,7 +368,6 @@ function App() {
         sidebarOpen={sidebarOpen}
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
-        insideTable={stats.insideTable}
         activeBlockStyle={stats.activeBlockStyle}
       />
       <div className="app-body">
