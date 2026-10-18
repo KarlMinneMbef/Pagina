@@ -103,6 +103,18 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Correctif : champ en-tête/pied de page décalé par l'ouverture du
+  panneau « Variables » (2026-10-17, remonté par l'utilisateur avec
+  capture)** : le champ flottant vit en position absolue aux
+  coordonnées prises à l'OUVERTURE — l'apparition du panneau (ou toute
+  fermeture de l'explorateur / redimensionnement) réduisait la zone
+  peinte APRÈS coup et le champ restait décalé (≈90px mesurés, flottant
+  au-dessus du document). Fix dans `startHeaderFooterEdit` :
+  `reposition()` (recalé sur l'élément d'origine s'il survit à un
+  repaint, sinon la zone visible la plus proche — le texte du champ est
+  partagé par toutes les pages) branché sur un `ResizeObserver` du
+  canevas + `resize` de fenêtre, débranché au commit/à l'annulation.
+  Vérifié : écart 0px après l'apparition du panneau. `tsc` propre.
 - **En-tête/pied de page : panneau « Variables » + correctif du bouton
   « Pied de page » (2026-10-17, fin de journée)** — demande utilisateur :
   "créer un panneau latéral droit avec les Variables sous forme d'icône,
