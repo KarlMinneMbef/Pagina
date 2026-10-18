@@ -662,3 +662,38 @@
   font-size: 9px;
   color: #bbbbbb;
 }
+
+/* Pastille « langage du bloc de code » (2026-10-17, déménagée du ruban
+ * Insertion) : petit sélecteur natif collé en haut à droite du bloc peint
+ * contenant le curseur — visible uniquement dans un bloc de code. Posée
+ * en fixed sur <body> (les pages affichées sont des clones), reposée à
+ * chaque repaint/curseur/scroll/resize par MarkdownEditor.tsx. */
+.xmd-code-lang-chip {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  background: #ffffff;
+  border: 1px solid #b9b9b7;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+.xmd-code-lang-chip select {
+  border: none;
+  background: transparent;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #343334; /* charbon (charte MBEF) */
+  padding: 2px 3px;
+  max-width: 110px;
+  cursor: pointer;
+  outline: none;
+}
+
+@media print {
+  .xmd-code-lang-chip {
+    display: none !important;
+  }
+}

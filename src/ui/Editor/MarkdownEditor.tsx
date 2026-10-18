@@ -57,6 +57,7 @@ import { MermaidDiagram } from "./extensions/MermaidDiagram";
 import { InlineMath, BlockMath } from "./extensions/Math";
 import { applyHeadingNumbering } from "./extensions/HeadingAutoNumber";
 import { paintPages, HEADER_TEMPLATE_ATTR, FOOTER_TEMPLATE_ATTR } from "./pagination/paintPages";
+import { CODE_BLOCK_LANGUAGE_OPTIONS } from "./codeBlockLanguages";
 import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClickPosition";
 import { computeCaretScreenPosition } from "./pagination/caretPosition";
 import { computeSelectionRects } from "./pagination/selectionHighlight";
@@ -83,9 +84,6 @@ export interface MarkdownEditorHandle {
   /** Code EN LIGNE (`` `code` ``) — distinct de `toggleCodeBlock` (un bloc
    * entier). */
   toggleCode: () => void;
-  /** Langage de coloration syntaxique du bloc de code où se trouve le
-   * curseur (aucun effet si le curseur n'est pas dans un bloc de code). */
-  setCodeBlockLanguage: (language: string) => void;
   setLink: () => void;
   // --- Presse-papiers (boutons Coller/Couper/Copier du ruban) ---
   /** Copie la sélection en Markdown (texte brut) via l'API Clipboard. */
@@ -642,6 +640,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Fonction « refermer le champ » de l'édition en cours (commit) — pour
     // le bouton ✕ du panneau latéral (`closeHeaderFooterEdit`).
     const headerFooterCommitRef = useRef<(() => void) | null>(null);
+    // Pastille « langage du bloc de code » (2026-10-17, déménagée du ruban
+    // Insertion) : petit sélecteur natif posé en haut à droite du BLOC
+    // PEINT contenant le curseur (les pages affichées sont des clones —
+    // même mécanisme que le champ d'en-tête/pied). Visible uniquement
+    // quand la sélection est dans un bloc de code ; resynchronisée à
+    // chaque repaint/curseur/scroll/resize via `codeLangSyncRef`.
+    const codeLangChipRef = useRef<HTMLDivElement | null>(null);
+    const codeLangSyncRef = useRef<() => void>(() => {});
     // Éditeur ciblé par les commandes du RUBAN : tant qu'un champ
     // d'en-tête/pied de page est ouvert, c'est LUI (l'en-tête/le pied est
     // du contenu Markdown ordinaire, simplement dupliqué sur chaque page —
@@ -840,8 +846,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       toggleBlockquote: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleBlockquote().run(),
       toggleCodeBlock: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCodeBlock().run(),
       toggleCode: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCode().run(),
-      setCodeBlockLanguage: (language) =>
-        cmd()?.chain().focus(undefined, { scrollIntoView: false }).updateAttributes("codeBlock", { language }).run(),
       setLink: () => {
         if (!editor) return;
         const previous = editor.getAttributes("link").href as string | undefined;
@@ -1104,6 +1108,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       if (!editor) return;
 
       const repaintCaretOnly = () => {
+        // La pastille de langage suit la sélection à CHAQUE changement de
+        // curseur (visible ou non selon qu'on est dans un bloc de code,
+        // recollée au bon clone) — avant les early-returns ci-dessous.
+        codeLangSyncRef.current();
         const canvas = canvasRef.current;
         const caret = caretRef.current;
         const selectionLayer = selectionLayerRef.current;
@@ -1237,6 +1245,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
         pageCountRef.current = result.pageCount;
         repaintCaretOnly();
+        // Les clones viennent d'être recréés : recolle la pastille de
+        // langage sur le bloc peint correspondant.
+        codeLangSyncRef.current();
         const words: number = editor.storage.characterCount.words();
         const characters: number = editor.storage.characterCount.characters();
         onStatsRef.current?.({
@@ -1268,6 +1279,95 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     useEffect(() => {
       repaintRef.current();
     }, [zoom]);
+
+    // Pastille « langage du bloc de code » (2026-10-17, retirée du ruban
+    // Insertion) : un petit sélecteur natif collé en haut à droite du
+    // BLOC PEINT contenant le curseur. Les pages affichées sont des
+    // clones (data-src-pos = position ProseMirror du bloc d'origine) :
+    // on retrouve celui de la sélection, on s'y cale en position fixe,
+    // et on se resynchronise à chaque repaint (codeLangSyncRef, appelé
+    // par repaint/repaintCaretOnly), scroll du wrapper et resize.
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!canvas || !editor) return;
+
+      const chip = document.createElement("div");
+      chip.className = "xmd-code-lang-chip";
+      chip.style.display = "none";
+      const select = document.createElement("select");
+      select.title = "Langage du bloc de code";
+      const plainOption = document.createElement("option");
+      plainOption.value = "";
+      plainOption.textContent = "Texte";
+      select.appendChild(plainOption);
+      for (const lang of CODE_BLOCK_LANGUAGE_OPTIONS) {
+        const o = document.createElement("option");
+        o.value = lang;
+        o.textContent = lang;
+        select.appendChild(o);
+      }
+      select.addEventListener("change", () => {
+        // « Texte » (valeur vide) → langue par défaut de CodeBlockLowlight.
+        editor.chain().focus().updateAttributes("codeBlock", { language: select.value || "text" }).run();
+      });
+      chip.appendChild(select);
+      document.body.appendChild(chip);
+      codeLangChipRef.current = chip;
+
+      const sync = () => {
+        const { selection } = editor.state;
+        // Remonte les niveaux jusqu'au bloc de code englobant la sélection.
+        let cbNode: { attrs: Record<string, unknown> } | null = null;
+        let cbStart = -1;
+        for (let d = selection.$from.depth; d >= 1; d--) {
+          const node = selection.$from.node(d);
+          if (node.type.name === "codeBlock") {
+            cbNode = node;
+            cbStart = selection.$from.before(d);
+            break;
+          }
+        }
+        if (readOnly || !cbNode || cbStart < 0) {
+          chip.style.display = "none";
+          return;
+        }
+        // Le bloc peut être cloné sur plusieurs pages (bloc long) : prend
+        // le fragment visible, sinon le premier.
+        const clones = Array.from(canvas.querySelectorAll<HTMLElement>(`[data-src-pos="${cbStart}"]`));
+        let rect: DOMRect | null = null;
+        for (const c of clones) {
+          const r = c.getBoundingClientRect();
+          if (r.bottom > 120 && r.top < window.innerHeight - 16) {
+            rect = r;
+            break;
+          }
+        }
+        if (!rect && clones.length > 0) rect = clones[0].getBoundingClientRect();
+        if (!rect) {
+          chip.style.display = "none";
+          return;
+        }
+        const lang = String(cbNode.attrs.language ?? "");
+        select.value = (CODE_BLOCK_LANGUAGE_OPTIONS as readonly string[]).includes(lang) ? lang : "";
+        chip.style.display = "";
+        chip.style.top = `${Math.max(rect.top, 0) + 4}px`;
+        chip.style.left = `${rect.right - chip.offsetWidth - 6}px`;
+      };
+      codeLangSyncRef.current = sync;
+
+      const wrap = canvas.closest(".xmd-page-wrap") ?? canvas;
+      wrap.addEventListener("scroll", sync);
+      window.addEventListener("resize", sync);
+      sync();
+
+      return () => {
+        wrap.removeEventListener("scroll", sync);
+        window.removeEventListener("resize", sync);
+        chip.remove();
+        codeLangChipRef.current = null;
+        codeLangSyncRef.current = () => {};
+      };
+    }, [editor, readOnly]);
 
     // Édition en place de l'en-tête/pied de page : un clic sur l'un ou
     // l'autre (sur N'IMPORTE QUELLE page — le texte est le même partout,
