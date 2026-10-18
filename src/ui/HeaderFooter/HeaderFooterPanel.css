@@ -82,6 +82,22 @@
   color: var(--hf-label);
 }
 
+/* Grille des Variables : boutons compacts type A (icône + libellé +
+   jeton dessous), 3 par ligne, tailles strictement identiques —
+   organisation demandée par l'utilisateur (2026-10-17) : la classe
+   .hf-grid existait dans le JSX mais n'avait AUCUNE règle, les
+   boutons s'empilaient en pleine largeur. */
+.hf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  align-items: stretch;
+}
+
+.hf-grid .hf-action {
+  padding: 8px 1px 5px;
+}
+
 .hf-action {
   display: flex;
   flex-direction: column;

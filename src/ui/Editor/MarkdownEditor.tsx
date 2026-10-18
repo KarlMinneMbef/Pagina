@@ -1379,10 +1379,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // Referme quand on clique ailleurs que dans le champ ou dans le
       // panneau latéral (les boutons du panneau neutralisent déjà leur
       // `mousedown` pour ne pas voler le focus au mini-éditeur).
+      // Le RUBAN (.tb-ribbon-stack) et la barre de titre (.tbar) sont
+      // AUSSI exclus : tant que le champ est ouvert, les commandes du
+      // ruban s'y appliquent via le routage `cmd()` — laisser le clic
+      // fermer le champ TUAIT la mise en forme de la sélection (bug
+      // remonté par l'utilisateur : « quand je veux mettre du texte en
+      // gras dans l'en-tête, il est automatiquement désélectionné »).
+      // Les commandes re-donnent le focus au mini-éditeur via leur
+      // `.focus()`, la sélection ProseMirror étant conservée même sans
+      // focus.
       const onDocMouseDown = (e: MouseEvent) => {
         const t = e.target as Node;
         if (host.contains(t)) return;
         if (t instanceof Element && t.closest(".ctx-host")) return;
+        if (t instanceof Element && t.closest(".tb-ribbon-stack, .tbar")) return;
         commit();
       };
       document.addEventListener("mousedown", onDocMouseDown, true);
