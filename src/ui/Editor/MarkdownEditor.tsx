@@ -129,6 +129,9 @@ export interface MarkdownEditorHandle {
   /** Transforme la ligne courante en ligne d'en-tête (et inversement) —
    * commande native de `@tiptap/extension-table`. Sans effet hors tableau. */
   toggleHeaderRow: () => void;
+  /** Vide le contenu de la cellule sous le curseur (ou de toutes les
+   * cellules de la sélection) sans supprimer les cellules. */
+  clearCellContents: () => void;
   setCellBackgroundColor: (color: string | null) => void;
   /** `sides` vide = tous les côtés. `css` = chaîne de bordure CSS complète
    * (ex. "2px solid #343334") ou `null` pour retirer la bordure sur ces
@@ -299,6 +302,38 @@ function applyToSelectedCells(editor: Editor, patch: Record<string, unknown>) {
       const node = $from.node(depth);
       if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
         tr.setNodeMarkup($from.before(depth), undefined, { ...node.attrs, ...patch });
+        touched = true;
+        break;
+      }
+    }
+  }
+
+  if (touched) view.dispatch(tr);
+}
+
+/** Vide le CONTENU de la (ou des) cellule(s) ciblée(s) — sélection
+ * multi-cellules ou cellule sous le curseur — sans supprimer les cellules
+ * elles-mêmes (bouton « Vider » du panneau Tableau). Même énumération de
+ * cellules que `applyToSelectedCells` ci-dessus. */
+function clearSelectedCellContents(editor: Editor) {
+  const { state, view } = editor;
+  const { selection } = state;
+  const tr = state.tr;
+  const emptyParagraph = state.schema.nodes.paragraph.create();
+  let touched = false;
+
+  if (selection instanceof CellSelection) {
+    selection.forEachCell((node, pos) => {
+      tr.replaceWith(pos + 1, pos + 1 + node.content.size, emptyParagraph);
+      touched = true;
+    });
+  } else {
+    const { $from } = selection;
+    for (let depth = $from.depth; depth > 0; depth--) {
+      const node = $from.node(depth);
+      if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
+        const pos = $from.before(depth);
+        tr.replaceWith(pos + 1, pos + 1 + node.content.size, emptyParagraph);
         touched = true;
         break;
       }
@@ -827,6 +862,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       mergeCells: () => editor?.chain().focus(undefined, { scrollIntoView: false }).mergeCells().run(),
       splitCell: () => editor?.chain().focus(undefined, { scrollIntoView: false }).splitCell().run(),
       toggleHeaderRow: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleHeaderRow().run(),
+      clearCellContents: () => {
+        if (!editor) return;
+        clearSelectedCellContents(editor);
+      },
       setCellBackgroundColor: (color) => {
         if (!editor) return;
         applyToSelectedCells(editor, { backgroundColor: color });

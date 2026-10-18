@@ -312,6 +312,7 @@ function App() {
       mergeCells: () => handle.mergeCells(),
       splitCell: () => handle.splitCell(),
       toggleHeaderRow: () => handle.toggleHeaderRow(),
+      clearCellContents: () => handle.clearCellContents(),
       setCellBackgroundColor: (color: string | null) => handle.setCellBackgroundColor(color),
       setCellBorder: (sides, css) => handle.setCellBorder(sides, css),
       setCellBorderPreset: (preset, css) => handle.setCellBorderPreset(preset, css),
@@ -438,7 +439,6 @@ function App() {
           <TablePropertiesPanel
             actions={actions}
             disabled={!activeTab}
-            shape={stats.tableSelectionShape}
             onClose={() => setTablePanelOpen(false)}
           />
         )}

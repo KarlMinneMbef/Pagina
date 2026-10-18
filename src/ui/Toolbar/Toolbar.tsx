@@ -157,6 +157,9 @@ export interface ToolbarActions {
   mergeCells: () => void;
   splitCell: () => void;
   toggleHeaderRow: () => void;
+  /** Vide le contenu de la cellule courante (ou des cellules
+   * sélectionnées) — bouton « Vider » du panneau Tableau. */
+  clearCellContents: () => void;
   setCellBackgroundColor: (color: string | null) => void;
   setCellBorder: (sides: ("top" | "right" | "bottom" | "left")[], css: string | null) => void;
   setCellBorderPreset: (preset: "all" | "outside" | "inside" | "none", css: string | null) => void;

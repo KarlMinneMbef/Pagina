@@ -103,6 +103,44 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Présentation du panneau latéral « Tableau » refaite (2026-10-17,
+  maquette sobre gris clair)** — FORME UNIQUEMENT, aucun handler changé :
+  en-tête sobre (titre « Tableau » seul + ✕, aucun texte « Contextuel »),
+  corps en 3 sections (Lignes / Colonnes / Cellules) de 3 boutons type A
+  (icône SVG ~20px + libellé ~10px dessous, tooltips obligatoires),
+  séparateurs horizontaux nets, palette locale en variables CSS
+  (--tp-* : fond #eeefef, filets #d0d3d4, texte #2a2a24, libellés
+  #75766f, boutons #e0e2e3/#d0d3d4/#c5c9ca — AUCUN vert). « Supprimer le
+  tableau » conservé en bas (seule voie d'UI pour cette commande).
+  - **NOUVELLE action `clearCellContents`** (bouton « Vider » de la
+    maquette — aucune action existante ne correspondait) :
+    `clearSelectedCellContents` dans MarkdownEditor.tsx vide le contenu
+    de la cellule courante (ou de toutes les cellules d'une sélection
+    multi-cellules) par `tr.replaceWith` d'un paragraphe vide, même
+    énumération que `applyToSelectedCells`. Câblée dans ToolbarActions +
+    App + PaginaLight.
+  - **Icônes du panneau remplacées par les tracés de la maquette**
+    (icons.tsx : RowAbove/RowBelow/RowDelete, ColLeft/ColRight/ColDelete,
+    MergeCells/SplitCells/ClearCell — `minmax(0,1fr)` obligatoire dans la
+    grille CSS : un `1fr` nu prend pour minimum la largeur du CONTENU,
+    donc « En dessous » élargissait sa colonne et les 3 boutons d'une
+    ligne n'avaient pas la même taille).
+  - **Commandes de l'ancienne présentation NON exposées dans la nouvelle
+    maquette** (bordures/couleur de fond/alignement vertical/bascule de
+    ligne d'en-tête) : leurs ACTIONS restent intactes dans
+    ToolbarActions/MarkdownEditorHandle (`setCellBorder`,
+    `setCellBorderPreset`, `setGridLineBorder`,
+    `setCellBackgroundColor`, `setCellVerticalAlign`,
+    `toggleHeaderRow` + icône `IconTableHeader` conservée dans
+    icons.tsx) — plus AUCUNE voie d'UI actuellement, à ré-exposer dans
+    une future surface si demandé.
+  - Vérifié 23/23 par Playwright/CDP sur fichier jetable : forme
+    (en-tête, 3 sections, 9 boutons égaux, tooltips, couleurs, zéro
+    vert) + fonction (chaque bouton → Ctrl+S → relecture du .md : GFM
+    préservé partout, Vider vide la cellule, ✕ masque, réapparition au
+    RETOUR dans le tableau après en être sorti — une fermeture manuelle
+    persiste tant qu'on n'en sort pas, comportement voulu). `tsc`
+    strict, build, 38 tests Vitest verts.
 - **Refonte complète du ruban façon Word 2024 (2026-10-17, même
   journée)** : deux onglets (Accueil absorbe « Format avancé », Insertion
   absorbe « Extras »), icônes SVG exclusives (grille 24x24, stroke 1.6,
