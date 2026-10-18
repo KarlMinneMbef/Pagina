@@ -112,6 +112,36 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Sélecteur de langage des blocs de code DÉMÉNAGÉ du ruban vers le
+  bloc lui-même (2026-10-17, choix utilisateur validé : « select
+  directement dans le code block quand on est en édition »)** :
+  - Le `<select>` « Langage… » du groupe Éléments (onglet Insertion)
+    est RETIRÉ du ruban ; `setCodeBlockLanguage` supprimé de
+    ToolbarActions/MarkdownEditorHandle/App/PaginaLight (le bouton
+    « Bloc de code » d'insertion reste).
+  - **Pastille flottante** `.xmd-code-lang-chip` (MarkdownEditor.tsx,
+    effet dédié) : petit sélecteur natif (« Texte » + langages)
+    collé en haut à droite du BLOC PEINT contenant le curseur —
+    les pages affichées étant des clones (`data-src-pos` = position
+    ProseMirror), la pastille vit en fixed sur <body> et se
+    recolle à chaque repaint/repaintCaretOnly (appels via
+    `codeLangSyncRef` — IMPORTANT : dans repaintCaretOnly l'appel
+    doit être PREMIÈRE LIGNE, avant ses early-returns) + scroll du
+    wrapper + resize. Visible uniquement sélection dans un bloc de
+    code (remonter `$from.node(d)` jusqu'au codeBlock, clone
+    `[data-src-pos=$from.before(d)]`, fragment visible si bloc long
+    cloné sur plusieurs pages). « Texte » → langue par défaut
+    `text` de CodeBlockLowlight. Masquée en readOnly et à
+    l'impression (@media print).
+  - Liste des langages : `src/ui/Editor/codeBlockLanguages.ts`
+    (CODE_BLOCK_LANGUAGE_OPTIONS, ex-Toolbar.tsx — clés de `common`
+    de lowlight).
+  - Vérifié par CDP : pastille visible dans le bloc, cachée en
+    dehors (y compris en naviguant aux flèches), changement
+    `sql` → clone `<code class="language-sql">` coloré ; tsc, build,
+    38 tests verts. PIÈGE de test : « Bloc de code » ne convertit
+    pas un TITRE (toggleCodeBlock sans effet sur heading) — viser un
+    paragraphe pour insérer.
 - **Ruban : coin droit à la Word + bouton Mise en page (2026-10-17,
   demande : « Explorateur au même emplacement que Partager dans
   Windows, Commenter désactivé à côté, et à la place de l'ancien

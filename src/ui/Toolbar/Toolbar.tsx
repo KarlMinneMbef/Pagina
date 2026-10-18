@@ -121,7 +121,6 @@ export interface ToolbarActions {
   insertTable: (rows: number, cols: number) => void;
   insertHorizontalRule: () => void;
   toggleCodeBlock: () => void;
-  setCodeBlockLanguage: (language: string) => void;
   insertPageBreak: () => void;
   insertFootnote: () => void;
   editHeader: () => void;
@@ -173,17 +172,6 @@ const FONT_FAMILIES = [
 /** Échelle partagée avec l'éditeur (voir `FONT_SIZE_STEPS` dans
  * MarkdownEditor.tsx — les boutons Agrandir/Réduire y font référence). */
 const FONT_SIZES = FONT_SIZE_STEPS.map((pt) => `${pt}pt`);
-
-/** Doit correspondre aux clés de `common` de lowlight (voir
- * `createLowlight(common)` dans MarkdownEditor.tsx) — vérifié une fois via
- * `Object.keys(common)`, pas d'import direct pour éviter de coupler ce
- * fichier à la config interne de l'éditeur. */
-const CODE_BLOCK_LANGUAGE_OPTIONS = [
-  "javascript", "typescript", "python", "java", "c", "cpp", "csharp",
-  "html", "css", "scss", "less", "json", "yaml", "xml", "markdown",
-  "bash", "shell", "sql", "php", "ruby", "go", "rust", "swift", "kotlin",
-  "r", "lua", "perl", "graphql", "makefile", "ini", "diff",
-];
 
 type RibbonTab = "accueil" | "insertion";
 
@@ -508,27 +496,6 @@ export function Toolbar({
                 icon={<IconCodeBlock size={15} />}
                 label="Bloc de code"
               />
-            </div>
-            <div className="tb-stack">
-              <select
-                className="tb-stack-select"
-                disabled={disabled}
-                defaultValue=""
-                title="Langage du bloc de code (curseur dans un bloc de code)"
-                onChange={(e) => {
-                  if (e.target.value) actions?.setCodeBlockLanguage(e.target.value);
-                }}
-              >
-                <option value="">Langage…</option>
-                {/* Doit correspondre aux clés de `common` de lowlight (voir
-                 * `MarkdownEditor.tsx`, `createLowlight(common)`) — sinon la
-                 * coloration syntaxique ne s'applique pas silencieusement. */}
-                {CODE_BLOCK_LANGUAGE_OPTIONS.map((lang) => (
-                  <option key={lang} value={lang}>
-                    {lang}
-                  </option>
-                ))}
-              </select>
             </div>
           </RibbonGroup>
 

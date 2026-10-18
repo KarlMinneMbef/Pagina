@@ -328,7 +328,6 @@ function App() {
       toggleBlockquote: () => handle.toggleBlockquote(),
       toggleCodeBlock: () => handle.toggleCodeBlock(),
       toggleCode: () => handle.toggleCode(),
-      setCodeBlockLanguage: (language) => handle.setCodeBlockLanguage(language),
       setLink: () => handle.setLink(),
       insertTable: (rows, cols) => handle.insertTable(rows, cols),
       addRowBefore: () => handle.addRowBefore(),
