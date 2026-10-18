@@ -405,16 +405,6 @@ export function PageSetupDialog({
           <button type="button" className="ps-btn" onClick={handleSetDefault} title="Enregistrer ces réglages comme valeurs par défaut des nouveaux documents">
             {defaultSaved ? "Défini par défaut ✓" : "Définir par défaut"}
           </button>
-          {tab === "miseEnPage" && (
-            <>
-              <button type="button" className="ps-btn ps-btn-link" disabled>
-                Numérotation des lignes…
-              </button>
-              <button type="button" className="ps-btn ps-btn-link" disabled>
-                Bordures…
-              </button>
-            </>
-          )}
           <div className="ps-actions-right">
             <button type="button" className="ps-btn ps-btn-primary" onClick={handleApply}>
               OK
