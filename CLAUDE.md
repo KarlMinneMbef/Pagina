@@ -103,6 +103,45 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Dialogue « Mise en page » REFONT INTÉGRALE à la Word (2026-10-17,
+  demande : « exactement identique aux 3 captures Word, même si
+  certaines notions ne sont pas encore traitées »)** —
+  PageSetupDialog.tsx/.css réécrits, trois onglets :
+  - **Marges** : Haut/Bas/Gauche/Droite en CM (stockage mm, affichage
+    cm), Relure + Position de la relure (grisés, non traités),
+    Orientation Portrait/Paysage (boutons-icônes SVG), « Afficher
+    plusieurs pages » (grisé), Aperçu SVG live + « Appliquer à : À tout
+    le document » (figé — sections pas encore traitées).
+  - **Papier** : formats **A3 / A4 / A5 / Letter / Legal**
+    (PAPER_SIZES_MM + PAPER_SIZE_LABELS, pageLayout.ts) + Largeur/
+    Hauteur EDITABLES en cm → **dimensions personnalisées**
+    (`widthMm?`/`heightMm?` optionnels dans PageLayoutSettings,
+    primés par resolvePageSizeMm ; choisir un format les efface).
+    Alimentation papier (grisée), « Options d'impression… » (grisé),
+    groupe **Document** (version/auteur — spécifique Pagina, conservé).
+  - **Mise en page** : Section (Début de la section, Supprimer les
+    notes de fin — grisés), En-têtes et pieds de page (« Paires et
+    impaires » grisé ; **« Première page différente » CÂBLÉ** = inverse
+    de showOnFirstPage, appliqué aux deux zones ; **« À partir du
+    bord » CÂBLÉ** = nouveau champ `fromEdgeMm` dans
+    HeaderFooterSettings — positionne la zone depuis le bord via les
+    variables CSS `--xmd-header-top`/`--xmd-footer-bottom`, défaut
+    12,5mm ≈ placement historique), Page/Alignement vertical (grisé),
+    Numérotation des lignes/Bordures (grisés).
+  - Boutons : **« Définir par défaut »** (persiste les réglages en
+    localStorage `pagina.defaultPageLayout`, utilisés par
+    createNewFile via loadDefaultPageLayout() — les nouveaux fichiers
+    naissent avec), **OK** (bleu, applique) et Annuler.
+  - SUPPRIMÉS de ce dialogue : onglets Page/En-tête-pied (ancienne
+    organisation), champs TEXTE d'en-tête/pied (s'éditent sur la page
+    même), onglet Titres et sommaire (styles de titres restent
+    accessibles via le ruban).
+  - Rétro-compatibilité : fromEdgeMm fusionné avec les défauts à la
+    lecture (extractDocumentConfig) ; fichiers existants sans le
+    champ OK. `tsc`, build, 38 tests verts ; vérifié par CDP dans la
+    fenêtre réelle (3 onglets, 5 formats, aperçu live portrait/paysage,
+    Annuler propre). PIÈGE HMR habituel (workspaceStore hot-swappé →
+    singleton Zustand perdu) : page.reload() via CDP pour restaurer.
 - **Correctif : le ruban fermait le champ en-tête/pied au moment de
   s'y appliquer (2026-10-17, remonté par l'utilisateur : « quand je
   veux mettre du texte en gras dans la zone en-tête, ça ne marche pas

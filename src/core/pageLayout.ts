@@ -48,6 +48,9 @@ export interface HeaderFooterSettings {
   /** `false` = masqué sur la première page uniquement (page de garde), le
    * reste du document garde son en-tête/pied de page normalement. */
   showOnFirstPage: boolean;
+  /** « À partir du bord » (onglet Mise en page, comme Word) : distance du
+   * bord de la page au DÉBUT de la zone, en millimètres. */
+  fromEdgeMm: number;
 }
 
 export interface PageLayoutSettings {
@@ -69,8 +72,14 @@ export interface PageLayoutSettings {
   marginLeftMm: number;
   marginRightMm: number;
   /** Format papier et orientation. */
-  paperSize: "A4" | "Letter";
+  paperSize: "A3" | "A4" | "A5" | "Letter" | "Legal";
   orientation: "portrait" | "landscape";
+  /** Dimensions PERSONNALISÉES en millimètres (Largeur/Hauteur de l'onglet
+   * Papier, comme Word) : définies = elles priment sur `paperSize` (le
+   * libellé du format reste affiché mais les dimensions appliquées sont
+   * celles-ci). Absentes = dimensions du format choisi. */
+  widthMm?: number;
+  heightMm?: number;
   header: HeaderFooterSettings;
   footer: HeaderFooterSettings;
   /** Champs libres saisis à la main, disponibles comme variables `{{version}}`
@@ -199,8 +208,8 @@ export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   marginRightMm: 20,
   paperSize: "A4",
   orientation: "portrait",
-  header: { text: "", heightMm: 12, showOnFirstPage: true },
-  footer: { text: "", heightMm: 12, showOnFirstPage: true },
+  header: { text: "", heightMm: 12, showOnFirstPage: true, fromEdgeMm: 12.5 },
+  footer: { text: "", heightMm: 12, showOnFirstPage: true, fromEdgeMm: 12.5 },
   documentVersion: "",
   author: "",
   headingStyles: DEFAULT_HEADING_STYLES,
@@ -208,16 +217,72 @@ export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
 
 /** Dimensions "portrait" des formats papier supportés, en millimètres. */
 export const PAPER_SIZES_MM: Record<PageLayoutSettings["paperSize"], { width: number; height: number }> = {
+  A3: { width: 297, height: 420 },
   A4: { width: 210, height: 297 },
+  A5: { width: 148, height: 210 },
   Letter: { width: 215.9, height: 279.4 },
+  Legal: { width: 215.9, height: 355.6 },
 };
 
-/** Largeur/hauteur réelles de la page en mm, une fois l'orientation appliquée. */
+/** Libellés français des formats, pour les listes déroulantes. */
+export const PAPER_SIZE_LABELS: Record<PageLayoutSettings["paperSize"], string> = {
+  A3: "A3 (297 x 420 mm)",
+  A4: "A4 (210 x 297 mm)",
+  A5: "A5 (148 x 210 mm)",
+  Letter: "Letter (21,59 x 27,94 cm)",
+  Legal: "Legal (21,59 x 35,56 cm)",
+};
+
+/** Largeur/hauteur réelles de la page en mm, une fois l'orientation — et
+ * les dimensions PERSONNALISÉES si présentes — appliquées. */
 export function resolvePageSizeMm(settings: PageLayoutSettings): { widthMm: number; heightMm: number } {
+  const custom =
+    typeof settings.widthMm === "number" && settings.widthMm > 0 && typeof settings.heightMm === "number" && settings.heightMm > 0;
+  if (custom) {
+    return settings.orientation === "landscape"
+      ? { widthMm: settings.heightMm!, heightMm: settings.widthMm! }
+      : { widthMm: settings.widthMm!, heightMm: settings.heightMm! };
+  }
   const base = PAPER_SIZES_MM[settings.paperSize];
   return settings.orientation === "landscape"
     ? { widthMm: base.height, heightMm: base.width }
     : { widthMm: base.width, heightMm: base.height };
+}
+
+/* « Définir par défaut » du dialogue Mise en page (comme Word) : les
+ * réglages courants deviennent ceux des NOUVEAUX documents créés via
+ * « Nouveau fichier ». Persistés dans localStorage, PAR application
+ * (pas par document). Un document déjà ouvert n'est jamais touché. */
+const DEFAULT_LAYOUT_STORAGE_KEY = "pagina.defaultPageLayout";
+
+/** Enregistre les réglages donnés comme valeurs par défaut des nouveaux
+ * documents (bouton « Définir par défaut »). */
+export function saveDefaultPageLayout(layout: PageLayoutSettings): void {
+  try {
+    localStorage.setItem(DEFAULT_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  } catch {
+    /* localStorage indisponible ( WebView corrompue, quota ) : sans effet,
+     * le défaut reste DEFAULT_PAGE_LAYOUT. */
+  }
+}
+
+/** Réglages par défaut des nouveaux documents : ceux posés par
+ * « Définir par défaut », sinon les défauts usine. Tolérant à un JSON
+ * invalide/corrompu (retour aux défauts usine). */
+export function loadDefaultPageLayout(): PageLayoutSettings {
+  try {
+    const raw = localStorage.getItem(DEFAULT_LAYOUT_STORAGE_KEY);
+    if (!raw) return DEFAULT_PAGE_LAYOUT;
+    const parsed = JSON.parse(raw) as Partial<PageLayoutSettings>;
+    return {
+      ...DEFAULT_PAGE_LAYOUT,
+      ...parsed,
+      header: { ...DEFAULT_PAGE_LAYOUT.header, ...parsed.header },
+      footer: { ...DEFAULT_PAGE_LAYOUT.footer, ...parsed.footer },
+    };
+  } catch {
+    return DEFAULT_PAGE_LAYOUT;
+  }
 }
 
 /** Contexte de substitution des variables d'en-tête/pied de page (voir

@@ -141,10 +141,13 @@
  * blanc de la marge reste donc au-dessus de l'en-tête / en-dessous du pied
  * de page (vers le bord de la page), pas entre eux et le texte du document
  * — correctif suite à un retour utilisateur (capture d'écran) qui montrait
- * l'inverse. Un en-tête/pied de page plus haut que la marge déborderait
- * du côté du bord de la page (valeur `top`/`bottom` négative) ; à la charge
- * de l'utilisateur de garder une marge >= hauteur d'en-tête/pied de page
- * (pas de validation automatique pour l'instant). */
+ * l'inverse. DEPUIS le dialogue Mise en page refait à la Word (2026-10-17),
+ * la distance « À partir du bord » est RÉGLABLE (--xmd-header-top /
+ * --xmd-footer-bottom, défaut 12,5mm) — voir les règles individuelles
+ * .xmd-page-header / .xmd-page-footer. Un en-tête/pied plus haut que la
+ * marge déborderait du côté du bord de la page ; à la charge de
+ * l'utilisateur de garder une marge suffisante (pas de validation
+ * automatique pour l'instant). */
 .xmd-page-header,
 .xmd-page-footer {
   position: absolute;
@@ -161,12 +164,17 @@
 }
 
 .xmd-page-header {
-  top: calc(var(--xmd-margin-top, 25mm) - var(--xmd-header-height, 12mm));
+  /* « À partir du bord » (réglable dans le dialogue Mise en page, comme
+   * Word) : distance du bord de la page au début de la zone. Avant, la
+   * zone était collée contre le début du CONTENU (marge - hauteur) ; la
+   * valeur par défaut (12,5mm) reproduit ce placement à 0,5mm près pour
+   * les documents existants. */
+  top: var(--xmd-header-top, calc(var(--xmd-margin-top, 25mm) - var(--xmd-header-height, 12mm)));
   height: var(--xmd-header-height, 12mm);
 }
 
 .xmd-page-footer {
-  bottom: calc(var(--xmd-margin-bottom, 25mm) - var(--xmd-footer-height, 12mm));
+  bottom: var(--xmd-footer-bottom, calc(var(--xmd-margin-bottom, 25mm) - var(--xmd-footer-height, 12mm)));
   height: var(--xmd-footer-height, 12mm);
 }
 

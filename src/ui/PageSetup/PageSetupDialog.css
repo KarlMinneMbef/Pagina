@@ -1,237 +1,328 @@
+/*
+ * « Mise en page » — reproduction du dialogue Word (demande 2026-10-17) :
+ * fond gris clair, bandeau de titre, onglets, panneau blanc, sections en
+ * légende bold ~10pt, bouton OK bleu à droite. Champs inertes grisés
+ * (disabled) : visibles comme dans Word, non fonctionnels pour l'instant.
+ */
 .ps-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 200;
 }
 
 .ps-dialog {
-  background: #ffffff;
-  border-radius: 6px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  width: 420px;
-  height: 480px;
-  min-width: 340px;
-  min-height: 300px;
-  max-width: calc(100vw - 40px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  background: #f0f0ee;
+  border: 1px solid #9a9a98;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
   font-family: Arial, sans-serif;
-  color: #343334;
-  /* Redimensionnable à la souris (poignée native du navigateur, coin
-   * bas-droit) — demandé explicitement par l'utilisateur. `overflow: auto`
-   * est requis par la spec CSS pour que la poignée apparaisse, même si le
-   * contenu interne (`.ps-body`) gère déjà son propre défilement. */
-  resize: both;
-  overflow: auto;
+  font-size: 12px;
+  color: #1f1f1f;
 }
 
-.ps-header {
+/* Bandeau de titre : plat, gris, ✕ à droite (style Word classique). */
+.ps-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #003f2b;
-  color: #ffffff;
-  border-radius: 6px 6px 0 0;
-  font-weight: 600;
+  padding: 6px 8px 6px 12px;
+  background: #f0f0ee;
+  border-bottom: 1px solid #d8d8d6;
+}
+
+.ps-titlebar-text {
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .ps-close {
   background: transparent;
   border: none;
-  color: #ffffff;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 7px;
   cursor: pointer;
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-.ps-close:hover {
-  background: rgba(255, 255, 255, 0.15);
+  color: #1f1f1f;
 }
 
+.ps-close:hover {
+  background: #d8d8d6;
+}
+
+/* Bande d'onglets (style Word : onglet actif blanc, relevé). */
 .ps-tabbar {
   display: flex;
   gap: 2px;
-  padding: 8px 16px 0;
-  border-bottom: 1px solid #d9d9d7;
+  padding: 4px 8px 0;
+  border-bottom: 1px solid #b9b9b7;
 }
 
 .ps-tab {
   background: transparent;
   border: none;
-  color: #6b6b69;
-  padding: 6px 12px;
-  font-size: 12px;
+  border-top: 2px solid transparent;
+  color: #4a4a48;
   font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 5px 14px 4px;
   cursor: pointer;
-  border-radius: 4px 4px 0 0;
 }
+
 .ps-tab:hover {
-  background: #f4f4f3;
-  color: #343334;
+  color: #1f1f1f;
 }
+
 .ps-tab-active {
-  color: #003f2b;
+  background: #ffffff;
+  border-top-color: #2b579a;
+  color: #1f1f1f;
   font-weight: 600;
-  background: #f4f4f3;
-  border: 1px solid #d9d9d7;
-  border-bottom-color: #f4f4f3;
-  margin-bottom: -1px;
 }
 
-.ps-cards {
+/* Panneau de contenu blanc, paddings généreux. */
+.ps-body {
+  background: #ffffff;
+  padding: 10px 14px 12px;
+  min-height: 330px;
+}
+
+.ps-cols {
   display: flex;
-  gap: 8px;
-  width: 100%;
+  gap: 16px;
+  align-items: flex-start;
 }
 
-.ps-card {
+.ps-col-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-col-preview {
+  width: 170px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Sections (fieldset/legend, style Word : légende bold 10pt). */
+.ps-group {
+  border: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ps-group legend {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2a5d2a;
+  margin-bottom: 2px;
+}
+
+/* Champs : libellé AU-DESSUS (comme Word), valeur en dessous. */
+.ps-num {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #1f1f1f;
+  min-width: 0;
+}
+
+.ps-num > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ps-num-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid #8a8a88;
+  background: #ffffff;
+}
+
+.ps-num-box input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 3px 4px;
+  color: #1f1f1f;
+  background: transparent;
+}
+
+.ps-num-box input:focus {
+  background: #eaf2ff;
+}
+
+.ps-num-unit {
+  padding: 0 5px;
+  font-size: 11px;
+  color: #6b6b69;
+  border-left: 1px solid #d8d8d6;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  background: #f7f7f5;
+}
+
+/* Listes déroulantes « Word ». */
+.ps-num select,
+.ps-select select {
+  border: 1px solid #8a8a88;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 3px 4px;
+  color: #1f1f1f;
+  max-width: 100%;
+}
+
+.ps-select > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* Cases à cocher. */
+.ps-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #1f1f1f;
+  cursor: pointer;
+}
+
+.ps-check input {
+  accent-color: #2b579a;
+}
+
+/* Grille des champs de marges/dimensions : 2 colonnes (comme Word :
+   Haut/Bas, Gauche/Droite, Relure/Position). */
+.ps-margins-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.ps-indent {
+  margin-top: 2px;
+  padding-left: 18px;
+}
+
+/* Champs INERTS : grisés, non modifiables (notion pas encore traitée). */
+.ps-disabled-field {
+  color: #9a9a98;
+}
+
+.ps-disabled-field select,
+.ps-disabled-field input {
+  color: #9a9a98;
+  background: #f4f4f2;
+  cursor: not-allowed;
+}
+
+/* Orientation : deux grandes options cliquables, page miniature SVG. */
+.ps-orient {
+  display: flex;
+  gap: 10px;
+}
+
+.ps-orient-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   background: #ffffff;
-  border: 1px solid #d9d9d7;
-  border-radius: 4px;
-  padding: 10px 8px;
+  border: 1px solid #8a8a88;
+  color: #1f1f1f;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 8px 16px 6px;
   cursor: pointer;
-  font-size: 12px;
-  color: #343334;
-}
-.ps-card:hover {
-  background: #f4f4f3;
-}
-.ps-card-active {
-  border-color: #24ac6e;
-  background: #e3f4ea;
-  color: #003f2b;
-  font-weight: 600;
 }
 
-.ps-card-glyph {
-  font-size: 18px;
+.ps-orient-btn:hover {
+  background: #f7f7f5;
 }
 
-.ps-headings-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-start;
+.ps-orient-active {
+  border-color: #2a5d2a;
+  box-shadow: inset 0 0 0 1px #2a5d2a;
+  background: #eef4ee;
 }
 
-.ps-body {
-  flex: 1;
-  min-height: 0;
-  padding: 12px 16px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Aperçu : mini-page SVG centrée. */
+.ps-preview {
+  display: block;
+  margin: 0 auto;
 }
 
-.ps-group {
-  border: 1px solid #d9d9d7;
-  border-radius: 4px;
-  padding: 10px 12px 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.ps-group legend {
-  font-size: 12px;
-  font-weight: 600;
-  color: #2f52a0;
-  padding: 0 4px;
-}
-
-.ps-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 12px;
-  color: #6b6b69;
-  flex: 1;
-  min-width: 90px;
-}
-
-.ps-field-wide {
-  flex-basis: 100%;
-}
-
-.ps-field input,
-.ps-field select {
-  font-size: 13px;
-  color: #343334;
-  padding: 5px 6px;
-  border: 1px solid #d9d9d7;
-  border-radius: 4px;
-}
-
-.ps-hint {
-  font-size: 11px;
-  color: #6b6b69;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.ps-hint code {
-  background: #f4f4f3;
-  border-radius: 3px;
-  padding: 1px 4px;
-  font-size: 11px;
-}
-
-.ps-field-checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  flex-basis: 100%;
-}
-
-.ps-field-checkbox input {
-  width: auto;
-}
-
-.ps-margins-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  width: 100%;
-}
-
+/* Boutons (style Word : OK bleu à droite, secondaires à gauche). */
 .ps-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid #d9d9d7;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid #d8d8d6;
+}
+
+.ps-actions-right {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
 }
 
 .ps-btn {
-  background: #f4f4f3;
-  border: 1px solid #d9d9d7;
-  border-radius: 4px;
-  padding: 6px 14px;
-  font-size: 13px;
+  background: #ffffff;
+  border: 1px solid #8a8a88;
+  color: #1f1f1f;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 4px 12px;
+  min-width: 74px;
   cursor: pointer;
-  color: #343334;
 }
-.ps-btn:hover {
-  background: #ebebe9;
+
+.ps-btn:hover:not(:disabled) {
+  background: #f7f7f5;
+}
+
+.ps-btn:disabled {
+  color: #9a9a98;
+  background: #f4f4f2;
+  cursor: not-allowed;
 }
 
 .ps-btn-primary {
-  background: #24ac6e;
-  border-color: #24ac6e;
+  background: #2b579a;
+  border-color: #1f3f74;
   color: #ffffff;
 }
-.ps-btn-primary:hover {
-  filter: brightness(1.05);
+
+.ps-btn-primary:hover:not(:disabled) {
+  background: #1f3f74;
+}
+
+.ps-btn-link {
+  min-width: 0;
 }
