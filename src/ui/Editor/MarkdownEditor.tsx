@@ -1683,6 +1683,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       "--xmd-margin-left": `${layout.marginLeftMm}mm`,
       "--xmd-header-height": `${layout.header.heightMm}mm`,
       "--xmd-footer-height": `${layout.footer.heightMm}mm`,
+      // « À partir du bord » (onglet Mise en page, comme Word) : distance du
+      // bord de la page au début de la zone, consommée par .xmd-page-header
+      // / .xmd-page-footer dans MarkdownEditor.css.
+      "--xmd-header-top": `${layout.header.fromEdgeMm}mm`,
+      "--xmd-footer-bottom": `${layout.footer.fromEdgeMm}mm`,
       // Style par niveau de titre (voir pageLayout.ts) — une variable par
       // propriété et par niveau, consommées par les règles `.xmd-prosemirror
       // h1`...`h6` dans MarkdownEditor.css. La numérotation elle-même n'a

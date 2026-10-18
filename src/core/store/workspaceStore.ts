@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import type { FileNode } from "../types";
-import { DEFAULT_PAGE_LAYOUT, withDocumentConfig } from "../pageLayout";
+import { loadDefaultPageLayout, withDocumentConfig } from "../pageLayout";
 import { useTabsStore } from "./tabsStore";
 import {
   pickWorkspaceFolder,
@@ -169,8 +169,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const path = joinPath(dirPath ?? root, name);
     // Documente la config de mise en page utilisée à la création du fichier
     // (police, marges, format papier, en-tête/pied de page) — invisible
-    // dans tout autre outil Markdown (voir pageLayout.ts).
-    await createFile(path, withDocumentConfig(DEFAULT_PAGE_LAYOUT, "\n"));
+    // dans tout autre outil Markdown (voir pageLayout.ts). « Définir par
+    // défaut » du dialogue Mise en page peut avoir remplacé les défauts
+    // usine (loadDefaultPageLayout, voir pageLayout.ts).
+    await createFile(path, withDocumentConfig(loadDefaultPageLayout(), "\n"));
     await get().refreshTree();
     return path;
   },
