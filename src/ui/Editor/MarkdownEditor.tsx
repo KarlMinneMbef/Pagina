@@ -48,6 +48,7 @@ import { FontSize } from "./extensions/FontSize";
 import { Markdown } from "tiptap-markdown";
 import { useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useState, type CSSProperties } from "react";
 import { PageBreak } from "./extensions/PageBreak";
+import { Bookmark } from "./extensions/Bookmark";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
 import { TocMarker } from "./extensions/TocMarker";
 import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
@@ -188,6 +189,11 @@ export interface MarkdownEditorHandle {
   insertInlineMath: () => void;
   insertBlockMath: () => void;
   insertEmoji: (emoji: string) => void;
+  /** Pose un signet (ancre invisible `<a id="…">`) à la position du
+   * curseur — cible des renvois. Voir `Bookmark.ts`. */
+  insertBookmark: () => void;
+  /** Insère un renvoi vers un signet : lien Markdown `[texte](#id)`. */
+  insertCrossReference: () => void;
 }
 
 // Coloration syntaxique des blocs de code : "common" couvre les langages les
@@ -228,13 +234,33 @@ function nextCase(text: string): string {
   return upper; // contient au moins une minuscule → MAJUSCULES
 }
 
-/** Presse-papiers INTERNE : dernier texte copié/coupé DANS l'application.
- * Repli de `pasteClipboard` quand la lecture du presse-papiers système est
+/** Presse-papiers INTERNE : dernier texte copié/coupé DANS l'application. * Repli de `pasteClipboard` quand la lecture du presse-papiers système est
  * refusée — WebView2 peut afficher une demande de permission native pour
  * clipboard-read (ou la voir bloquée par la configuration) : Coller reste
  * ainsi fonctionnel pour tout ce qui a été copié/coupé via les boutons du
  * ruban, sans dépendre de cette permission. */
 let internalClipboard: string | null = null;
+
+/** Normalise un nom de signet saisi en identifiant d'ancre sûr : minuscules,
+ * sans accents, espaces → tirets, seuls [a-z0-9-_] survivent (voir
+ * `insertBookmark`/`insertCrossReference`). */
+function slugifyBookmark(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9\-_]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/** Échappe un texte saisi avant de l'injecter dans un HTML construit à la
+ * main pour `insertContent` (renvois — le libellé vient d'un prompt). */
+function escapeHtmlText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 /** Élément d'en-tête/pied de page le plus PROCHE DU VIEWPORT — les boutons
  * du ruban ne doivent pas systématiquement viser la zone de la PREMIÈRE
@@ -665,6 +691,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         TaskItem.configure({ nested: true }),
         CharacterCount,
         PageBreak,
+        Bookmark,
         TocMarker,
         FootnoteReference,
         FootnoteDefinition,
@@ -1015,6 +1042,31 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "blockMath", attrs: { source } }).run();
       },
       insertEmoji: (emoji) => editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent(emoji).run(),
+      // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
+      insertBookmark: () => {
+        if (!editor) return;
+        const name = window.prompt("Nom du signet (ancre invisible à cette position du document) :", "signet");
+        if (!name) return;
+        const id = slugifyBookmark(name);
+        if (!id) return;
+        editor.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "bookmark", attrs: { id } }).run();
+      },
+      insertCrossReference: () => {
+        if (!editor) return;
+        const name = window.prompt("Nom du signet visé (celui donné à la création du signet) :", "signet");
+        if (!name) return;
+        const id = slugifyBookmark(name);
+        if (!id) return;
+        const label = window.prompt("Texte affiché pour le renvoi :", name) ?? name;
+        // Lien Markdown standard vers l'ancre : [texte](#id) — cliquable
+        // dans tout moteur de rendu, et le saut vers l'ancre <a id> posée
+        // par « Signet » fonctionne à l'écran comme à l'impression.
+        editor
+          .chain()
+          .focus(undefined, { scrollIntoView: false })
+          .insertContent(`<a href="#${id}">${escapeHtmlText(label || id)}</a>`)
+          .run();
+      },
     }));
 
     // Si le contenu initial change (changement d'onglet actif), recharger l'éditeur.

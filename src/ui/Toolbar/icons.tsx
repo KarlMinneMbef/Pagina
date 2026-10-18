@@ -239,6 +239,28 @@ export function IconLink({ size, className }: IconProps) {
   );
 }
 
+/** Signet (marque-page) — AUCUN tracé fourni par la maquette pour les deux
+ * nouvelles commandes du groupe « Liens » : dérivation minimale dans le
+ * même langage graphique (grille 24x24, stroke 1.6). */
+export function IconBookmark({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M7 3.5h10V20l-5-3.8L7 20z" />
+    </Svg24>
+  );
+}
+
+/** Renvoi (renvoi vers un signet). */
+export function IconCrossReference({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M10 17h5a4 4 0 0 0 4-4v-3" />
+      <path d="M16 12.5l3-3 3 3" />
+    </Svg24>
+  );
+}
+
 // --- Insertion : En-tête et pied ---
 
 export function IconHeader({ size, className }: IconProps) {
