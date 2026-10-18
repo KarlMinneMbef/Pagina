@@ -471,8 +471,11 @@ export function Toolbar({
             </div>
           </RibbonGroup>
 
-          <RibbonGroup label="Tableaux et éléments" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+          <RibbonGroup label="Tableau" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
             <TableSizePicker disabled={disabled} onPick={(rows, cols) => actions?.insertTable(rows, cols)} />
+          </RibbonGroup>
+
+          <RibbonGroup label="Éléments" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
             <div className="tb-stack">
               <StackButton
                 disabled={disabled}
