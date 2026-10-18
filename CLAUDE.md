@@ -103,6 +103,27 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Correctif : le ruban fermait le champ en-tête/pied au moment de
+  s'y appliquer (2026-10-17, remonté par l'utilisateur : « quand je
+  veux mettre du texte en gras dans la zone en-tête, ça ne marche pas
+  car l'en-tête est automatiquement désélectionné »)** — le clic sur
+  un bouton du ruban (G, italique, tableaux…) passait par
+  `onDocMouseDown` → `commit()` : le champ se REFERMAIT sur le
+  mousedown, avant même que la commande ne s'exécute. Fix dans
+  `startHeaderFooterEdit` (MarkdownEditor.tsx) : la fermeture hors
+  champ ignore AUSSI `.tb-ribbon-stack` (ruban) et `.tbar` (barre de
+  titre) en plus de `.ctx-host` — le champ reste ouvert, la commande
+  route via `cmd()`, s'applique à la sélection (conservée même sans
+  focus) et le `.focus()` de la chaîne rend le focus au mini-éditeur.
+  Vérifié par Playwright/CDP : sélection dans le champ → clic G →
+  `<strong>` présent, champ ouvert, focus dedans ; Ctrl+Z annule.
+  Seul un clic dans le document (ou l'explorateur) referme.
+- **Réorganisation des boutons du panneau En-tête/Pied (2026-10-17)** :
+  la classe `.hf-grid` du JSX n'avait AUCUNE règle CSS — les 6 boutons
+  Variables s'empilaient en pleine largeur. Ajout
+  (HeaderFooterPanel.css) : grille 3 colonnes, boutons type A
+  strictement identiques (icône + libellé + jeton), vérifié par CDP
+  (3×2 boutons de 77×59px).
 - **Correctif disposition : panneaux contextuels vs pages A4
   (2026-10-17, retour utilisateur « il faut reprendre la disposition
   des panneaux »)** — quand le panneau contextuel droit
