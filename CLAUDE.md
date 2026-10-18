@@ -112,6 +112,25 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Fenêtre Emoji refaite + groupe « Panneau » (2026-10-17, demande :
+  « refaire la fenêtre emoji, mettre le bouton dans le segment
+  Panneau, refaire le bouton »)** :
+  - L'ancienne liste plate de 30 émojis (menu 6 colonnes) est
+    remplacée par une FENÊTRE à catégories façon sélecteur moderne
+    (`.tb-emoji-pop`, Toolbar.tsx) : 8 catégories
+    (EMOJI_CATEGORIES — Smileys & émotions, Animaux & nature,
+    Nourriture & boissons, Voyages & lieux, Activités, Objets,
+    Symboles, Drapeaux, 157 émojis au total, l'ancienne liste
+    répartie dedans), grille 8 colonnes, défilement, fermeture par
+    Échap/clic extérieur, RECALAGE dans le viewport à l'ouverture
+    (le groupe est en bout de ruban — déborderait sinon, même
+    logique que le ColorPicker). Couleurs MBEF (titre sapin, survol
+    azur).
+  - Nouveau groupe ruban **« Panneau »** à la fin de l'onglet
+    Insertion : le bouton Emoji (type B, icône visage SVG + ▾) y
+    vit désormais, retiré de « Diagrammes et formules ».
+  - Vérifié par CDP : 8 catégories/157 émojis, pas de débordement,
+    Échap ferme. tsc, build, 38 tests verts.
 - **Sélecteur de langage des blocs de code DÉMÉNAGÉ du ruban vers le
   bloc lui-même (2026-10-17, choix utilisateur validé : « select
   directement dans le code block quand on est en édition »)** :
