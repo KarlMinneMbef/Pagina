@@ -326,3 +326,12 @@
 .ps-btn-link {
   min-width: 0;
 }
+
+/* Boutons « Numérotation des lignes… » / « Bordures… » déplacés DANS la
+   section Page (demande 2026-10-17) : côte à côte sous l'alignement
+   vertical, pas dans la barre d'actions du bas. */
+.ps-inline-btns {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
