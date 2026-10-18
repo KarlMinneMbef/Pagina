@@ -126,12 +126,28 @@ export function IconBlockquote({ size, className }: IconProps) {
   );
 }
 
+// Alignements (demande 2026-10-17 : les 4 icônes paraissaient identiques
+// à 16px — une seule barre du milieu différait, déplacement quasi
+// imperceptible). Modèle à QUATRE barres, barres courtes franchement
+// positionnées selon l'alignement (pleine largeur : 4→20 ; courte : 11).
+function alignBars(shortX: number | null): ReactNode {
+  const bar = (y: number, x: number, w: number) => (
+    <rect key={y} x={x} y={y} width={w} height={1.8} rx="0.9" fill="currentColor" stroke="none" />
+  );
+  return (
+    <>
+      {bar(6, 4, 16)}
+      {shortX === null ? bar(10, 4, 16) : bar(10, shortX, 11)}
+      {bar(14, 4, 16)}
+      {shortX === null ? bar(18, 4, 16) : bar(18, shortX, 11)}
+    </>
+  );
+}
+
 export function IconAlignLeft({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="6" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="10.6" width="11" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="15.2" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
+      {alignBars(4)}
     </Svg24>
   );
 }
@@ -139,9 +155,7 @@ export function IconAlignLeft({ size, className }: IconProps) {
 export function IconAlignCenter({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="6" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="6.5" y="10.6" width="11" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="15.2" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
+      {alignBars(6.5)}
     </Svg24>
   );
 }
@@ -149,9 +163,7 @@ export function IconAlignCenter({ size, className }: IconProps) {
 export function IconAlignRight({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="6" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="9" y="10.6" width="11" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="15.2" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
+      {alignBars(9)}
     </Svg24>
   );
 }
@@ -159,9 +171,7 @@ export function IconAlignRight({ size, className }: IconProps) {
 export function IconAlignJustify({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="6" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="10.6" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
-      <rect x="4" y="15.2" width="16" height="1.8" rx="0.9" fill="currentColor" stroke="none" />
+      {alignBars(null)}
     </Svg24>
   );
 }

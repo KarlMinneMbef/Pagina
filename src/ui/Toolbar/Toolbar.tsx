@@ -400,14 +400,16 @@ export function Toolbar({
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
               <IconBlockquote size={16} />
             </button>
+            {/* Ordre demandé par l'utilisateur (2026-10-17) :
+             * gauche, droite, centré, justifié. */}
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
               <IconAlignLeft size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
-              <IconAlignCenter size={16} />
-            </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
               <IconAlignRight size={16} />
+            </button>
+            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
+              <IconAlignCenter size={16} />
             </button>
             <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
               <IconAlignJustify size={16} />
