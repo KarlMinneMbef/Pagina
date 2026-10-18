@@ -4,7 +4,14 @@
 .xmd-page-wrap {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  /* AUTO et pas hidden : quand un panneau contextuel droit
+   * (ContextualPanelHost) ou l'explorateur réduisent la largeur
+   * disponible, la page A4 (largeur FIXE) doit rester atteignable —
+   * avant, le bord droit des pages était rogné sans recours
+   * (retour utilisateur 2026-10-17 : « il faut reprendre la
+   * disposition des panneaux »). Voir aussi `align-items: safe
+   * center` sur .xmd-page-canvas juste en dessous. */
+  overflow-x: auto;
   background: #e6e6e6;
   padding: 32px 16px;
   position: relative;
@@ -78,7 +85,12 @@
 .xmd-page-canvas {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* `safe` : centrage quand il y a la place, sinon la page se
+   * cale à GAUCHE et reste entièrement atteignable au scroll
+   * horizontal de .xmd-page-wrap (un `center` simple laisserait
+   * déborder les deux bords à la fois, le bord gauche devenant
+   * impossible à rejoindre). */
+  align-items: safe center;
   gap: 24px;
   transform: scale(var(--xmd-zoom, 1));
   transform-origin: top center;
@@ -90,7 +102,13 @@
   /* Hauteur FIXE, jamais recalculée selon le contenu — une page qui ne se
    * remplit pas reste simplement blanche en dessous, comme dans Word. */
   height: var(--xmd-page-height, 297mm);
-  max-width: 100%;
+  /* PAS de `max-width: 100%` : réduire la page quand un panneau contextuel
+   * droit (ContextualPanelHost) ou l'explorateur mange de la largeur
+   * déformait la page A4 (largeur NON fixe) et désynchronisait tout ce qui
+   * repose sur la géométrie fixe des pages (résolution des clics vers
+   * l'éditeur invisible, en-tête/pied, pagination). La page garde sa
+   * largeur PLEINE ; si la place manque, .xmd-page-wrap offre un scroll
+   * horizontal (voir overflow-x: auto plus haut). */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
   position: relative;

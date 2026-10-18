@@ -103,6 +103,34 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Correctif disposition : panneaux contextuels vs pages A4
+  (2026-10-17, retour utilisateur « il faut reprendre la disposition
+  des panneaux »)** — quand le panneau contextuel droit
+  (ContextualPanelHost) ou l'explorateur ouvert réduisaient la largeur
+  disponible, `.xmd-page` (max-width: 100%) SE RÉTRÉCISSAIT en dessous
+  de sa largeur A4 fixe : pages déformées + tout ce qui repose sur la
+  géométrie fixe (résolution des clics vers l'éditeur invisible,
+  en-tête/pied, pagination) désynchronisé. Fix dans
+  MarkdownEditor.css : `max-width: 100%` SUPPRIMÉ de `.xmd-page`
+  (largeur TOUJOURS fixe), `.xmd-page-wrap` passe en `overflow-x:
+  auto` (le bord droit redevient atteignable au scroll horizontal au
+  lieu d'être rogné sans recours) et `.xmd-page-canvas` en
+  `align-items: safe center` (centré s'il y a la place, calé à gauche
+  sinon — un `center` simple laisserait le bord gauche inatteignable).
+  Vérifié par Playwright/CDP : panneau ouvert à 1280px de fenêtre →
+  page reste 794px, panneau 260px à droite, pas de chevauchement,
+  champ d'en-tête ouvert parfaitement aligné sur la zone peinte.
+  **PIÈGE VÉCU (session zombie)** : l'utilisateur a testé sur une
+  session `tauri dev` OBSOLÈTE encore en arrière-plan (HMR avait
+  remonté l'app après « CODE_BLOCK_LANGUAGES incompatible » → état
+  cassé, champ d'en-tête inéditable, « je ne peux pas éditer le texte
+  dans l'en-tête et pied de page »). Sur une session propre, l'édition
+  en-tête/pied (clic → champ, frappe, boutons Variables du panneau,
+  Échap, clic ailleurs) est fonctionnelle de bout en bout — vérifié
+  par CDP. Avant de croire un rapport d'utilisateur sur un bug
+  d'édition, vérifier l'arborescence de processus : UNE seule instance
+  `npx tauri dev` doit exister (vite sur 1420, app + CDP sur 9222) ;
+  tuer les arbres zombies AVANT de diagnostiquer.
 - **En-tête/pied de page = MARKDOWN ordinaire piloté par le RUBAN
   (2026-10-17, refonte demandée par l'utilisateur après rejet des
   mini-fonctions dédiées : \"considère les deux parties comme une partie
