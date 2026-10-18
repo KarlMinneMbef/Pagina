@@ -261,15 +261,6 @@ export function IconFooter({ size, className }: IconProps) {
   );
 }
 
-export function IconVariable({ size, className }: IconProps) {
-  return (
-    <Svg24 size={size} className={className}>
-      <path d="M4 7h6a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h6" />
-      <path d="M4 21h6" />
-    </Svg24>
-  );
-}
-
 // --- Insertion : Sommaire ---
 
 export function IconTocMarker({ size, className }: IconProps) {
@@ -465,6 +456,73 @@ export function IconValignBottom({ size, className }: IconProps) {
     <Svg24 size={size} className={className}>
       <rect x="4" y="5" width="16" height="14" rx="1" />
       <rect x="6.5" y="14.6" width="11" height="2.4" rx="1" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
+
+// --- Variables d'en-tête/pied de page (panneau « Variables », App.tsx) —
+// aucun tracé fourni par la maquette pour ces six jetons : dérivation
+// minimale dans le même langage graphique (grille 24x24, stroke 1.6). */
+
+/** {{page}} — numéro de la page courante. */
+export function IconVarPage({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="5" y="4" width="14" height="16" rx="1.5" />
+      <path d="M9.5 16h5" />
+    </Svg24>
+  );
+}
+
+/** {{pages}} — nombre total de pages. */
+export function IconVarPages({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="7" width="12" height="13" rx="1.5" />
+      <path d="M8 4h10a2 2 0 0 1 2 2v10" />
+    </Svg24>
+  );
+}
+
+/** {{date}} — date du jour. */
+export function IconVarDate({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="6" width="16" height="14" rx="1.5" />
+      <path d="M8 3.5v4M16 3.5v4M4 11h16" />
+      <circle cx="9" cy="15" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="15" r="1" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
+
+/** {{filename}} — nom du fichier. */
+export function IconVarFile({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6" />
+    </Svg24>
+  );
+}
+
+/** {{version}} — version du document. */
+export function IconVarVersion({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M4 12l8-8h8v8l-8 8z" />
+      <circle cx="16" cy="8" r="1.2" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
+
+/** {{author}} — auteur du document. */
+export function IconVarAuthor({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
     </Svg24>
   );
 }

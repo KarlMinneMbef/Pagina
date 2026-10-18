@@ -36,7 +36,7 @@ export interface PaginaLightProps {
 }
 
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5];
-const STATS_INITIALES: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph", insideTable: false, tableSelectionShape: null };
+const STATS_INITIALES: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph", insideTable: false, tableSelectionShape: null, headerFooterEditMode: null };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
 

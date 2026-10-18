@@ -103,6 +103,41 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **En-tête/pied de page : panneau « Variables » + correctif du bouton
+  « Pied de page » (2026-10-17, fin de journée)** — demande utilisateur :
+  "créer un panneau latéral droit avec les Variables sous forme d'icône,
+  grande icône pour le pied de page ; pour info le bouton pied de page ne
+  marche pas" (mode de travail demandé : modifications du ruban SANS
+  séance de tests).
+  - **Correctif du « bouton qui ne marche pas »** : `editHeader`/
+    `editFooter` visaient TOUJOURS la zone de la première page
+    (`querySelector`) — si l'utilisateur lisait une page ultérieure, le
+    champ flottant s'ouvrait HORS du viewport, donc visuellement "rien ne
+    se passait". Nouveau `headerFooterTargetNearViewport()` : choisit la
+    zone visible la plus proche du centre du viewport (à défaut la
+    première). Le bouton fonctionnait techniquement — son ancrage était
+    le problème.
+  - **`EditorStats.headerFooterEditMode`** ("header"|"footer"|null) :
+    remonté à l'ouverture/fermeture du champ flottant (commit/cancel,
+    via un `emitMode` dédié — sans attendre une modification du
+    document) + ajouté aux 4 sites d'émission de stats (au passage le
+    site "après repaint" oubliait `insideTable`/`tableSelectionShape`,
+    corrigé) + `closeHeaderFooterEdit()` au handle (blur = commit).
+  - **Nouveau panneau latéral `HeaderFooterPanel`**
+    (src/ui/HeaderFooter/, style sobre hf-* identique au panneau
+    Tableau) : titre En-tête/Pied de page + ✕ (termine l'édition en
+    validant), section « Variables » avec 6 boutons-icônes (Page, Pages,
+    Date, Fichier, Version, Auteur — icônes `IconVar*` DÉRIVÉES, aucun
+    tracé de maquette fourni) + jeton affiché sous le libellé. Visible
+    uniquement pendant l'édition du champ, suit son cycle de vie.
+    `onMouseDown preventDefault` conservé (piège du focus documenté).
+  - **Ruban** : groupe « En-tête et pied » = deux grandes icônes
+    (En-tête, Pied de page) ; le menu « Variable ▾ » du ruban est
+    SUPPRIMÉ (remplacé par le panneau) — `VariablePicker` et
+    `HEADER_FOOTER_VARIABLES` retirés de Toolbar.tsx, `IconVariable`
+    retiré d'icons.tsx. `.hf-panel` ajouté aux règles `@media print`.
+    `tsc`, build, 38 tests verts ; séance de vérification CDP non
+    demandée pour cette passe.
 - **Éditeur de bordures : ÉDITION DIRECTE (2026-10-17, fin de journée)** —
   retour utilisateur : "quand on clique ou change une bordure sur le
   schéma, on change le tableau" (simplification UX). Les boutons

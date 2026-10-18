@@ -1,0 +1,149 @@
+/*
+ * Panneau latéral « Variables » (en-tête/pied de page) — même présentation
+ * sobre gris clair que TablePropertiesPanel.css (palette dupliquée sous
+ * des préfixes hf-* pour garder les deux panneaux indépendants).
+ */
+.hf-panel {
+  --hf-bg: #eeefef;
+  --hf-line: #d0d3d4;
+  --hf-text: #2a2a24;
+  --hf-label: #75766f;
+  --hf-btn: #e0e2e3;
+  --hf-btn-hover: #d0d3d4;
+  --hf-btn-active: #c5c9ca;
+
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--hf-bg);
+  color: var(--hf-text);
+  border-left: 1px solid var(--hf-line);
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.hf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px 8px 12px;
+  border-bottom: 1px solid var(--hf-line);
+}
+
+.hf-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hf-text);
+}
+
+.hf-close {
+  background: transparent;
+  border: none;
+  color: var(--hf-text);
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.hf-close:hover {
+  background: var(--hf-btn-hover);
+}
+
+.hf-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hf-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hf-label);
+}
+
+.hf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+/* Bouton variable : icône ~20px + libellé ~10px + jeton en 9px gris. */
+.hf-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: var(--hf-btn);
+  border: none;
+  border-radius: 5px;
+  padding: 8px 2px 6px;
+  color: var(--hf-text);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.hf-action:hover:not(:disabled) {
+  background: var(--hf-btn-hover);
+}
+
+.hf-action:active:not(:disabled) {
+  background: var(--hf-btn-active);
+}
+
+.hf-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hf-action-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.hf-action-label {
+  font-size: 10px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.hf-action-token {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--hf-label);
+  font-family: "Courier New", monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.hf-hint {
+  margin: 0;
+  font-size: 10px;
+  color: var(--hf-label);
+  line-height: 1.4;
+}
