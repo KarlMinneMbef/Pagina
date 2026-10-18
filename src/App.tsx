@@ -13,6 +13,7 @@ import { StatusBar, type ViewMode } from "./ui/StatusBar/StatusBar";
 import { PageSetupDialog } from "./ui/PageSetup/PageSetupDialog";
 import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
 import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel";
+import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
 import { useWorkspaceStore } from "./core/store/workspaceStore";
@@ -27,6 +28,7 @@ const EMPTY_STATS: EditorStats = {
   activeBlockStyle: "paragraph",
   insideTable: false,
   tableSelectionShape: null,
+  headerFooterEditMode: null,
 };
 
 function App() {
@@ -441,6 +443,16 @@ function App() {
             disabled={!activeTab}
             shape={stats.tableSelectionShape}
             onClose={() => setTablePanelOpen(false)}
+          />
+        )}
+        {/* Panneau « Variables » : visible uniquement pendant l'édition d'un
+         * champ d'en-tête/pied de page (suit le cycle de vie du champ —
+         * fermeture = commit ou annulation). */}
+        {activeTab && stats.headerFooterEditMode && (
+          <HeaderFooterPanel
+            mode={stats.headerFooterEditMode}
+            onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
+            onClose={() => editorRef.current?.closeHeaderFooterEdit()}
           />
         )}
       </div>

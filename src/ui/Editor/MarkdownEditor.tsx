@@ -175,6 +175,10 @@ export interface MarkdownEditorHandle {
    * champ d'en-tête/pied de page en cours d'édition (ou ouvre celui de
    * l'en-tête par défaut s'il n'y en a aucun d'ouvert). */
   insertHeaderFooterVariable: (token: string) => void;
+  /** Termine l'édition du champ d'en-tête/pied de page en cours (valide
+   * le texte saisi, comme un clic ailleurs) — bouton ✕ du panneau
+   * « Variables » dans App.tsx. */
+  closeHeaderFooterEdit: () => void;
   insertTocMarker: () => void;
   generateToc: () => void;
   /** Insère une référence `[^n]` au curseur ET la définition correspondante
@@ -231,6 +235,36 @@ function nextCase(text: string): string {
  * ainsi fonctionnel pour tout ce qui a été copié/coupé via les boutons du
  * ruban, sans dépendre de cette permission. */
 let internalClipboard: string | null = null;
+
+/** Élément d'en-tête/pied de page le plus PROCHE DU VIEWPORT — les boutons
+ * du ruban ne doivent pas systématiquement viser la zone de la PREMIÈRE
+ * page (repiqué par `querySelector`) : si l'utilisateur lit une page
+ * ultérieure, le champ flottant s'ouvrait hors de son champ de vision et
+ * le bouton semblait « ne rien faire ». On choisit la zone visible la
+ * plus proche du centre du viewport, à défaut la première. */
+function headerFooterTargetNearViewport(canvas: HTMLElement | null, selector: string): HTMLElement | null {
+  if (!canvas) return null;
+  const els = Array.from(canvas.querySelectorAll<HTMLElement>(selector));
+  if (els.length === 0) return null;
+  const vh = window.innerHeight;
+  const visible = els.filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.top < vh;
+  });
+  if (visible.length === 0) return els[0];
+  const mid = vh / 2;
+  let best = visible[0];
+  let bestDist = Infinity;
+  for (const el of visible) {
+    const r = el.getBoundingClientRect();
+    const d = Math.abs(r.top + r.height / 2 - mid);
+    if (d < bestDist) {
+      bestDist = d;
+      best = el;
+    }
+  }
+  return best;
+}
 
 function mmToPx(mm: number): number {
   const probe = document.createElement("div");
@@ -511,6 +545,10 @@ export interface EditorStats {
   /** Dimensions de la sélection de cellules courante — voir
    * `getSelectionShape` ; `null` hors tableau. */
   tableSelectionShape: { rows: number; cols: number } | null;
+  /** Champ flottant d'en-tête/pied de page actuellement en cours d'édition
+   * — pilote le panneau latéral « Variables » (voir `HeaderFooterPanel`
+   * dans App.tsx) ; `null` quand aucun champ n'est ouvert. */
+  headerFooterEditMode: "header" | "footer" | null;
 }
 
 interface MarkdownEditorProps {
@@ -571,6 +609,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // aux boutons "insérer une variable" du ruban de taper dans le bon champ
     // sans que l'utilisateur ait à re-cliquer dedans.
     const activeHeaderFooterInputRef = useRef<HTMLInputElement | null>(null);
+    // Mode en-tête/pied de page en cours d'édition (voir startHeaderFooterEdit)
+    // — remonte dans `EditorStats.headerFooterEditMode` pour piloter le
+    // panneau latéral « Variables » de App.tsx.
+    const headerFooterModeRef = useRef<"header" | "footer" | null>(null);
     // Peuplée après le montage de l'éditeur (voir plus bas) — permet aux
     // callbacks `onUpdate`/`onSelectionUpdate`, créés une seule fois par
     // Tiptap, d'appeler la version toujours à jour de `repaint`.
@@ -727,6 +769,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeBlockStyle: getActiveBlockStyle(editor),
           insideTable: editor.isActive("table"),
           tableSelectionShape: getSelectionShape(editor),
+          headerFooterEditMode: headerFooterModeRef.current,
         });
       },
     });
@@ -914,16 +957,22 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         tableSelectionShape: editor ? getSelectionShape(editor) : null,
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
+        headerFooterEditMode: headerFooterModeRef.current,
       }),
       editHeader: () => {
-        const el = canvasRef.current?.querySelector<HTMLElement>(".xmd-page-header");
+        const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
         if (el) startHeaderFooterEditRef.current(el);
       },
       editFooter: () => {
-        const el = canvasRef.current?.querySelector<HTMLElement>(".xmd-page-footer");
+        const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-footer");
         if (el) startHeaderFooterEditRef.current(el);
       },
       insertHeaderFooterVariable: (token) => insertHeaderFooterVariableRef.current(token),
+      closeHeaderFooterEdit: () => {
+        // `blur` déclenche le `commit` du champ (voir startHeaderFooterEdit)
+        // — le texte saisi est validé, comme un clic ailleurs dans l'app.
+        activeHeaderFooterInputRef.current?.blur();
+      },
       insertTocMarker: () => editor?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
       generateToc: () => editor?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
       insertFootnote: () => {
@@ -1115,6 +1164,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeBlockStyle: getActiveBlockStyle(editor),
           insideTable: editor.isActive("table"),
           tableSelectionShape: getSelectionShape(editor),
+          headerFooterEditMode: headerFooterModeRef.current,
         });
       };
       repaintRef.current = repaint;
@@ -1147,6 +1197,24 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const template = target.getAttribute(isHeader ? HEADER_TEMPLATE_ATTR : FOOTER_TEMPLATE_ATTR) ?? "";
       const rect = target.getBoundingClientRect();
 
+      // Remonte le mode d'édition (panneau latéral « Variables » de App.tsx)
+      // à chaque ouverture/fermeture du champ — sans attendre une
+      // modification du document, qui n'arrive pas tant qu'on ne tape rien.
+      const emitMode = (mode: "header" | "footer" | null) => {
+        headerFooterModeRef.current = mode;
+        if (!editor) return;
+        onStatsRef.current?.({
+          words: editor.storage.characterCount.words(),
+          characters: editor.storage.characterCount.characters(),
+          pageCount: pageCountRef.current,
+          currentPage: currentPageRef.current,
+          activeBlockStyle: getActiveBlockStyle(editor),
+          insideTable: editor.isActive("table"),
+          tableSelectionShape: getSelectionShape(editor),
+          headerFooterEditMode: mode,
+        });
+      };
+
       const input = document.createElement("input");
       input.type = "text";
       input.className = "xmd-header-footer-edit";
@@ -1159,12 +1227,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       input.focus();
       input.select();
       activeHeaderFooterInputRef.current = input;
+      emitMode(isHeader ? "header" : "footer");
 
       let committed = false;
       const commit = () => {
         if (committed) return;
         committed = true;
         if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
+        emitMode(null);
         const nextText = input.value;
         input.remove();
         const current = layoutRef.current;
@@ -1176,6 +1246,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if (committed) return;
         committed = true;
         if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
+        emitMode(null);
         input.remove();
       };
       // `mousedown` (pas seulement `blur`) sur les boutons "insérer une
@@ -1425,6 +1496,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             activeBlockStyle: getActiveBlockStyle(editor),
             insideTable: editor.isActive("table"),
             tableSelectionShape: getSelectionShape(editor),
+            headerFooterEditMode: headerFooterModeRef.current,
           });
         }
       };

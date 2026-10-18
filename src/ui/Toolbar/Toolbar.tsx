@@ -58,21 +58,8 @@ import {
   IconTaskList,
   IconTocMarker,
   IconTocRefresh,
-  IconVariable,
 } from "./icons";
 import "./Toolbar.css";
-
-/** Variables disponibles dans l'en-tête/pied de page — voir
- * `resolveHeaderFooterText` dans `core/pageLayout.ts` pour la substitution
- * réelle, ce tableau ne fait que lister les jetons pour ce menu. */
-const HEADER_FOOTER_VARIABLES: { label: string; token: string }[] = [
-  { label: "Numéro de page", token: "{{page}}" },
-  { label: "Nombre de pages", token: "{{pages}}" },
-  { label: "Date du jour", token: "{{date}}" },
-  { label: "Nom du fichier", token: "{{filename}}" },
-  { label: "Version du document", token: "{{version}}" },
-  { label: "Auteur", token: "{{author}}" },
-];
 
 /** Emoji courants — insérés comme caractère Unicode réel (pas un code
  * `:smile:` à convertir), donc lisibles tels quels dans n'importe quel
@@ -533,16 +520,16 @@ export function Toolbar({
               icon={<IconHeader size={28} />}
               label="En-tête"
             />
-            <div className="tb-stack">
-              <StackButton
-                disabled={disabled}
-                onClick={() => actions?.editFooter()}
-                title="Modifier le pied de page (identique à cliquer directement sur le pied de page d'une page)"
-                icon={<IconFooter size={15} />}
-                label="Pied de page"
-              />
-              <VariablePicker disabled={disabled} onPick={(token) => actions?.insertHeaderFooterVariable(token)} />
-            </div>
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.editFooter()}
+              title="Modifier le pied de page (identique à cliquer directement sur le pied de page d'une page)"
+              icon={<IconFooter size={28} />}
+              label="Pied de page"
+            />
+            {/* Les variables ({{page}}, {{date}}...) vivent désormais dans le
+             * panneau latéral « Variables » qui s'ouvre avec le champ
+             * d'édition (voir HeaderFooterPanel dans App.tsx). */}
           </RibbonGroup>
 
           <RibbonGroup label="Sommaire" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
@@ -785,63 +772,6 @@ function HeadingPicker({
   );
 }
 
-/** Menu d'insertion des variables d'en-tête/pied de page (numéro de page,
- * date...). Insère dans le champ actuellement ouvert (voir
- * `insertHeaderFooterVariable` dans MarkdownEditor.tsx) — s'il n'y en a
- * aucun, l'en-tête est ouvert par défaut. `onMouseDown` avec
- * `preventDefault()` sur chaque option : sans ça, cliquer sur une option
- * ferait perdre le focus au champ flottant (événement `blur`, qui le
- * referme) AVANT que `onClick` n'ait la moindre chance de s'exécuter. */
-function VariablePicker({ disabled, onPick }: { disabled: boolean; onPick: (token: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
-
-  return (
-    <div className="tb-heading-picker" ref={rootRef}>
-      <button
-        className="tb-stack-btn tb-heading-picker-trigger tb-stack-btn-with-caret"
-        disabled={disabled}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen((o) => !o)}
-        title="Insérer une variable dans l'en-tête/le pied de page (numéro de page, date...)"
-      >
-        <span className="tb-stack-btn-icon">
-          <IconVariable size={15} />
-        </span>
-        <span className="tb-stack-btn-label">Variable</span>
-        <span className="tb-stack-caret">▾</span>
-      </button>
-      {open && (
-        <div className="tb-heading-menu">
-          {HEADER_FOOTER_VARIABLES.map(({ label, token }) => (
-            <button
-              key={token}
-              className="tb-heading-option"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onPick(token);
-                setOpen(false);
-              }}
-            >
-              {label} <span className="tb-heading-option-token">{token}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 const TABLE_PICKER_MAX_COLS = 8;
 const TABLE_PICKER_MAX_ROWS = 6;
