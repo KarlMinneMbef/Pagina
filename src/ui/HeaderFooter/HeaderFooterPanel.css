@@ -11,7 +11,6 @@
   --hf-btn: #e0e2e3;
   --hf-btn-hover: #d0d3d4;
   --hf-btn-active: #c5c9ca;
-  --hf-danger: #b3261e;
 
   display: flex;
   flex-direction: column;
@@ -83,117 +82,6 @@
   color: var(--hf-label);
 }
 
-/* Rangée de petits boutons (G/I/S, couleur, alignements). */
-.hf-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.hf-mini {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: var(--hf-btn);
-  border: none;
-  border-radius: 4px;
-  color: var(--hf-text);
-  cursor: pointer;
-  line-height: 1;
-}
-
-.hf-mini:hover:not(:disabled) {
-  background: var(--hf-btn-hover);
-}
-
-.hf-mini:active:not(:disabled) {
-  background: var(--hf-btn-active);
-}
-
-.hf-mini-with-caret {
-  position: relative;
-}
-
-.hf-caret {
-  position: absolute;
-  right: 1px;
-  bottom: 0;
-  font-size: 7px;
-  line-height: 1;
-  pointer-events: none;
-}
-
-/* Boutons lettrés (exceptions admises : G/I/S/A). */
-.hf-letter {
-  font-size: 13px;
-  line-height: 1;
-}
-
-.hf-letter-bold {
-  font-weight: 700;
-}
-
-.hf-letter-italic {
-  font-style: italic;
-}
-
-.hf-letter-underline {
-  text-decoration: underline;
-}
-
-/* Champs Police / Taille. */
-.hf-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.hf-field select {
-  flex: 1;
-  max-width: 130px;
-  background: var(--hf-btn);
-  border: 1px solid var(--hf-line);
-  border-radius: 4px;
-  color: var(--hf-text);
-  font-size: 11px;
-  padding: 3px 4px;
-}
-
-.hf-field select option {
-  color: var(--hf-text);
-  background: #ffffff;
-}
-
-/* Section Tableau : le sélecteur-grille (bouton type A) + commandes en
- * grille de boutons-icônes. */
-.hf-table-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  align-items: stretch;
-}
-
-/* Le sélecteur-grille TableSizePicker vit dans la première cellule — il
- * rend un bouton type A prévu pour le ruban vert : recadrer sobrement. */
-.hf-table-grid > div {
-  display: flex;
-}
-
-.hf-table-grid .tb-big-btn {
-  width: 100%;
-  min-width: 0;
-  color: var(--hf-text);
-  padding: 4px 2px;
-}
-
-.hf-table-grid .tb-big-btn:hover:not(:disabled) {
-  background: var(--hf-btn-hover);
-}
-
 .hf-action {
   display: flex;
   flex-direction: column;
@@ -247,21 +135,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-
-.hf-delete-table {
-  background: transparent;
-  border: 1px solid var(--hf-line);
-  border-radius: 5px;
-  color: var(--hf-danger);
-  font-size: 11px;
-  font-family: Arial, sans-serif;
-  padding: 6px 8px;
-  cursor: pointer;
-}
-
-.hf-delete-table:hover:not(:disabled) {
-  background: var(--hf-btn-hover);
 }
 
 .hf-hint {
