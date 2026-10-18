@@ -129,9 +129,10 @@ projets"). Constats et actions :
     bord » CÂBLÉ** = nouveau champ `fromEdgeMm` dans
     HeaderFooterSettings — positionne la zone depuis le bord via les
     variables CSS `--xmd-header-top`/`--xmd-footer-bottom`, défaut
-    12,5mm ≈ placement historique), Page/Alignement vertical (grisé).
-    Boutons « Numérotation des lignes… » / « Bordures… » SUPPRIMÉS
-    (demande 2026-10-17 : reviendront avec leurs fonctionnalités).
+    12,5mm ≈ placement historique), Page/Alignement vertical (grisé) +
+    boutons « Numérotation des lignes… » / « Bordures… » DÉPLACÉS dans
+    la section Page (demande 2026-10-17 : pas dans la barre du bas) —
+    inactifs tant que les notions ne sont pas traitées.
   - Boutons : **« Définir par défaut »** (persiste les réglages en
     localStorage `pagina.defaultPageLayout`, utilisés par
     createNewFile via loadDefaultPageLayout() — les nouveaux fichiers

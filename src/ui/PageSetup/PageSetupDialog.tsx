@@ -382,6 +382,17 @@ export function PageSetupDialog({
                       <option>Haut</option>
                     </select>
                   </label>
+                  {/* Déplacés ici depuis la barre du bas (demande
+                   * 2026-10-17) — inactifs tant que les notions ne
+                   * sont pas traitées. */}
+                  <div className="ps-inline-btns">
+                    <button type="button" className="ps-btn ps-btn-link" disabled>
+                      Numérotation des lignes…
+                    </button>
+                    <button type="button" className="ps-btn ps-btn-link" disabled>
+                      Bordures…
+                    </button>
+                  </div>
                 </fieldset>
               </div>
 
