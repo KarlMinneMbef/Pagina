@@ -537,6 +537,12 @@ export function Toolbar({
                 label="Bloc de code"
               />
             </div>
+            {/* Emoji (demande 2026-10-17 : AVEC le groupe Éléments, SANS
+             * cadre sur le bouton — seule la fenêtre à catégories
+             * s'ouvre en dessous). */}
+            <div className="tb-stack">
+              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
+            </div>
           </RibbonGroup>
 
           <RibbonGroup label="Liens" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
@@ -628,12 +634,6 @@ export function Toolbar({
                 label="Formule en bloc"
               />
             </div>
-          </RibbonGroup>
-
-          {/* Groupe « Panneau » (demande 2026-10-17) : boutons ouvrant des
-           * panneaux/popup — la fenêtre Emoji y vit désormais. */}
-          <RibbonGroup label="Panneau" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
-            <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
           </RibbonGroup>
         </div>
       )}
@@ -839,7 +839,7 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
   const rootRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
-  // Recale la fenêtre dans le viewport à l'ouverture (le groupe « Panneau »
+  // Recale la fenêtre dans le viewport à l'ouverture (le bouton Emoji
   // vit en bout de ruban : aligné à droite par défaut, elle déborderait de
   // la fenêtre si celle-ci est étroite — même logique que le ColorPicker).
   useEffect(() => {
@@ -874,7 +874,7 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
   return (
     <div className="tb-heading-picker" ref={rootRef}>
       <button
-        className="tb-stack-btn tb-heading-picker-trigger tb-stack-btn-with-caret"
+        className="tb-stack-btn tb-stack-btn-with-caret"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         title="Insérer un emoji"
