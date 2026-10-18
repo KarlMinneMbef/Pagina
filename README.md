@@ -25,26 +25,28 @@ Développé en interne, on a choisi de le rendre public : si un autre bureau d'�
 ### Édition et mise en page
 - **Éditeur WYSIWYG complet** : gras, italique, souligné, barré, couleur, surlignage, indice/exposant, alignement, code en ligne — mise en forme visuelle immédiate.
 - **Vraie pagination à l'écran** : des pages A4/Letter à taille fixe (comme dans Word), pas une simple simulation — ce que vous voyez à l'écran est exactement ce qui sera imprimé/exporté en PDF.
-- **Mise en page configurable par document** : format papier, orientation, marges, tout réglable depuis une boîte de dialogue dédiée.
-- **En-tête et pied de page** avec variables dynamiques (`{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`, `{{version}}`, `{{auteur}}`), édition directement en cliquant dessus dans la page, et réglage indépendant pour la première page.
+- **Boîte de dialogue « Mise en page » à la Word** : trois onglets (Marges, Papier, Mise en page), cinq formats papier (A3, A4, A5, Letter, Legal) plus dimensions personnalisées, orientation, « à partir du bord » de l'en-tête/pied, « première page différente », aperçu en direct, et « Définir par défaut » pour que les nouveaux documents naissent avec vos réglages.
+- **En-tête et pied de page riches** : du contenu Markdown ordinaire dupliqué sur chaque page — police, taille, couleur, alignement, tableaux, tout se met en forme depuis le ruban habituel. Variables dynamiques (`{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`, `{{version}}`, `{{author}}`) insérables en un clic depuis le panneau latéral. Édition directement en cliquant sur la zone dans la page.
 - **Styles de titres et numérotation automatique** : police, taille, couleur par niveau de titre (H1 à H6), schéma de numérotation configurable (1.1., A., i....) écrit directement dans le texte — donc toujours correct, même ouvert ailleurs.
 - **Sommaire automatique**, généré à partir des titres réels du document, avec des liens cliquables qui font défiler jusqu'au bon endroit.
 - **Zoom** façon Word/Google Docs (25 % à 400 %).
 
 ### Contenu riche, toujours du Markdown standard
-- **Tableaux** avec alignement de colonnes (gauche/centre/droite), conservé à l'enregistrement (syntaxe GFM).
+- **Tableaux** avec alignement de colonnes (gauche/centre/droite), fusion/scission de cellules et **bordures éditées directement sur un schéma** (cliquer un côté du schéma applique la bordure : style, épaisseur, couleur) dans le panneau « Outils de tableau » qui apparaît dès que le curseur est dans une cellule.
 - **Blocs de code avec coloration syntaxique** (une trentaine de langages).
 - **Notes de bas de page** (syntaxe `[^1]`/`[^1]: ...`, standard Pandoc/GFM).
 - **Diagrammes Mermaid** et **formules LaTeX** (KaTeX), avec édition de la source et aperçu rendu en direct.
-- **Liens, images, citations, listes (à puces, numérotées, à cocher), séparateurs, emoji.**
+- **Liens, signets et renvois** (ancre `<a id>` invisible + lien Markdown `#ancre`), citations, listes (à puces, numérotées, à cocher), séparateurs, emoji.
 - **Saut de page manuel**, sommaire, styles de titre : tout encodé en commentaires HTML Markdown standards, invisibles ailleurs.
 
 ### Autour de l'édition
-- **Explorateur de fichiers** intégré : ouverture d'un dossier de travail, arborescence `.md`/`.xmd`, création de fichiers et dossiers.
+- **Ruban à la Word** : deux onglets (Accueil, Insertion), icônes SVG dessinées pour l'application, presse-papiers câblé, et au coin droit les boutons **Explorateur** et **Commenter** (à venir) au même emplacement que « Partager » dans Word.
+- **Panneaux contextuels latéraux droits** : une seule colonne à onglets — « Outils de tableau » (lignes, colonnes, cellules, alignement vertical, bordures sur schéma) et « En-tête/Pied de page » (variables) apparaissent et disparaissent selon le contexte, sans jamais recouvrir la page.
+- **Explorateur de fichiers** intégré : recherche instantanée dans l'arborescence (vue aplatie des correspondances), menu contextuel (nouveau fichier/dossier, renommer, dupliquer, supprimer — dialogues maison avec validation, jamais d'invite système), badge « modifié », tri dossiers-puis-fichiers insensible aux accents, chemin complet au survol, rafraîchissement en direct du disque, ergonomie clavier (flèches, Entrée, Suppr, F2, double-clic).
 - **Ouverture directe de fichiers** (sans passer par un dossier), **Enregistrer sous**, et **association de fichiers Windows** : un `.md`/`.xmd` peut s'ouvrir en double-cliquant dessus dans l'Explorateur ("Ouvrir avec Pagina" ou en application par défaut).
 - **Onglets multi-fichiers**, avec indicateur de modifications non enregistrées.
 - **Export PDF réel**, directement depuis la mise en page affichée à l'écran (pas un moteur de rendu séparé qui pourrait diverger).
-- Interface façon ruban, en français, pensée pour rester lisible même avec beaucoup de commandes.
+- Interface en français, aux couleurs de la charte MBEF, testée unitairement (Vitest + Testing Library).
 
 ## Principe technique clé
 
@@ -73,7 +75,8 @@ En développement actif.
 ## Feuille de route
 
 - **Correcteur orthographique** intégré à l'éditeur.
-- **Édition de tableaux avancée** : fusion/scission de cellules, largeurs de colonne personnalisées (hors Markdown standard, volontairement exclues pour l'instant — voir l'onglet de ruban contextuel "Tableau" déjà disponible pour l'édition standard : ajout/suppression de lignes-colonnes, alignement, insertion par grille façon Word).
+- **Édition de tableaux avancée** : largeurs de colonne personnalisées (hors Markdown standard, volontairement exclues pour l'instant). La fusion/scission de cellules et les bordures éditables sur schéma sont déjà disponibles, avec repli HTML valide.
+- **Commentaires de relecture** (bouton « Commenter » du ruban, désactivé en attendant) et **Propriétés du document / compte utilisateur** (version, auteur).
 - **Export HTML**, en plus du PDF déjà disponible — un fichier autonome, mise en page incluse, pour publication web ou partage sans lecteur PDF.
 - **Un vrai format `.xmd`** (au-delà du simple fichier `.md` actuel) : suivi des versions du document, historique des modifications, commentaires de relecture, et une gestion d'images plus aboutie (dossier `images/` dédié par document, copie automatique au collage/glisser) — packagé pour rester portable.
 - **Module d'édition assistée par IA** : sélection d'un passage de texte, correction/reformulation proposée par un modèle, validation façon "suivi des modifications" Word.
