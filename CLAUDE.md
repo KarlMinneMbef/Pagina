@@ -112,9 +112,8 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
-- **Fenêtre Emoji refaite + groupe « Panneau » (2026-10-17, demande :
-  « refaire la fenêtre emoji, mettre le bouton dans le segment
-  Panneau, refaire le bouton »)** :
+- **Fenêtre Emoji refaite (2026-10-17, demande : « refaire la fenêtre
+  emoji, mettre le bouton avec Éléments sans le cadre sur le bouton »)** :
   - L'ancienne liste plate de 30 émojis (menu 6 colonnes) est
     remplacée par une FENÊTRE à catégories façon sélecteur moderne
     (`.tb-emoji-pop`, Toolbar.tsx) : 8 catégories
@@ -123,14 +122,18 @@ projets"). Constats et actions :
     Symboles, Drapeaux, 157 émojis au total, l'ancienne liste
     répartie dedans), grille 8 colonnes, défilement, fermeture par
     Échap/clic extérieur, RECALAGE dans le viewport à l'ouverture
-    (le groupe est en bout de ruban — déborderait sinon, même
+    (le bouton est en bout de ruban — déborderait sinon, même
     logique que le ColorPicker). Couleurs MBEF (titre sapin, survol
     azur).
-  - Nouveau groupe ruban **« Panneau »** à la fin de l'onglet
-    Insertion : le bouton Emoji (type B, icône visage SVG + ▾) y
-    vit désormais, retiré de « Diagrammes et formules ».
+  - Le bouton Emoji (type B, icône visage SVG + ▾, SANS cadre —
+    classe tb-heading-picker-trigger retirée du déclencheur) vit
+    dans le groupe **« Éléments »** (avec Séparateur et Bloc de
+    code) de l'onglet Insertion. Un groupe intermédiaire
+    « Panneau » avait été créé puis retiré sur demande de
+    l'utilisateur dans la même journée.
   - Vérifié par CDP : 8 catégories/157 émojis, pas de débordement,
-    Échap ferme. tsc, build, 38 tests verts.
+    Échap ferme, bouton sans bordure visible dans Éléments. tsc,
+    build, 38 tests verts.
 - **Sélecteur de langage des blocs de code DÉMÉNAGÉ du ruban vers le
   bloc lui-même (2026-10-17, choix utilisateur validé : « select
   directement dans le code block quand on est en édition »)** :
