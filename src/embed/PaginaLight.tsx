@@ -116,6 +116,7 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       mergeCells: () => handle.mergeCells(),
       splitCell: () => handle.splitCell(),
       toggleHeaderRow: () => handle.toggleHeaderRow(),
+      clearCellContents: () => handle.clearCellContents(),
       setCellBackgroundColor: (color: string | null) => handle.setCellBackgroundColor(color),
       setCellBorder: (sides, css) => handle.setCellBorder(sides, css),
       setCellBorderPreset: (preset, css) => handle.setCellBorderPreset(preset, css),

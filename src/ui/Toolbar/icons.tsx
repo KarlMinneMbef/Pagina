@@ -332,14 +332,14 @@ export function IconEmoji({ size, className }: IconProps) {
   );
 }
 
-// --- Panneau contextuel : Outils de tableau ---
+// --- Panneau contextuel « Tableau » (tracés de la maquette 2026-10-17) ---
 
 export function IconRowAbove({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="8" width="16" height="10" rx="1" />
-      <path d="M4 12.5h16" />
-      <path d="M12 3v5M9.5 5L12 2.5 14.5 5" />
+      <rect x="4" y="9" width="16" height="9" rx="1" />
+      <path d="M4 13.5h16" />
+      <path d="M12 2.5v5M9.5 4.5L12 2l2.5 2.5" />
     </Svg24>
   );
 }
@@ -347,9 +347,19 @@ export function IconRowAbove({ size, className }: IconProps) {
 export function IconRowBelow({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="6" width="16" height="10" rx="1" />
+      <rect x="4" y="6" width="16" height="9" rx="1" />
       <path d="M4 10.5h16" />
-      <path d="M12 14v6M9.5 18L12 20.5 14.5 18" />
+      <path d="M12 16.5v5M9.5 19.5L12 22l2.5-2.5" />
+    </Svg24>
+  );
+}
+
+export function IconRowDelete({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="7" width="16" height="10" rx="1" />
+      <path d="M4 12h16" />
+      <path d="M3 4l6 16M15 4l6 16" strokeWidth={1.2} />
     </Svg24>
   );
 }
@@ -357,9 +367,9 @@ export function IconRowBelow({ size, className }: IconProps) {
 export function IconColLeft({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="8" y="4" width="10" height="16" rx="1" />
-      <path d="M12.5 4v16" />
-      <path d="M3 12h5M5 9.5L7.5 12 5 14.5" />
+      <rect x="9" y="4" width="9" height="16" rx="1" />
+      <path d="M13.5 4v16" />
+      <path d="M2.5 12h5M4.5 9.5L2 12l2.5 2.5" />
     </Svg24>
   );
 }
@@ -367,34 +377,19 @@ export function IconColLeft({ size, className }: IconProps) {
 export function IconColRight({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="6" y="4" width="10" height="16" rx="1" />
+      <rect x="6" y="4" width="9" height="16" rx="1" />
       <path d="M10.5 4v16" />
-      <path d="M16 12h5M19 9.5L21.5 12 19 14.5" />
+      <path d="M16.5 12h5M19.5 9.5L22 12l-2.5 2.5" />
     </Svg24>
   );
 }
 
-/** Dérivé des tracés fournis (RowAbove : rect + séparateur) : la flèche
- * est remplacée par une croix pour « Supprimer la ligne » — aucun tracé
- * dédié n'était fourni pour cette commande. */
-export function IconDeleteRow({ size, className }: IconProps) {
+export function IconColDelete({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
-      <rect x="4" y="8" width="16" height="10" rx="1" />
-      <path d="M4 12.5h16" />
-      <path d="M16 2l5 5M21 2l-5 5" />
-    </Svg24>
-  );
-}
-
-/** Dérivé des tracés fournis (ColLeft : rect + séparateur), croix pour
- * « Supprimer la colonne » — voir IconDeleteRow. */
-export function IconDeleteColumn({ size, className }: IconProps) {
-  return (
-    <Svg24 size={size} className={className}>
-      <rect x="8" y="4" width="10" height="16" rx="1" />
-      <path d="M12.5 4v16" />
-      <path d="M18 2l4 4M22 2l-4 4" />
+      <rect x="7" y="4" width="10" height="16" rx="1" />
+      <path d="M12 4v16" />
+      <path d="M3 4l6 16M15 4l6 16" strokeWidth={1.2} />
     </Svg24>
   );
 }
@@ -409,6 +404,30 @@ export function IconMergeCells({ size, className }: IconProps) {
   );
 }
 
+export function IconSplitCells({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="1" />
+      <path d="M12 5v14" />
+      <path d="M6.5 12l2.5-2.5M6.5 12L9 14.5M17.5 12L15 9.5M17.5 12L15 14.5" strokeWidth={1.2} />
+    </Svg24>
+  );
+}
+
+export function IconClearCell({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="1" />
+      <path d="M4 10h16" />
+      <path d="M9 13l6 6M15 13l-6 6" strokeWidth={1.2} />
+    </Svg24>
+  );
+}
+
+/** Basculer ligne d'en-tête (tracé de la maquette du ruban, conservé dans
+ * la bibliothèque — le bouton n'est plus exposé depuis la refonte du
+ * panneau « Tableau » du 2026-10-17, l'action `toggleHeaderRow` reste
+ * disponible dans `ToolbarActions`). */
 export function IconTableHeader({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
