@@ -127,10 +127,11 @@ projets"). Constats et actions :
     azur).
   - Le bouton Emoji (type B, icône visage SVG + ▾, SANS cadre —
     classe tb-heading-picker-trigger retirée du déclencheur) vit
-    dans le groupe **« Éléments »** (avec Séparateur et Bloc de
-    code) de l'onglet Insertion. Un groupe intermédiaire
-    « Panneau » avait été créé puis retiré sur demande de
-    l'utilisateur dans la même journée.
+    dans le groupe **« Éléments »** de l'onglet Insertion, en une
+    seule pile de 3 LIGNES (demande 2026-10-17) : Séparateur,
+    Emoji, Bloc de code. Un groupe intermédiaire « Panneau »
+    avait été créé puis retiré sur demande de l'utilisateur dans
+    la même journée.
   - Vérifié par CDP : 8 catégories/157 émojis, pas de débordement,
     Échap ferme, bouton sans bordure visible dans Éléments. tsc,
     build, 38 tests verts.

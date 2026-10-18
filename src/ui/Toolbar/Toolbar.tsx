@@ -521,6 +521,8 @@ export function Toolbar({
           </RibbonGroup>
 
           <RibbonGroup label="Éléments" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            {/* Une seule pile, 3 lignes (demande 2026-10-17) :
+             * Séparateur, Emoji, Bloc de code. */}
             <div className="tb-stack">
               <StackButton
                 disabled={disabled}
@@ -529,6 +531,7 @@ export function Toolbar({
                 icon={<IconHorizontalRule size={15} />}
                 label="Séparateur"
               />
+              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
               <StackButton
                 disabled={disabled}
                 onClick={() => actions?.toggleCodeBlock()}
@@ -536,12 +539,6 @@ export function Toolbar({
                 icon={<IconCodeBlock size={15} />}
                 label="Bloc de code"
               />
-            </div>
-            {/* Emoji (demande 2026-10-17 : AVEC le groupe Éléments, SANS
-             * cadre sur le bouton — seule la fenêtre à catégories
-             * s'ouvre en dessous). */}
-            <div className="tb-stack">
-              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
             </div>
           </RibbonGroup>
 
