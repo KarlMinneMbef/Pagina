@@ -1229,10 +1229,41 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       activeHeaderFooterInputRef.current = input;
       emitMode(isHeader ? "header" : "footer");
 
+      // Le champ vit en position absolue aux coordonnées prises à
+      // l'OUVERTURE : l'apparition du panneau « Variables » (ou une
+      // fermeture de l'explorateur, un redimensionnement de fenêtre)
+      // déplace la zone peinte APRÈS coup — sans recalage, le champ
+      // restait décalé (≈90px mesurés) au-dessus du document (bug remonté
+      // par l'utilisateur le 2026-10-17). On le recale à chaque
+      // changement de taille du canevas, et sur l'élément d'origine s'il
+      // survit (un repaint reconstruit les pages : on retombe alors sur
+      // la zone visible la plus proche, le texte du champ est partagé
+      // par toutes les pages).
+      const selector = isHeader ? ".xmd-page-header" : ".xmd-page-footer";
+      const reposition = () => {
+        const el = target.isConnected ? target : headerFooterTargetNearViewport(canvasRef.current, selector);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return;
+        input.style.left = `${r.left}px`;
+        input.style.top = `${r.top}px`;
+        input.style.width = `${r.width}px`;
+        input.style.height = `${r.height}px`;
+      };
+      const canvasEl = canvasRef.current;
+      const resizeObserver = canvasEl ? new ResizeObserver(() => reposition()) : null;
+      if (canvasEl && resizeObserver) resizeObserver.observe(canvasEl);
+      window.addEventListener("resize", reposition);
+      const stopFollowing = () => {
+        resizeObserver?.disconnect();
+        window.removeEventListener("resize", reposition);
+      };
+
       let committed = false;
       const commit = () => {
         if (committed) return;
         committed = true;
+        stopFollowing();
         if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
         emitMode(null);
         const nextText = input.value;
@@ -1245,6 +1276,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const cancel = () => {
         if (committed) return;
         committed = true;
+        stopFollowing();
         if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
         emitMode(null);
         input.remove();
