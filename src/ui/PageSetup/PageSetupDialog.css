@@ -1,8 +1,12 @@
 /*
- * « Mise en page » — reproduction du dialogue Word (demande 2026-10-17) :
- * fond gris clair, bandeau de titre, onglets, panneau blanc, sections en
- * légende bold ~10pt, bouton OK bleu à droite. Champs inertes grisés
- * (disabled) : visibles comme dans Word, non fonctionnels pour l'instant.
+ * « Mise en page » — reproduction du dialogue Word, aux couleurs de la
+ * convention MBEF (nuancier officiel : src/ui/theme/tokens.ts).
+ * - sapin #003F2B : bandeau de titre, légendes de sections, éléments actifs
+ * - prairie #24AC6E : onglet actif, cases cochées, bouton d'action OK
+ * - azur #DFEFF8 : fond de saisie focalisée
+ * - charbon #343334 : texte principal
+ * Champs inertes grisés (disabled) : visibles comme dans Word, non
+ * fonctionnels pour l'instant.
  */
 .ps-overlay {
   position: fixed;
@@ -22,22 +26,23 @@
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
   font-family: Arial, sans-serif;
   font-size: 12px;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
 }
 
-/* Bandeau de titre : plat, gris, ✕ à droite (style Word classique). */
+/* Bandeau de titre : SAPIN (en-têtes de panneaux, convention MBEF). */
 .ps-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 8px 6px 12px;
-  background: #f0f0ee;
-  border-bottom: 1px solid #d8d8d6;
+  background: #003f2b; /* sapin */
+  border-bottom: 1px solid #002916;
 }
 
 .ps-titlebar-text {
   font-size: 13px;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .ps-close {
@@ -47,14 +52,14 @@
   line-height: 1;
   padding: 3px 7px;
   cursor: pointer;
-  color: #1f1f1f;
+  color: #ffffff;
 }
 
 .ps-close:hover {
-  background: #d8d8d6;
+  background: rgba(255, 255, 255, 0.18);
 }
 
-/* Bande d'onglets (style Word : onglet actif blanc, relevé). */
+/* Bande d'onglets : onglet actif souligné PRAIRIE (convention MBEF). */
 .ps-tabbar {
   display: flex;
   gap: 2px;
@@ -74,13 +79,13 @@
 }
 
 .ps-tab:hover {
-  color: #1f1f1f;
+  color: #343334; /* charbon */
 }
 
 .ps-tab-active {
   background: #ffffff;
-  border-top-color: #2b579a;
-  color: #1f1f1f;
+  border-top-color: #24ac6e; /* prairie */
+  color: #343334;
   font-weight: 600;
 }
 
@@ -113,7 +118,7 @@
   gap: 8px;
 }
 
-/* Sections (fieldset/legend, style Word : légende bold 10pt). */
+/* Sections : légende SAPIN (en-têtes, convention MBEF). */
 .ps-group {
   border: none;
   margin: 0 0 8px;
@@ -127,7 +132,7 @@
   padding: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #2a5d2a;
+  color: #003f2b; /* sapin */
   margin-bottom: 2px;
 }
 
@@ -137,7 +142,7 @@
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   min-width: 0;
 }
 
@@ -163,12 +168,12 @@
   font-family: Arial, sans-serif;
   font-size: 12px;
   padding: 3px 4px;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   background: transparent;
 }
 
 .ps-num-box input:focus {
-  background: #eaf2ff;
+  background: #dfeff8; /* azur */
 }
 
 .ps-num-unit {
@@ -190,7 +195,7 @@
   font-family: Arial, sans-serif;
   font-size: 12px;
   padding: 3px 4px;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   max-width: 100%;
 }
 
@@ -202,18 +207,18 @@
   clip: rect(0 0 0 0);
 }
 
-/* Cases à cocher. */
+/* Cases à cocher : accent PRAIRIE (convention MBEF). */
 .ps-check {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   cursor: pointer;
 }
 
 .ps-check input {
-  accent-color: #2b579a;
+  accent-color: #24ac6e; /* prairie */
 }
 
 /* Grille des champs de marges/dimensions : 2 colonnes (comme Word :
@@ -241,7 +246,8 @@
   cursor: not-allowed;
 }
 
-/* Orientation : deux grandes options cliquables, page miniature SVG. */
+/* Orientation : deux grandes options cliquables ; l'active reprend SAPIN
+ * (éléments actifs, convention MBEF) sur un fond teinte PRAIRIE clair. */
 .ps-orient {
   display: flex;
   gap: 10px;
@@ -254,7 +260,7 @@
   gap: 4px;
   background: #ffffff;
   border: 1px solid #8a8a88;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   font-family: Arial, sans-serif;
   font-size: 12px;
   padding: 8px 16px 6px;
@@ -266,9 +272,9 @@
 }
 
 .ps-orient-active {
-  border-color: #2a5d2a;
-  box-shadow: inset 0 0 0 1px #2a5d2a;
-  background: #eef4ee;
+  border-color: #003f2b; /* sapin */
+  box-shadow: inset 0 0 0 1px #003f2b;
+  background: #e8f7f0; /* teinte claire de prairie */
 }
 
 /* Aperçu : mini-page SVG centrée. */
@@ -277,7 +283,8 @@
   margin: 0 auto;
 }
 
-/* Boutons (style Word : OK bleu à droite, secondaires à gauche). */
+/* Boutons : OK en PRAIRIE (boutons d'action, convention MBEF) à droite,
+ * secondaires à gauche. */
 .ps-actions {
   display: flex;
   align-items: center;
@@ -295,7 +302,7 @@
 .ps-btn {
   background: #ffffff;
   border: 1px solid #8a8a88;
-  color: #1f1f1f;
+  color: #343334; /* charbon */
   font-family: Arial, sans-serif;
   font-size: 12px;
   padding: 4px 12px;
@@ -314,13 +321,13 @@
 }
 
 .ps-btn-primary {
-  background: #2b579a;
-  border-color: #1f3f74;
+  background: #24ac6e; /* prairie */
+  border-color: #1b8a54;
   color: #ffffff;
 }
 
 .ps-btn-primary:hover:not(:disabled) {
-  background: #1f3f74;
+  background: #1b8a54;
 }
 
 .ps-btn-link {
