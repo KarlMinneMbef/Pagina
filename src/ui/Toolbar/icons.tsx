@@ -187,6 +187,31 @@ export function IconExplorer({ size, className }: IconProps) {
   );
 }
 
+// --- Mise en page (bouton fin d'Accueil, demande 2026-10-17 : reprend
+// la place de l'ancien bouton Explorateur) : page + marges pointillées. ---
+
+export function IconPageSetup({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="5" y="3.5" width="14" height="17" rx="1" />
+      <rect x="7.8" y="6.3" width="8.4" height="11.4" rx="0.4" strokeDasharray="2 2" />
+      <path d="M7.8 9.5h1.4" />
+    </Svg24>
+  );
+}
+
+// --- Commentaire (bouton « Commenter » à côté de l'Explorateur, coin
+// droit du ruban comme « Partager » dans Word — inactif pour l'instant). ---
+
+export function IconComment({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4a2 2 0 0 1-2-2z" />
+      <path d="M8 8.5h8M8 11.5h5" />
+    </Svg24>
+  );
+}
+
 // --- Insertion : Pages ---
 
 export function IconPageBreak({ size, className }: IconProps) {

@@ -56,6 +56,8 @@ import {
   IconMermaid,
   IconOrderedList,
   IconPageBreak,
+  IconPageSetup,
+  IconComment,
   IconPaste,
   IconTaskList,
   IconTocMarker,
@@ -229,6 +231,25 @@ export function Toolbar({
         >
           Insertion
         </button>
+
+        {/* Coin droit du ruban (demande 2026-10-17) : Explorateur au
+         * même emplacement que « Partager » dans Word, Commenter à
+         * côté — inactif tant que la fonctionnalité n'existe pas. */}
+        <div className="tb-tabbar-right">
+          <button
+            type="button"
+            className={`tb-corner-btn${sidebarOpen ? " tb-corner-btn-active" : ""}`}
+            onClick={onToggleSidebar}
+            title={sidebarOpen ? "Masquer l'explorateur" : "Afficher l'explorateur"}
+          >
+            <IconExplorer size={16} />
+            Explorateur
+          </button>
+          <button type="button" className="tb-corner-btn" disabled title="Commenter (bientôt disponible)">
+            <IconComment size={16} />
+            Commenter
+          </button>
+        </div>
       </div>}
 
       {showAccueil && (
@@ -428,16 +449,18 @@ export function Toolbar({
             />
           </RibbonGroup>
 
-          {/* Explorateur : grande icône séparée, à la FIN du bandeau Accueil
-           * (pas un onglet, pas un groupe). */}
+          {/* Mise en page : grande icône séparée à la FIN du bandeau
+           * Accueil (demande 2026-10-17 : reprend la place de
+           * l'ancien bouton Explorateur, déplacé au coin droit du
+           * ruban comme « Partager » dans Word). */}
           {!leger && (
             <>
               <div className="tb-ribbon-spacer" />
               <BigButton
-                onClick={onToggleSidebar}
-                title={sidebarOpen ? "Masquer l'explorateur" : "Afficher l'explorateur"}
-                icon={<IconExplorer size={28} />}
-                label="Explorateur"
+                onClick={onOpenPageSetup}
+                title="Mise en page (format, marges, en-tête/pied de page)"
+                icon={<IconPageSetup size={28} />}
+                label="Mise en page"
               />
             </>
           )}

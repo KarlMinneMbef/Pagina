@@ -103,6 +103,21 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Ruban : coin droit à la Word + bouton Mise en page (2026-10-17,
+  demande : « Explorateur au même emplacement que Partager dans
+  Windows, Commenter désactivé à côté, et à la place de l'ancien
+  Explorateur un bouton Mise en page »)** :
+  - Barre d'onglets : zone `.tb-tabbar-right` (margin-left:auto) au
+    COIN DROIT comme « Partager » de Word — bouton **Explorateur**
+    (petite icône + libellé, icône active quand la sidebar est
+    ouverte, onToggleSidebar) et bouton **Commenter** (icône bulle,
+    DÉSACTIVÉ tant que la fonctionnalité n'existe pas).
+  - Fin du bandeau Accueil : l'ancien grand bouton Explorateur est
+    remplacé par **Mise en page** (grande icône IconPageSetup : page
+    + marges pointillées, onOpenPageSetup) — le lanceur « ⌄ » du
+    groupe Paragraphe ouvre le même dialogue.
+  - Vérifié par CDP (boutons présents, Commenter disabled) ; tsc,
+    build, 38 tests verts.
 - **Dialogue « Mise en page » REFONT INTÉGRALE à la Word (2026-10-17,
   demande : « exactement identique aux 3 captures Word, même si
   certaines notions ne sont pas encore traitées »)** —
