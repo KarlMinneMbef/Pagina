@@ -40,17 +40,18 @@ import "./TablePropertiesPanel.css";
  * pouvoir vivre dans un `Set<string>` React state. */
 const lineKey = (l: GridLine) => `${l.axis}-${l.index}`;
 
-/** Lignes EXTÉRIEURES actives par défaut pour une forme de sélection
- * donnée (façon "Encadrement" de Word) — les lignes INTERNES démarrent
- * toujours désactivées, l'utilisateur les active explicitement s'il en
- * a besoin. */
-function defaultOuterLines(shape: { rows: number; cols: number }): Set<string> {
-  return new Set([
-    lineKey({ axis: "row", index: 0 }),
-    lineKey({ axis: "row", index: shape.rows }),
-    lineKey({ axis: "col", index: 0 }),
-    lineKey({ axis: "col", index: shape.cols }),
-  ]);
+/** Reconstruit la liste des `GridLine` actives d'un `Set` de clés, bornée à
+ * la forme courante de la sélection (rows+1 lignes horizontales,
+ * cols+1 verticales). */
+function linesOfSet(set: Set<string>, shape: { rows: number; cols: number }): GridLine[] {
+  const out: GridLine[] = [];
+  for (let i = 0; i <= shape.rows; i++) {
+    if (set.has(lineKey({ axis: "row", index: i }))) out.push({ axis: "row", index: i });
+  }
+  for (let j = 0; j <= shape.cols; j++) {
+    if (set.has(lineKey({ axis: "col", index: j }))) out.push({ axis: "col", index: j });
+  }
+  return out;
 }
 
 const BORDER_STYLES = [
@@ -90,38 +91,53 @@ export function TablePropertiesPanel({
 }) {
   const inactive = disabled || actions === null;
   const effectiveShape = shape ?? { rows: 1, cols: 1 };
-  const [lines, setLines] = useState<Set<string>>(() => defaultOuterLines(effectiveShape));
+  /** Lignes de grille actives dans le schéma — en ÉDITION DIRECTE : chaque
+   * clic ajoute/retire immédiatement la bordure correspondante dans le
+   * tableau (plus de bouton « Appliquer »). Le schéma reflète donc les
+   * bascules de CETTE session, pas une lecture de l'état du document. */
+  const [lines, setLines] = useState<Set<string>>(() => new Set());
   const [style, setStyle] = useState("solid");
   const [width, setWidth] = useState("1px");
   const [color, setColor] = useState("#343334");
+  const borderCss = `${width} ${style} ${color}`;
 
   // La forme de la sélection peut changer PENDANT que le panneau reste
   // ouvert (glisser-sélectionner plusieurs cellules sans jamais ressortir
-  // du tableau) — on repart alors d'un jeu de lignes par défaut cohérent
-  // avec la NOUVELLE forme plutôt que de garder d'anciens index qui
-  // n'auraient plus de sens.
+  // du tableau) — on repart d'un schéma vierge cohérent avec la nouvelle
+  // forme plutôt que de garder d'anciens index qui n'auraient plus de sens.
   useEffect(() => {
-    setLines(defaultOuterLines(effectiveShape));
+    setLines(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveShape.rows, effectiveShape.cols]);
 
-  const toggleLine = (line: GridLine) =>
+  /** Clic sur une ligne du schéma : application IMMÉDIATE au tableau —
+   * ligne absente → ajoute la bordure avec le pinceau courant (style/
+   * épaisseur/couleur), ligne active → la retire. */
+  const toggleLine = (line: GridLine) => {
+    const key = lineKey(line);
+    const active = lines.has(key);
+    if (active) {
+      actions?.setGridLineBorder([line], null);
+    } else {
+      actions?.setGridLineBorder([line], borderCss);
+    }
     setLines((prev) => {
       const next = new Set(prev);
-      const key = lineKey(line);
-      if (next.has(key)) next.delete(key);
+      if (active) next.delete(key);
       else next.add(key);
       return next;
     });
+  };
 
-  const selectedLines: GridLine[] = [];
-  for (let i = 0; i <= effectiveShape.rows; i++) {
-    if (lines.has(lineKey({ axis: "row", index: i }))) selectedLines.push({ axis: "row", index: i });
-  }
-  for (let j = 0; j <= effectiveShape.cols; j++) {
-    if (lines.has(lineKey({ axis: "col", index: j }))) selectedLines.push({ axis: "col", index: j });
-  }
-  const borderCss = `${width} ${style} ${color}`;
+  /** Changement de Style/Épaisseur/Couleur : re-application IMMÉDIATE aux
+   * lignes actuellement actives du schéma (édition directe, plus de
+   * bouton « Appliquer ») — et mise à jour du pinceau pour les prochains
+   * clics s'il n'y a pas de ligne active. */
+  useEffect(() => {
+    if (lines.size === 0 || !actions || inactive) return;
+    actions.setGridLineBorder(linesOfSet(lines, effectiveShape), borderCss);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [style, width, color]);
 
   const { width: panelWidth, onHandleMouseDown } = useHorizontalResize(260, { min: 220, max: 520, anchor: "right" });
 
@@ -332,25 +348,10 @@ export function TablePropertiesPanel({
             />
           </div>
 
-          <div className="tp-row">
-            <button
-              className="tp-btn"
-              disabled={inactive || selectedLines.length === 0}
-              onClick={() => actions?.setGridLineBorder(selectedLines, null)}
-              title="Retirer la bordure des lignes sélectionnées dans le schéma"
-            >
-              Retirer
-            </button>
-            <button
-              className="tp-btn tp-btn-primary"
-              disabled={inactive || selectedLines.length === 0}
-              onClick={() => actions?.setGridLineBorder(selectedLines, borderCss)}
-              title="Appliquer le style/épaisseur/couleur aux lignes sélectionnées dans le schéma"
-            >
-              Appliquer
-            </button>
-          </div>
-
+          <p className="tp-hint">
+            Cliquez directement les lignes du schéma : la bordure s'applique (ou se retire) immédiatement dans le
+            tableau ; Style/Épaisseur/Couleur régissent le trait des lignes actives.
+          </p>
           <p className="tp-hint">
             Bordures/fond/alignement : sans équivalent Markdown standard, le tableau est alors enregistré en HTML dans le
             fichier .md (toujours lisible ailleurs).
@@ -458,7 +459,7 @@ function BorderDiagram({
 
     return (
       <g key={lineKey(line)} className="tp-bd-edge-group" onClick={() => !disabled && onToggle(line)}>
-        <title>{`${positionLabel} ${active ? "(activée — cliquer pour retirer)" : "(absente — cliquer pour activer)"}`}</title>
+        <title>{`${positionLabel} ${active ? "(bordure posée — cliquer pour la retirer du tableau)" : "(absente — cliquer pour la poser dans le tableau)"}`}</title>
         <line x1={x1e} y1={y1e} x2={x2e} y2={y2e} stroke="transparent" strokeWidth={10} className="tp-bd-hit" />
         {offset > 0 ? (
           <>

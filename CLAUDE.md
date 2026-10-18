@@ -103,6 +103,30 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Éditeur de bordures : ÉDITION DIRECTE (2026-10-17, fin de journée)** —
+  retour utilisateur : "quand on clique ou change une bordure sur le
+  schéma, on change le tableau" (simplification UX). Les boutons
+  « Retirer/Appliquer » de la section Bordures du panneau Tableau sont
+  SUPPRIMÉS :
+  - **Clic sur une ligne du schéma = application immédiate** : ligne
+    absente → pose la bordure avec le pinceau courant (style/épaisseur/
+    couleur), ligne active → la retire (via `setGridLineBorder` sur la
+    seule ligne cliquée).
+  - **Changement de Style/Épaisseur/Couleur = re-application
+    immédiate** aux lignes actuellement actives du schéma (effet sur
+    [style, width, color]) ; sans ligne active, c'est le pinceau des
+    prochains clics.
+  - Le schéma démarre VIDE (plus de pré-sélection "extérieures" —
+    désormais chaque clic agit, une pré-sélection aurait fait qu'un
+    premier clic sur un bord RETIRAIT une bordure jamais posée) et se
+    vide quand la forme de la sélection change. Il reflète les
+    bascules de la SESSION, pas une lecture de l'état du document.
+  - Piège de sérialisation : `setGridLineBorder` écrit la forme
+    abrégée `border-top: 3px solid rgb(...)` alors que les PRÉSETS
+    écrivent `border-width/style/color` séparés — les regex de test
+    doivent accepter les deux. Vérifié 6/6 par CDP (pose 1px, re-apply
+    3px, style tireté, retrait, présets, nettoyage). `tsc`, build,
+    38 tests verts.
 - **Fonctionnalités du panneau « Tableau » RÉCUPÉRÉES (2026-10-17, fin de
   journée)** — retour utilisateur après la refonte sobre : "on a perdu
   beaucoup de côtés sur ce panneau, il faut récupérer les fonctionnalités
