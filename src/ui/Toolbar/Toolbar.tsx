@@ -69,10 +69,50 @@ import "./Toolbar.css";
  * `:smile:` à convertir), donc lisibles tels quels dans n'importe quel
  * autre outil Markdown, sans dépendance à un rendu spécial. Le DÉCLENCHEUR
  * du menu porte l'icône SVG fournie (visage), pas un emoji. */
-const EMOJI_LIST = [
-  "😀", "😉", "😂", "🙂", "😍", "🤔", "😢", "😮", "👍", "👎",
-  "🙏", "👏", "💪", "✅", "❌", "⚠️", "❗", "❓", "💡", "🔥",
-  "⭐", "🎯", "📌", "📅", "🕒", "📎", "🔗", "📧", "📞", "🏗️",
+/** Fenêtre Emoji (refaite 2026-10-17 sur demande : catégories à la
+ * façon des sélecteurs modernes — l'ancienne liste plate de 30 émojis
+ * est répartie dans les catégories, complétée). */
+const EMOJI_CATEGORIES: { id: string; label: string; emojis: string[] }[] = [
+  {
+    id: "smileys",
+    label: "Smileys & émotions",
+    emojis: ["😀", "😃", "😄", "😁", "😉", "😂", "🙂", "😊", "😍", "🤩", "😘", "😜", "🤔", "🤨", "😐", "😮", "😴", "😢", "😭", "😤", "😡", "🥳", "🤒"],
+  },
+  {
+    id: "animaux",
+    label: "Animaux & nature",
+    emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🌿", "🍀", "🌱", "🌳", "🌸"],
+  },
+  {
+    id: "nourriture",
+    label: "Nourriture & boissons",
+    emojis: ["🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🥕", "🌽", "🍞", "🧀", "🍗", "🍕", "🍔", "🍟", "☕", "🍵", "🍺", "💧"],
+  },
+  {
+    id: "voyages",
+    label: "Voyages & lieux",
+    emojis: ["🏠", "🏢", "🏭", "🏥", "🏦", "🏨", "🏫", "🏗️", "⛰️", "🌋", "🏝️", "🏞️", "🚗", "🚌", "✈️", "🚀", "🚲", "🚂", "🗺️"],
+  },
+  {
+    id: "activites",
+    label: "Activités",
+    emojis: ["⚽", "🏀", "🏈", "🎾", "🏐", "🏓", "🏸", "🥊", "🎯", "🎲", "🎮", "🎸", "🎤", "🎧", "🎨", "🎬", "🏆", "🥇", "🎪"],
+  },
+  {
+    id: "objets",
+    label: "Objets",
+    emojis: ["⌚", "📱", "💻", "🖥️", "🖨️", "📞", "📧", "📷", "🔋", "💡", "🔦", "📚", "📝", "✏️", "📅", "🕒", "📌", "📎", "🔗", "🔒", "🔑", "🛠️"],
+  },
+  {
+    id: "symboles",
+    label: "Symboles",
+    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "✅", "❌", "⚠️", "❗", "❓", "⭐", "🔥", "👍", "👎", "👏", "🙏", "💪", "➡️"],
+  },
+  {
+    id: "drapeaux",
+    label: "Drapeaux",
+    emojis: ["🏁", "🚩", "🎌", "🏴", "🏳️", "🇫🇷", "🇪🇺", "🇩🇪", "🇬🇧", "🇧🇪", "🇪🇸", "🇮🇹", "🇺🇸", "🇨🇭"],
+  },
 ];
 
 const HEADING_PREVIEW_SIZE: Record<1 | 2 | 3 | 4 | 5 | 6, number> = {
@@ -588,9 +628,12 @@ export function Toolbar({
                 label="Formule en bloc"
               />
             </div>
-            <div className="tb-stack">
-              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
-            </div>
+          </RibbonGroup>
+
+          {/* Groupe « Panneau » (demande 2026-10-17) : boutons ouvrant des
+           * panneaux/popup — la fenêtre Emoji y vit désormais. */}
+          <RibbonGroup label="Panneau" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
           </RibbonGroup>
         </div>
       )}
@@ -794,6 +837,21 @@ function HeadingPicker({
 function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: string) => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  // Recale la fenêtre dans le viewport à l'ouverture (le groupe « Panneau »
+  // vit en bout de ruban : aligné à droite par défaut, elle déborderait de
+  // la fenêtre si celle-ci est étroite — même logique que le ColorPicker).
+  useEffect(() => {
+    if (!open) return;
+    const pop = popRef.current;
+    if (!pop) return;
+    const rect = pop.getBoundingClientRect();
+    const overflowRight = rect.right - (window.innerWidth - 8);
+    if (overflowRight > 0) {
+      pop.style.right = `${parseFloat(pop.style.right || "0") + overflowRight}px`;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -802,8 +860,15 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
         setOpen(false);
       }
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   return (
@@ -821,18 +886,28 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
         <span className="tb-stack-caret">▾</span>
       </button>
       {open && (
-        <div className="tb-emoji-menu">
-          {EMOJI_LIST.map((emoji) => (
-            <button
-              key={emoji}
-              className="tb-emoji-option"
-              onClick={() => {
-                onPick(emoji);
-                setOpen(false);
-              }}
-            >
-              {emoji}
-            </button>
+        <div className="tb-emoji-pop" ref={popRef} role="dialog" aria-label="Emoji">
+          <div className="tb-emoji-pop-title">Emoji</div>
+          {EMOJI_CATEGORIES.map((cat) => (
+            <div key={cat.id} className="tb-emoji-cat">
+              <div className="tb-emoji-cat-label">{cat.label}</div>
+              <div className="tb-emoji-grid">
+                {cat.emojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="tb-emoji-cell"
+                    title={emoji}
+                    onClick={() => {
+                      onPick(emoji);
+                      setOpen(false);
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

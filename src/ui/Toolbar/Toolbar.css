@@ -534,34 +534,62 @@
   margin-left: 4px;
 }
 
-.tb-emoji-menu {
+/* Fenêtre Emoji (refaite 2026-10-17, groupe « Panneau ») : popup à
+ * catégories façon sélecteur moderne — ancré à DROITE du bouton (le
+ * groupe vit en bout de ruban), défilable, couleurs MBEF (titres
+ * sapin, survol azur). */
+.tb-emoji-pop {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  right: 0;
+  width: 328px;
+  max-height: 340px;
+  overflow-y: auto;
   background: #ffffff;
   border: 1px solid #d9d9d7;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  padding: 6px;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
-  width: 200px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  padding: 8px;
   z-index: 60;
+  font-family: Arial, sans-serif;
 }
 
-.tb-emoji-option {
+.tb-emoji-pop-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #003f2b; /* sapin */
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid #e4e4e2;
+  margin-bottom: 2px;
+}
+
+.tb-emoji-cat-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #75766f;
+  margin: 8px 2px 4px;
+}
+
+.tb-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.tb-emoji-cell {
   background: transparent;
   border: none;
   font-size: 18px;
-  padding: 4px;
-  border-radius: 3px;
+  line-height: 1.2;
+  padding: 3px 0;
+  border-radius: 4px;
   cursor: pointer;
-  line-height: 1;
 }
 
-.tb-emoji-option:hover {
-  background: #dfeff8;
+.tb-emoji-cell:hover {
+  background: #dfeff8; /* azur */
 }
 
 /* Sélecteur de taille de tableau (grille survolée façon Word). */
