@@ -117,8 +117,11 @@ projets"). Constats et actions :
     Hauteur EDITABLES en cm → **dimensions personnalisées**
     (`widthMm?`/`heightMm?` optionnels dans PageLayoutSettings,
     primés par resolvePageSizeMm ; choisir un format les efface).
-    Alimentation papier (grisée), « Options d'impression… » (grisé),
-    groupe **Document** (version/auteur — spécifique Pagina, conservé).
+    Alimentation papier (grisée), « Options d'impression… » (grisé).
+    Version/auteur : SUPPRIMÉS du dialogue (demande 2026-10-17 :
+    seront traités plus tard dans « Propriétés du document » et
+    compte utilisateur) — les champs documentVersion/author RESTENT
+    dans le modèle (variables {{version}}/{{author}} de l'en-tête/pied).
   - **Mise en page** : Section (Début de la section, Supprimer les
     notes de fin — grisés), En-têtes et pieds de page (« Paires et
     impaires » grisé ; **« Première page différente » CÂBLÉ** = inverse

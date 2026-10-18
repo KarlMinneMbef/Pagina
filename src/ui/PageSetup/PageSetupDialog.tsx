@@ -321,20 +321,6 @@ export function PageSetupDialog({
                   </div>
                 </fieldset>
 
-                <fieldset className="ps-group">
-                  <legend>Document</legend>
-                  <div className="ps-margins-grid">
-                    <label className="ps-num">
-                      <span>Version du document :</span>
-                      <input type="text" placeholder="ex. v1.3" value={draft.documentVersion} onChange={(e) => set("documentVersion", e.target.value)} />
-                    </label>
-                    <label className="ps-num">
-                      <span>Auteur / rédacteur :</span>
-                      <input type="text" value={draft.author} onChange={(e) => set("author", e.target.value)} />
-                    </label>
-                  </div>
-                </fieldset>
-
                 <button type="button" className="ps-btn ps-btn-link" disabled>
                   Options d&apos;impression…
                 </button>
