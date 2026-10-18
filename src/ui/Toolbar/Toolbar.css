@@ -35,6 +35,46 @@
   font-weight: 600;
 }
 
+/* Coin droit de la barre d'onglets (demande 2026-10-17) : même emplacement
+ * que « Partager » dans Word — Explorateur actif, Commenter à côté
+ * (désactivé tant que la fonctionnalité n'existe pas). */
+.tb-tabbar-right {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  align-items: stretch;
+  padding: 3px 6px;
+}
+
+.tb-corner-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.tb-corner-btn:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tb-corner-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tb-corner-btn-active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 /* Ligne 3 (+ légendes) : groupes de commandes de l'onglet actif. */
 .tb-ribbon {
   display: flex;
