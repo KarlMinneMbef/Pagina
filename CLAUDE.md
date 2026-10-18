@@ -65,6 +65,15 @@ l'éditeur) :
   autorisé à appeler `invoke` côté frontend), backend Rust dans
   `src-tauri/src/fs_commands.rs` (lecture/écriture/CRUD fichiers) et
   `src-tauri/src/watcher.rs` (watch du dossier de travail).
+- **Couleurs UI** : `src/ui/theme/tokens.ts` — nuancier officiel MBEF
+  (Mon BE Fluides, `mbefColors`), source unique de vérité : `sapin`
+  #003F2B (primaire : ruban, en-têtes de panneaux, éléments actifs),
+  `prairie` #24AC6E (accents : onglet actif, cases cochées, boutons
+  d'action), `ocean` #2F52A0 (liens, sommaire, titres), `charbon`
+  #343334 (texte), `carotte` #EB5B1F (erreurs), `sable` #F7AE37
+  (avertissements), `azur` #DFEFF8 (fonds informatifs). Toute nouvelle
+  UI doit reprendre ces couleurs — ne pas inventer de teintes (le
+  dialogue Mise en page les applique, voir « État d'avancement »).
 
 ## Audit de code (2026-09-13)
 
@@ -151,7 +160,12 @@ projets"). Constats et actions :
   - Boutons : **« Définir par défaut »** (persiste les réglages en
     localStorage `pagina.defaultPageLayout`, utilisés par
     createNewFile via loadDefaultPageLayout() — les nouveaux fichiers
-    naissent avec), **OK** (bleu, applique) et Annuler.
+    naissent avec), **OK** (vert prairie, applique) et Annuler.
+  - **Couleurs : convention MBEF appliquée (2026-10-17, « je ne change
+    rien d'autre »)** — bandeau de titre SAPIN, légendes de sections
+    sapin, onglet actif souligné prairie, cases à cocher prairie,
+    orientation active sapin sur fond teinté prairie, saisie focalisée
+    azur, texte charbon, OK prairie (voir tokens.ts ci-dessus).
   - SUPPRIMÉS de ce dialogue : onglets Page/En-tête-pied (ancienne
     organisation), champs TEXTE d'en-tête/pied (s'éditent sur la page
     même), onglet Titres et sommaire (styles de titres restent
