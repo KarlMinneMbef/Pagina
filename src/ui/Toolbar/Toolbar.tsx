@@ -35,11 +35,13 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconBlockquote,
+  IconBookmark,
   IconBulletList,
   IconClearFormat,
   IconCodeBlock,
   IconCodeInline,
   IconCopy,
+  IconCrossReference,
   IconCut,
   IconEmoji,
   IconExplorer,
@@ -129,6 +131,9 @@ export interface ToolbarActions {
   insertInlineMath: () => void;
   insertBlockMath: () => void;
   insertEmoji: (emoji: string) => void;
+  // --- Liens (Signet / Renvoi) ---
+  insertBookmark: () => void;
+  insertCrossReference: () => void;
   // --- Code en ligne (groupe Police) ---
   toggleCode: () => void;
   toggleSubscript: () => void;
@@ -502,14 +507,30 @@ export function Toolbar({
             </div>
           </RibbonGroup>
 
-          <RibbonGroup label="Liens et médias" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
-            <BigButton
-              disabled={disabled}
-              onClick={() => actions?.setLink()}
-              title="Lien"
-              icon={<IconLink size={28} />}
-              label="Lien"
-            />
+          <RibbonGroup label="Liens" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <div className="tb-stack">
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.setLink()}
+                title="Lien hypertexte sur la sélection"
+                icon={<IconLink size={15} />}
+                label="Lien"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertBookmark()}
+                title="Signet : pose une ancre invisible à cette position, cible des renvois"
+                icon={<IconBookmark size={15} />}
+                label="Signet"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertCrossReference()}
+                title="Renvoi : insère un lien vers un signet du document"
+                icon={<IconCrossReference size={15} />}
+                label="Renvoi"
+              />
+            </div>
           </RibbonGroup>
 
           <RibbonGroup label="En-tête et pied" buttonsClassName="tb-group-buttons tb-group-buttons-flex">

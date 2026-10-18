@@ -103,6 +103,25 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Groupe « Liens » : Lien + Signet + Renvoi (2026-10-17, fin de
+  journée)** — demande utilisateur façon Word ("le panneau liens et
+  médias devient Liens comme Windows ; rajoute Signet et Renvoi"),
+  toujours en mode « modifications sans séance de tests » :
+  - Le groupe « Liens et médias » (une grande icône Lien) devient
+    « **Liens** » : trois boutons type B empilés — **Lien** (setLink
+    inchangé), **Signet**, **Renvoi** (icônes IconBookmark/
+    IconCrossReference DÉRIVÉES, aucun tracé de maquette fourni).
+  - **Signet** : nouvelle extension `Bookmark.ts` — nœud inline atomique
+    `<a id="…"></a>` (HTML inline valide en .md, invisible dans tout
+    autre outil) ; `insertBookmark` passe par window.prompt (même schéma
+    que setLink/insertInlineMath) + `slugifyBookmark` (minuscules, sans
+    accents, espaces→tirets, [a-z0-9-_]).
+  - **Renvoi** : `insertCrossReference` — deux prompts (signet visé,
+    texte affiché) puis insertion d'un lien Markdown standard
+    `[texte](#id)` (via insertContent HTML `<a href="#id">`, capté par
+    la marque Link) : cliquable partout, saut vers l'ancre fonctionnel.
+  - Câblé ToolbarActions/handle/App/PaginaLight. `tsc`, build, 38 tests
+    verts.
 - **Correctif : champ en-tête/pied de page décalé par l'ouverture du
   panneau « Variables » (2026-10-17, remonté par l'utilisateur avec
   capture)** : le champ flottant vit en position absolue aux

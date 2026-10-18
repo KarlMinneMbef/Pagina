@@ -347,6 +347,8 @@ function App() {
       insertInlineMath: () => handle.insertInlineMath(),
       insertBlockMath: () => handle.insertBlockMath(),
       insertEmoji: (emoji) => handle.insertEmoji(emoji),
+      insertBookmark: () => handle.insertBookmark(),
+      insertCrossReference: () => handle.insertCrossReference(),
     });
   }, [activeTab?.path]);
 

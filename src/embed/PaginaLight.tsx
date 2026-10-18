@@ -149,6 +149,8 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       insertInlineMath: () => {},
       insertBlockMath: () => {},
       insertEmoji: (emoji) => handle.insertEmoji(emoji),
+      insertBookmark: () => handle.insertBookmark(),
+      insertCrossReference: () => handle.insertCrossReference(),
     });
   }, [resetKey]);
 
