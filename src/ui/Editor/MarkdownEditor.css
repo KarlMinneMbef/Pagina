@@ -199,6 +199,50 @@
   color: #343334;
 }
 
+/* Champ RICHE (2026-10-17) : la zone est un mini-éditeur Tiptap — elle peut
+ * GRANDIR au-delà de la hauteur de la zone (min-height posée en JS) quand
+ * le contenu (ex. tableau) dépasse ; box-shadow pour la lire comme un
+ * objet flottant au-dessus des pages. */
+.xmd-header-footer-rich {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  overflow: visible;
+}
+
+.xmd-hf-prosemirror {
+  min-height: inherit;
+  outline: none;
+  padding: 2px 4px;
+  text-align: left;
+  line-height: 1.2;
+  white-space: pre-wrap;
+}
+
+/* Un tableau tapé dans le champ riche doit être immédiatement lisible. */
+.xmd-hf-prosemirror table,
+.xmd-header-footer-content table {
+  border-collapse: collapse;
+}
+
+.xmd-hf-prosemirror td,
+.xmd-hf-prosemirror th,
+.xmd-header-footer-content td,
+.xmd-header-footer-content th {
+  border: 1px solid #b9b9b7;
+  padding: 0 4px;
+}
+
+/* Contenu RICHE peint dans la zone d'en-tête/pied de page : pleine largeur
+ * pour que l'alignement propre du contenu (text-align interne) s'exprime,
+ * le conteneur restant centré verticalement. */
+.xmd-header-footer-content {
+  width: 100%;
+  text-align: inherit;
+}
+
+.xmd-header-footer-content p {
+  margin: 0;
+}
+
 /* Menu contextuel clic-droit sur une cellule de tableau (voir
  * `TableContextMenu` dans MarkdownEditor.tsx) — positionné en JS aux
  * coordonnées exactes du clic (`position: fixed` + clientX/clientY). */

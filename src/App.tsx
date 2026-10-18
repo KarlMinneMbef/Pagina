@@ -14,6 +14,7 @@ import { PageSetupDialog } from "./ui/PageSetup/PageSetupDialog";
 import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
 import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel";
 import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
+import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
 import { useWorkspaceStore } from "./core/store/workspaceStore";
@@ -67,6 +68,11 @@ function App() {
   // tant que le curseur reste dans le même tableau.
   const [tablePanelOpen, setTablePanelOpen] = useState(false);
   const wasInsideTableRef = useRef(false);
+  // Onglet actif de l'hôte de panneaux contextuels (« tableau » | « hf ») :
+  // quand deux contextes sont actifs en même temps (curseur dans un tableau
+  // + édition d'en-tête/pied de page), l'utilisateur choisit l'onglet.
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf">("tableau");
+  const prevHfModeRef = useRef<string | null>(null);
 
   useEffect(() => {
     restoreLastWorkspace();
@@ -83,6 +89,27 @@ function App() {
       setTablePanelOpen(false);
     }
   }, [stats.insideTable]);
+
+  // Sélection automatique de l'onglet : une édition d'en-tête/pied qui
+  // DÉMARRE prend la main (l'utilisateur vient de cliquer dessus), sa fin
+  // rend la main à l'onglet Tableau s'il est encore ouvert.
+  useEffect(() => {
+    const mode = stats.headerFooterEditMode;
+    if (mode && !prevHfModeRef.current) {
+      setCtxTab("hf");
+    } else if (!mode && prevHfModeRef.current && tablePanelOpen) {
+      setCtxTab("tableau");
+    }
+    prevHfModeRef.current = mode;
+  }, [stats.headerFooterEditMode, tablePanelOpen]);
+
+  // Un onglet Tableau ouvert doit toujours être sélectionné si aucun
+  // contexte en-tête/pied n'est actif (état initial, retour de l'hôte).
+  useEffect(() => {
+    if (tablePanelOpen && !stats.headerFooterEditMode && ctxTab !== "tableau") {
+      setCtxTab("tableau");
+    }
+  }, [tablePanelOpen, stats.headerFooterEditMode]);
 
   // Ouverture depuis l'Explorateur Windows (double-clic sur un .md/.xmd
   // associé à Pagina, ou "Ouvrir avec") — voir `startup_files.rs` côté Rust.
@@ -439,23 +466,62 @@ function App() {
             onZoomChange={(z) => setZoom(clampZoom(z))}
           />
         </div>
-        {tablePanelOpen && activeTab && (
-          <TablePropertiesPanel
-            actions={actions}
-            disabled={!activeTab}
-            shape={stats.tableSelectionShape}
-            onClose={() => setTablePanelOpen(false)}
-          />
-        )}
-        {/* Panneau « Variables » : visible uniquement pendant l'édition d'un
-         * champ d'en-tête/pied de page (suit le cycle de vie du champ —
-         * fermeture = commit ou annulation). */}
-        {activeTab && stats.headerFooterEditMode && (
-          <HeaderFooterPanel
-            mode={stats.headerFooterEditMode}
-            onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
-            onClose={() => editorRef.current?.closeHeaderFooterEdit()}
-          />
+        {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
+         * plusieurs contextes actifs (demande 2026-10-17) — une seule
+         * colonne, jamais de panneaux côte à côte. */}
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode) && (
+          <ContextualPanelHost
+            tabs={
+              ([
+                ...(tablePanelOpen ? [{ id: "tableau", label: "Tableau" }] : []),
+                ...(stats.headerFooterEditMode
+                  ? [{ id: "hf", label: stats.headerFooterEditMode === "header" ? "En-tête" : "Pied de page" }]
+                  : []),
+              ] as ContextualTab[])
+            }
+            activeId={ctxTab}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf")}
+          >
+            {ctxTab !== "hf" &&
+              tablePanelOpen &&
+              actions && (
+                <TablePropertiesPanel
+                  actions={actions}
+                  disabled={!activeTab}
+                  shape={stats.tableSelectionShape}
+                  onClose={() => setTablePanelOpen(false)}
+                />
+              )}
+            {ctxTab === "hf" &&
+              stats.headerFooterEditMode &&
+              editorRef.current && (
+                <HeaderFooterPanel
+                  mode={stats.headerFooterEditMode}
+                  onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
+                  onClose={() => editorRef.current?.closeHeaderFooterEdit()}
+                  hf={{
+                    toggleBold: () => editorRef.current?.hfToggleBold(),
+                    toggleItalic: () => editorRef.current?.hfToggleItalic(),
+                    toggleUnderline: () => editorRef.current?.hfToggleUnderline(),
+                    setFontFamily: (f) => editorRef.current?.hfSetFontFamily(f),
+                    unsetFontFamily: () => editorRef.current?.hfUnsetFontFamily(),
+                    setFontSize: (s) => editorRef.current?.hfSetFontSize(s),
+                    unsetFontSize: () => editorRef.current?.hfUnsetFontSize(),
+                    setColor: (c) => editorRef.current?.hfSetColor(c),
+                    unsetColor: () => editorRef.current?.hfUnsetColor(),
+                    setTextAlign: (a) => editorRef.current?.hfSetTextAlign(a),
+                    insertTable: (rows, cols) => editorRef.current?.hfInsertTable(rows, cols),
+                    addRowBefore: () => editorRef.current?.hfAddRowBefore(),
+                    addRowAfter: () => editorRef.current?.hfAddRowAfter(),
+                    deleteRow: () => editorRef.current?.hfDeleteRow(),
+                    addColumnBefore: () => editorRef.current?.hfAddColumnBefore(),
+                    addColumnAfter: () => editorRef.current?.hfAddColumnAfter(),
+                    deleteColumn: () => editorRef.current?.hfDeleteColumn(),
+                    deleteTable: () => editorRef.current?.hfDeleteTable(),
+                  }}
+                />
+              )}
+          </ContextualPanelHost>
         )}
       </div>
       {pageSetupOpen && activeTab && (

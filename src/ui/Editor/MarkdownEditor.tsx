@@ -25,6 +25,7 @@
  *   est invisible.
  */
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { TableMarkdown as Table } from "./extensions/TableMarkdown";
@@ -180,6 +181,28 @@ export interface MarkdownEditorHandle {
    * le texte saisi, comme un clic ailleurs) — bouton ✕ du panneau
    * « Variables » dans App.tsx. */
   closeHeaderFooterEdit: () => void;
+  // --- Commandes de mise en forme du champ RICHE en-tête/pied de page
+  // (appliquées au mini-éditeur ouvert — voir startHeaderFooterEdit ;
+  // sans effet si aucun champ n'est ouvert). Pilotées par le panneau
+  // latéral « En-tête/Pied de page » (HeaderFooterPanel.tsx). ---
+  hfSetFontFamily: (family: string) => void;
+  hfUnsetFontFamily: () => void;
+  hfSetFontSize: (size: string) => void;
+  hfUnsetFontSize: () => void;
+  hfSetColor: (color: string) => void;
+  hfUnsetColor: () => void;
+  hfSetTextAlign: (align: "left" | "center" | "right" | "justify") => void;
+  hfToggleBold: () => void;
+  hfToggleItalic: () => void;
+  hfToggleUnderline: () => void;
+  hfInsertTable: (rows: number, cols: number) => void;
+  hfAddRowBefore: () => void;
+  hfAddRowAfter: () => void;
+  hfDeleteRow: () => void;
+  hfAddColumnBefore: () => void;
+  hfAddColumnAfter: () => void;
+  hfDeleteColumn: () => void;
+  hfDeleteTable: () => void;
   insertTocMarker: () => void;
   generateToc: () => void;
   /** Insère une référence `[^n]` au curseur ET la définition correspondante
@@ -634,7 +657,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Champ flottant actuellement ouvert (voir startHeaderFooterEdit) — permet
     // aux boutons "insérer une variable" du ruban de taper dans le bon champ
     // sans que l'utilisateur ait à re-cliquer dedans.
-    const activeHeaderFooterInputRef = useRef<HTMLInputElement | null>(null);
+    // Mini-éditeur RICHE en-tête/pied de page (Tiptap, voir
+    // `startHeaderFooterEdit`) : c'est LUI la cible des commandes `hf*` du
+    // handle et du panneau latéral, tant que le champ est ouvert.
+    const headerMiniEditorRef = useRef<Editor | null>(null);
+    // Fonction « refermer le champ » de l'édition en cours (commit) — pour
+    // le bouton ✕ du panneau latéral (`closeHeaderFooterEdit`).
+    const headerFooterCommitRef = useRef<(() => void) | null>(null);
     // Mode en-tête/pied de page en cours d'édition (voir startHeaderFooterEdit)
     // — remonte dans `EditorStats.headerFooterEditMode` pour piloter le
     // panneau latéral « Variables » de App.tsx.
@@ -996,10 +1025,30 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       },
       insertHeaderFooterVariable: (token) => insertHeaderFooterVariableRef.current(token),
       closeHeaderFooterEdit: () => {
-        // `blur` déclenche le `commit` du champ (voir startHeaderFooterEdit)
-        // — le texte saisi est validé, comme un clic ailleurs dans l'app.
-        activeHeaderFooterInputRef.current?.blur();
+        // Referme le champ riche en validant (les modifications sont déjà
+        // appliquées en direct — il ne reste qu'à refermer).
+        headerFooterCommitRef.current?.();
       },
+      // --- Commandes du champ riche en-tête/pied de page (mini-éditeur) ---
+      hfSetFontFamily: (family) => headerMiniEditorRef.current?.chain().focus().setFontFamily(family).run(),
+      hfUnsetFontFamily: () => headerMiniEditorRef.current?.chain().focus().unsetFontFamily().run(),
+      hfSetFontSize: (size) => headerMiniEditorRef.current?.chain().focus().setFontSize(size).run(),
+      hfUnsetFontSize: () => headerMiniEditorRef.current?.chain().focus().unsetFontSize().run(),
+      hfSetColor: (color) => headerMiniEditorRef.current?.chain().focus().setColor(color).run(),
+      hfUnsetColor: () => headerMiniEditorRef.current?.chain().focus().unsetColor().run(),
+      hfSetTextAlign: (align) => headerMiniEditorRef.current?.chain().focus().setTextAlign(align).run(),
+      hfToggleBold: () => headerMiniEditorRef.current?.chain().focus().toggleBold().run(),
+      hfToggleItalic: () => headerMiniEditorRef.current?.chain().focus().toggleItalic().run(),
+      hfToggleUnderline: () => headerMiniEditorRef.current?.chain().focus().toggleUnderline().run(),
+      hfInsertTable: (rows, cols) =>
+        headerMiniEditorRef.current?.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(),
+      hfAddRowBefore: () => headerMiniEditorRef.current?.chain().focus().addRowBefore().run(),
+      hfAddRowAfter: () => headerMiniEditorRef.current?.chain().focus().addRowAfter().run(),
+      hfDeleteRow: () => headerMiniEditorRef.current?.chain().focus().deleteRow().run(),
+      hfAddColumnBefore: () => headerMiniEditorRef.current?.chain().focus().addColumnBefore().run(),
+      hfAddColumnAfter: () => headerMiniEditorRef.current?.chain().focus().addColumnAfter().run(),
+      hfDeleteColumn: () => headerMiniEditorRef.current?.chain().focus().deleteColumn().run(),
+      hfDeleteTable: () => headerMiniEditorRef.current?.chain().focus().deleteTable().run(),
       insertTocMarker: () => editor?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
       generateToc: () => editor?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
       insertFootnote: () => {
@@ -1249,9 +1298,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const template = target.getAttribute(isHeader ? HEADER_TEMPLATE_ATTR : FOOTER_TEMPLATE_ATTR) ?? "";
       const rect = target.getBoundingClientRect();
 
-      // Remonte le mode d'édition (panneau latéral « Variables » de App.tsx)
-      // à chaque ouverture/fermeture du champ — sans attendre une
-      // modification du document, qui n'arrive pas tant qu'on ne tape rien.
+      // Remonte le mode d'édition (panneau latéral « En-tête/Pied de page »
+      // de App.tsx) à chaque ouverture/fermeture du champ.
       const emitMode = (mode: "header" | "footer" | null) => {
         headerFooterModeRef.current = mode;
         if (!editor) return;
@@ -1267,82 +1315,110 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
       };
 
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "xmd-header-footer-edit";
-      input.value = template;
-      input.style.left = `${rect.left}px`;
-      input.style.top = `${rect.top}px`;
-      input.style.width = `${rect.width}px`;
-      input.style.height = `${rect.height}px`;
-      document.body.appendChild(input);
-      input.focus();
-      input.select();
-      activeHeaderFooterInputRef.current = input;
-      emitMode(isHeader ? "header" : "footer");
+      // Champ RICHE (2026-10-17) : l'en-tête/pied de page se met à former
+      // comme un mini-document — police/taille/couleur/alignement ET
+      // tableaux, pilotés par le panneau latéral (voir
+      // `HeaderFooterPanel.tsx` et les méthodes `hf*` du handle). Le texte
+      // simple historique reste valide (il est encadré d'un <p> à l'édition).
+      const looksHtml = /<\/?[a-z][^>]*>/i.test(template);
+      const initialContent = looksHtml ? template : template ? `<p>${escapeHtmlText(template)}</p>` : "";
 
-      // Le champ vit en position absolue aux coordonnées prises à
-      // l'OUVERTURE : l'apparition du panneau « Variables » (ou une
-      // fermeture de l'explorateur, un redimensionnement de fenêtre)
-      // déplace la zone peinte APRÈS coup — sans recalage, le champ
-      // restait décalé (≈90px mesurés) au-dessus du document (bug remonté
-      // par l'utilisateur le 2026-10-17). On le recale à chaque
-      // changement de taille du canevas, et sur l'élément d'origine s'il
-      // survit (un repaint reconstruit les pages : on retombe alors sur
-      // la zone visible la plus proche, le texte du champ est partagé
-      // par toutes les pages).
+      const host = document.createElement("div");
+      host.className = "xmd-header-footer-edit xmd-header-footer-rich";
+      host.style.left = `${rect.left}px`;
+      host.style.top = `${rect.top}px`;
+      host.style.width = `${rect.width}px`;
+      host.style.minHeight = `${rect.height}px`;
+      document.body.appendChild(host);
+
+      let mini: Editor;
+      try {
+        mini = new TiptapEditor({
+          element: host,
+          extensions: [
+            StarterKit.configure({ link: { openOnClick: false } }),
+            TextStyle,
+            FontFamily,
+            FontSize,
+            Color,
+            TextAlign.configure({ types: ["paragraph", "tableCell", "tableHeader"] }),
+            Table,
+            TableRow,
+            TableCell,
+            TableHeader,
+          ],
+          content: initialContent,
+          editorProps: { attributes: { class: "xmd-hf-prosemirror" } },
+        });
+      } catch (e) {
+        host.remove();
+        return;
+      }
+      headerMiniEditorRef.current = mini;
+      emitMode(isHeader ? "header" : "footer");
+      mini.commands.focus("end");
+
+      // Mise à jour EN DIRECT : le contenu est partagé par toutes les
+      // pages et le document peint suit la frappe au fur et à mesure
+      // (comme le corps du document). Le « commit » ne fait plus rien
+      // d'autre que refermer : tout est déjà appliqué.
+      const field = isHeader ? "header" : "footer";
+      mini.on("update", () => {
+        const current = layoutRef.current;
+        onLayoutChangeRef.current({ ...current, [field]: { ...current[field], text: mini.getHTML() } });
+      });
+
+      // Recalage du champ sur la zone peinte : l'ouverture du panneau
+      // latéral (ou une fermeture d'explorateur, un redimensionnement)
+      // déplace les pages APRÈS l'ouverture — sans recalage le champ
+      // restait décalé (bug du 2026-10-17). Sur l'élément d'origine s'il
+      // survit à un repaint, sinon la zone visible la plus proche.
       const selector = isHeader ? ".xmd-page-header" : ".xmd-page-footer";
       const reposition = () => {
         const el = target.isConnected ? target : headerFooterTargetNearViewport(canvasRef.current, selector);
         if (!el) return;
         const r = el.getBoundingClientRect();
         if (r.width === 0 && r.height === 0) return;
-        input.style.left = `${r.left}px`;
-        input.style.top = `${r.top}px`;
-        input.style.width = `${r.width}px`;
-        input.style.height = `${r.height}px`;
+        host.style.left = `${r.left}px`;
+        host.style.top = `${r.top}px`;
+        host.style.width = `${r.width}px`;
+        host.style.minHeight = `${r.height}px`;
       };
       const canvasEl = canvasRef.current;
       const resizeObserver = canvasEl ? new ResizeObserver(() => reposition()) : null;
       if (canvasEl && resizeObserver) resizeObserver.observe(canvasEl);
       window.addEventListener("resize", reposition);
-      const stopFollowing = () => {
+
+      // Referme quand on clique ailleurs que dans le champ ou dans le
+      // panneau latéral (les boutons du panneau neutralisent déjà leur
+      // `mousedown` pour ne pas voler le focus au mini-éditeur).
+      const onDocMouseDown = (e: MouseEvent) => {
+        const t = e.target as Node;
+        if (host.contains(t)) return;
+        if (t instanceof Element && t.closest(".ctx-host")) return;
+        commit();
+      };
+      document.addEventListener("mousedown", onDocMouseDown, true);
+
+      let closed = false;
+      const detach = () => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener("mousedown", onDocMouseDown, true);
         resizeObserver?.disconnect();
         window.removeEventListener("resize", reposition);
+        headerFooterCommitRef.current = null;
+        headerMiniEditorRef.current = null;
+        emitMode(null);
+        mini.destroy();
+        host.remove();
       };
+      const commit = () => detach();
+      const cancel = () => detach();
+      headerFooterCommitRef.current = commit;
 
-      let committed = false;
-      const commit = () => {
-        if (committed) return;
-        committed = true;
-        stopFollowing();
-        if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
-        emitMode(null);
-        const nextText = input.value;
-        input.remove();
-        const current = layoutRef.current;
-        const field = isHeader ? "header" : "footer";
-        if (current[field].text === nextText) return; // rien à faire, évite un dirty inutile
-        onLayoutChangeRef.current({ ...current, [field]: { ...current[field], text: nextText } });
-      };
-      const cancel = () => {
-        if (committed) return;
-        committed = true;
-        stopFollowing();
-        if (activeHeaderFooterInputRef.current === input) activeHeaderFooterInputRef.current = null;
-        emitMode(null);
-        input.remove();
-      };
-      // `mousedown` (pas seulement `blur`) sur les boutons "insérer une
-      // variable" du ruban appelle `preventDefault()` pour ne PAS voler le
-      // focus au champ — sans ça, `blur` se déclencherait avant `onClick` et
-      // fermerait l'édition avant d'avoir pu y insérer quoi que ce soit.
-      input.addEventListener("blur", commit);
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          input.blur();
-        } else if (e.key === "Escape") {
+      host.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
           e.preventDefault();
           cancel();
         }
@@ -1350,35 +1426,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     };
     startHeaderFooterEditRef.current = startHeaderFooterEdit;
 
-    /** Insère une variable (`{{page}}`, etc.) dans le champ d'en-tête/pied de
-     * page actuellement ouvert ; s'il n'y en a aucun, ouvre celui de
-     * l'en-tête (choix par défaut) et insère à la fin du texte existant. */
+    /** Insère une variable (`{{page}}`, etc.) dans le champ riche
+     * d'en-tête/pied de page actuellement ouvert ; s'il n'y en a aucun,
+     * ouvre celui de l'en-tête (choix par défaut) et insère à la fin. */
     insertHeaderFooterVariableRef.current = (token: string) => {
-      const insertInto = (input: HTMLInputElement) => {
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? input.value.length;
-        input.value = input.value.slice(0, start) + token + input.value.slice(end);
-        const newPos = start + token.length;
-        input.focus();
-        input.setSelectionRange(newPos, newPos);
-      };
-
-      const active = activeHeaderFooterInputRef.current;
-      if (active && document.body.contains(active)) {
-        insertInto(active);
+      const mini = headerMiniEditorRef.current;
+      if (mini) {
+        mini.chain().focus().insertContent(token).run();
         return;
       }
-      const el = canvasRef.current?.querySelector<HTMLElement>(".xmd-page-header");
+      const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
       if (!el) return;
       startHeaderFooterEditRef.current(el);
-      const opened = activeHeaderFooterInputRef.current;
-      if (opened) {
-        // `startHeaderFooterEdit` sélectionne tout le texte existant par
-        // défaut (pratique pour un remplacement rapide) — ici on veut au
-        // contraire AJOUTER à la fin, donc on déplace d'abord le curseur.
-        opened.setSelectionRange(opened.value.length, opened.value.length);
-        insertInto(opened);
-      }
+      headerMiniEditorRef.current?.chain().focus("end").insertContent(token).run();
     };
 
     // Clics sur la couche peinte : traduits en position réelle dans

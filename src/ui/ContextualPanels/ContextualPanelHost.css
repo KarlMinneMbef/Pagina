@@ -1,0 +1,50 @@
+/* Hôte des panneaux contextuels : une colonne, des onglets si plusieurs
+ * contextes actifs. Même palette sobre que les panneaux qu'il contient. */
+.ctx-host {
+  --tp-bg: #eeefef;
+  --tp-line: #d0d3d4;
+  --tp-text: #2a2a24;
+  --tp-label: #75766f;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-shrink: 0;
+  background: var(--tp-bg);
+  color: var(--tp-text);
+  border-left: 1px solid var(--tp-line);
+  overflow: hidden;
+}
+
+.ctx-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--tp-line);
+}
+
+.ctx-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--tp-label);
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  padding: 4px 6px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctx-tab:hover {
+  color: var(--tp-text);
+}
+
+.ctx-tab-active {
+  color: var(--tp-text);
+  font-weight: 600;
+  border-bottom-color: var(--tp-text);
+}
