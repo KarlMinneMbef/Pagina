@@ -103,50 +103,53 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
-- **En-tête/pied de page RICHES + panneaux contextuels en ONGLETS
-  (2026-10-17, dernière passe de la journée)** — demandes utilisateur
-  explicites : "des onglets latéraux du panneau" (plusieurs panneaux
-  côte à côte compressaient la page) et "éditer les pieds de page avec
-  texte aligné, couleur, police, taille, et faire un tableau".
-  - **`ContextualPanelHost`** (src/ui/ContextualPanels/) : UNE colonne
-    droite redimensionnable avec ONGLETS quand plusieurs contextes sont
-    actifs (Tableau | En-tête/Pied de page) ; un seul contexte = pas de
-    barre d'onglets. Sélection auto : une édition d'en-tête/pied qui
-    démarre prend l'onglet, sa fin rend la main à Tableau s'il reste
-    ouvert. Les panneaux (TableProperties/HeaderFooter) sont devenus
-    des CONTENUS sans châssis (l'hôte fournit fond/bordure/largeur/
-    poignée) ; `.ctx-host` remplace `.tp-panel`/`.hf-panel` dans
-    `@media print`.
-  - **Champ d'en-tête/pied de page RICHE** : le `<input>` devient un
-    mini-éditeur TIPTAP complet (`new TiptapEditor` hors React, monté
-    dans un div `.xmd-header-footer-rich` recouvrant la zone —
-    StarterKit + TextStyle/FontFamily/FontSize/Color/TextAlign + les
-    MÊMES extensions tableau que l'éditeur principal). Mise à jour EN
-    DIRECT (`mini.on("update")` → onLayoutChange) : le champ peint suit
-    la frappe, plus de notion d'annulation — Échap/clic ailleurs/✕ ne
-    font que REFERMER. Fermeture par `mousedown` hors (champ ∪ .ctx-host)
-    en phase capture ; recalage ResizeObserver conservé.
-  - **Sérialisation** : `layout.header/footer.text` peut contenir du
-    HTML (mises en forme, tableaux). `paintPages.ts`
-    `buildHeaderFooterContent()` : si le texte contient des balises →
-    `innerHTML` après substitution des variables, SINON `textContent`
-    (comportement inchangé pour les documents existants — aucune
-    interprétation HTML du texte simple). Les variables {{page}} etc.
-    restent substituées dans les deux cas.
-  - **Panneau En-tête/Pied de page** (3 sections) : **Mise en forme**
-    (G/I/S, police, taille, couleur via ColorPicker, 3 alignements) ;
-    **Tableau** (TableSizePicker EXTRAIT de Toolbar.tsx vers
-    `src/ui/Toolbar/TableSizePicker.tsx` pour être réutilisé ici +
-    lignes/colonnes ±, suppr. ligne/colonne/tableau) ; **Variables**
-    (inchangées). Commandes via NOUVELLES méthodes `hf*` du handle
-    (hfSetFontFamily, hfSetFontSize, hfSetColor, hfSetTextAlign,
-    hfToggleBold/Italic/Underline, hfInsertTable, hfAddRowBefore/…,
-    hfDeleteTable) — ciblent le mini-éditeur, sans effet champ fermé.
-    `insertHeaderFooterVariable` insère désormais dans le mini-éditeur.
+- **En-tête/pied de page = MARKDOWN ordinaire piloté par le RUBAN
+  (2026-10-17, refonte demandée par l'utilisateur après rejet des
+  mini-fonctions dédiées : \"considère les deux parties comme une partie
+  de Markdown qu'on duplique\")** — plus AUCUNE commande `hf*` :
+  - **Principe** : l'en-tête/pied de page est du contenu Markdown
+    ordinaire, simplement dupliqué sur chaque page. Le RUBAN existant
+    (police, taille, couleur, alignements, tableaux, gras…) s'applique
+    au champ ouvert via un ROUTAGE : `cmd()` dans MarkdownEditor.tsx
+    renvoie `headerMiniEditorRef.current ?? editor` — toutes les
+    commandes du handle (y compris cellules/bordures de tableau)
+    ciblent le mini-éditeur tant que le champ est ouvert, et
+    re-basculent sur l'éditeur principal à la fermeture.
+  - **Champ RICHE** (`startHeaderFooterEdit`) : mini-éditeur Tiptap
+    HORS React (div `.xmd-header-footer-rich` recouvrant la zone) avec
+    les mêmes extensions de mise en forme/tableaux que l'éditeur
+    principal + **`Markdown.configure({ html: true })`** — le template
+    (MARKDOWN brut stocké dans `layout.header/footer.text`) est parsé
+    tel quel à l'ouverture (le HTML historique passe aussi grâce à
+    `html: true`), et `mini.on("update")` re-sérialise en MARKDOWN à
+    chaque frappe (`mini.storage.markdown.getMarkdown()`) — mise à jour
+    en direct, Échap/clic ailleurs/✕ ne font que REFERMER.
+  - **Peinture** (`paintPages.ts`) : le peintre reçoit
+    `header/footer` = `HeaderFooterSettings & { html? }` — MarkdownEditor
+    convertit le template via `mdToHtml()`
+    (`editor.storage.markdown.parser.parse`) et
+    `buildHeaderFooterContent()` fait `innerHTML` (après substitution
+    des variables) si `html` est fourni, SINON `textContent` (texte
+    simple historique : jamais interprété comme HTML).
+  - **Panneau latéral En-tête/Pied de page** (HeaderFooterPanel.tsx) :
+    réduit aux **Variables uniquement** (titre + ✕ + 6 jetons + hint
+    \"le ruban s'applique au champ\"). Les sections Mise en forme et
+    Tableau du panneau ont été SUPPRIMÉES (le ruban les remplace).
+    `insertHeaderFooterVariable` insère dans le mini-éditeur (ou
+    l'ouvre). PageSetupDialog : champs texte simples = du markdown,
+    restent valides.
+  - `ContextualPanelHost` (src/ui/ContextualPanels/) : UNE colonne
+    droite redimensionnable avec ONGLETS quand plusieurs contextes
+    sont actifs (Tableau | En-tête/Pied de page) ; un seul contexte =
+    pas de barre d'onglets. Sélection auto : une édition d'en-tête/pied
+    qui démarre prend l'onglet, sa fin rend la main à Tableau s'il
+    reste ouvert. Panneaux = CONTENUS sans châssis (l'hôte fournit
+    fond/bordure/largeur/poignée) ; `.ctx-host` dans `@media print`.
   - `tsc` strict, build, 38 tests verts ; pas de séance de test
     (mode de travail demandé). À vérifier manuellement : édition riche
     en conditions réelles (tableau dans un pied de page, substitution
-    à l'impression).
+    à l'impression), et vieux documents dont l'en-tête était stocké en
+    HTML (passent par `html: true` — à confirmer).
 - **Groupe « Liens » : Lien + Signet + Renvoi (2026-10-17, fin de
   journée)** — demande utilisateur façon Word ("le panneau liens et
   médias devient Liens comme Windows ; rajoute Signet et Renvoi"),

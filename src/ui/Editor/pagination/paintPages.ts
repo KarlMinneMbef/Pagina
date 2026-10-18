@@ -31,21 +31,29 @@ export const SRC_POS_ATTR = "data-src-pos";
 export const HEADER_TEMPLATE_ATTR = "data-header-template";
 export const FOOTER_TEMPLATE_ATTR = "data-footer-template";
 
-/** Construit le contenu affiché d'une zone en-tête/pied de page : texte
- * simple historique (texte substitué, aucun HTML interprété) ou contenu
- * RICHE (2026-10-17 — le champ d'édition est un mini-éditeur Tiptap,
- * `layout.header.text` peut contenir du HTML : mises en forme,
- * tableaux…). Les variables `{{page}}` etc. sont substituées dans les
- * DEUX cas. Retourne un élément (pas une chaîne) pour ne jamais passer
- * par `innerHTML` sur du texte simple non échappé. */
-function buildHeaderFooterContent(template: string, ctx: HeaderFooterContext): HTMLElement {
-  const resolved = resolveHeaderFooterText(template, ctx);
+/** Réglages d'en-tête/pied de page étendus pour la peinture : `text` est
+ * le template MARKDOWN brut (sérialisé par le mini-éditeur — c'est lui
+ * qui est stocké dans le document et exposé à la ré-édition via
+ * `HEADER_TEMPLATE_ATTR`) et `html` sa traduction HTML prête à peindre
+ * (calculée par l'appelant via le parseur Markdown de tiptap-markdown :
+ * mises en forme, tableaux…). */
+type PaintHeaderFooterSettings = HeaderFooterSettings & { html?: string };
+
+/** Construit le contenu affiché d'une zone en-tête/pied de page : contenu
+ * RICHE (`html` fourni — `innerHTML` après substitution des variables) ou
+ * texte simple historique (texte substitué, AUCUN HTML interprété, jamais
+ * passé par `innerHTML`). Les variables `{{page}}` etc. sont substituées
+ * dans les deux cas. Retourne un élément (pas une chaîne). */
+function buildHeaderFooterContent(
+  settings: PaintHeaderFooterSettings,
+  ctx: HeaderFooterContext,
+): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "xmd-header-footer-content";
-  if (/<\/?[a-z][^>]*>/i.test(resolved)) {
-    wrap.innerHTML = resolved;
+  if (settings.html) {
+    wrap.innerHTML = resolveHeaderFooterText(settings.html, ctx);
   } else {
-    wrap.textContent = resolved;
+    wrap.textContent = resolveHeaderFooterText(settings.text, ctx);
   }
   return wrap;
 }
@@ -54,8 +62,8 @@ export interface PaintPagesOptions {
   pageHeightPx: number;
   marginTopPx: number;
   marginBottomPx: number;
-  header: HeaderFooterSettings;
-  footer: HeaderFooterSettings;
+  header: PaintHeaderFooterSettings;
+  footer: PaintHeaderFooterSettings;
   /** Tout le contexte de substitution des variables SAUF `page`/`pages`,
    * qui dépendent de la page en cours de peinture — calculés ici. */
   context: Omit<HeaderFooterContext, "page" | "pages">;
@@ -129,7 +137,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       if (header.showOnFirstPage || !isFirstPage) {
         const headerEl = document.createElement("div");
         headerEl.className = "xmd-page-header";
-        headerEl.appendChild(buildHeaderFooterContent(header.text, fullContext));
+        headerEl.appendChild(buildHeaderFooterContent(header, fullContext));
         headerEl.setAttribute(HEADER_TEMPLATE_ATTR, header.text);
         headerEl.title = "Cliquer pour modifier l'en-tête";
         page.appendChild(headerEl);
@@ -159,7 +167,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       if (footer.showOnFirstPage || !isFirstPage) {
         const footerEl = document.createElement("div");
         footerEl.className = "xmd-page-footer";
-        footerEl.appendChild(buildHeaderFooterContent(footer.text, fullContext));
+        footerEl.appendChild(buildHeaderFooterContent(footer, fullContext));
         footerEl.setAttribute(FOOTER_TEMPLATE_ATTR, footer.text);
         footerEl.title = "Cliquer pour modifier le pied de page";
         page.appendChild(footerEl);

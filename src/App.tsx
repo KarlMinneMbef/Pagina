@@ -499,26 +499,6 @@ function App() {
                   mode={stats.headerFooterEditMode}
                   onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
                   onClose={() => editorRef.current?.closeHeaderFooterEdit()}
-                  hf={{
-                    toggleBold: () => editorRef.current?.hfToggleBold(),
-                    toggleItalic: () => editorRef.current?.hfToggleItalic(),
-                    toggleUnderline: () => editorRef.current?.hfToggleUnderline(),
-                    setFontFamily: (f) => editorRef.current?.hfSetFontFamily(f),
-                    unsetFontFamily: () => editorRef.current?.hfUnsetFontFamily(),
-                    setFontSize: (s) => editorRef.current?.hfSetFontSize(s),
-                    unsetFontSize: () => editorRef.current?.hfUnsetFontSize(),
-                    setColor: (c) => editorRef.current?.hfSetColor(c),
-                    unsetColor: () => editorRef.current?.hfUnsetColor(),
-                    setTextAlign: (a) => editorRef.current?.hfSetTextAlign(a),
-                    insertTable: (rows, cols) => editorRef.current?.hfInsertTable(rows, cols),
-                    addRowBefore: () => editorRef.current?.hfAddRowBefore(),
-                    addRowAfter: () => editorRef.current?.hfAddRowAfter(),
-                    deleteRow: () => editorRef.current?.hfDeleteRow(),
-                    addColumnBefore: () => editorRef.current?.hfAddColumnBefore(),
-                    addColumnAfter: () => editorRef.current?.hfAddColumnAfter(),
-                    deleteColumn: () => editorRef.current?.hfDeleteColumn(),
-                    deleteTable: () => editorRef.current?.hfDeleteTable(),
-                  }}
                 />
               )}
           </ContextualPanelHost>

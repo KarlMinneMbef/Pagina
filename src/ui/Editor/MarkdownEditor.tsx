@@ -181,28 +181,6 @@ export interface MarkdownEditorHandle {
    * le texte saisi, comme un clic ailleurs) — bouton ✕ du panneau
    * « Variables » dans App.tsx. */
   closeHeaderFooterEdit: () => void;
-  // --- Commandes de mise en forme du champ RICHE en-tête/pied de page
-  // (appliquées au mini-éditeur ouvert — voir startHeaderFooterEdit ;
-  // sans effet si aucun champ n'est ouvert). Pilotées par le panneau
-  // latéral « En-tête/Pied de page » (HeaderFooterPanel.tsx). ---
-  hfSetFontFamily: (family: string) => void;
-  hfUnsetFontFamily: () => void;
-  hfSetFontSize: (size: string) => void;
-  hfUnsetFontSize: () => void;
-  hfSetColor: (color: string) => void;
-  hfUnsetColor: () => void;
-  hfSetTextAlign: (align: "left" | "center" | "right" | "justify") => void;
-  hfToggleBold: () => void;
-  hfToggleItalic: () => void;
-  hfToggleUnderline: () => void;
-  hfInsertTable: (rows: number, cols: number) => void;
-  hfAddRowBefore: () => void;
-  hfAddRowAfter: () => void;
-  hfDeleteRow: () => void;
-  hfAddColumnBefore: () => void;
-  hfAddColumnAfter: () => void;
-  hfDeleteColumn: () => void;
-  hfDeleteTable: () => void;
   insertTocMarker: () => void;
   generateToc: () => void;
   /** Insère une référence `[^n]` au curseur ET la définition correspondante
@@ -658,12 +636,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // aux boutons "insérer une variable" du ruban de taper dans le bon champ
     // sans que l'utilisateur ait à re-cliquer dedans.
     // Mini-éditeur RICHE en-tête/pied de page (Tiptap, voir
-    // `startHeaderFooterEdit`) : c'est LUI la cible des commandes `hf*` du
-    // handle et du panneau latéral, tant que le champ est ouvert.
+    // `startHeaderFooterEdit`) : tant que le champ est ouvert, le routage
+    // `cmd()` ci-dessous y redirige TOUTES les commandes du ruban.
     const headerMiniEditorRef = useRef<Editor | null>(null);
     // Fonction « refermer le champ » de l'édition en cours (commit) — pour
     // le bouton ✕ du panneau latéral (`closeHeaderFooterEdit`).
     const headerFooterCommitRef = useRef<(() => void) | null>(null);
+    // Éditeur ciblé par les commandes du RUBAN : tant qu'un champ
+    // d'en-tête/pied de page est ouvert, c'est LUI (l'en-tête/le pied est
+    // du contenu Markdown ordinaire, simplement dupliqué sur chaque page —
+    // le ruban s'y applique donc tel quel, AUCUNE commande dédiée) ; sinon
+    // l'éditeur principal. Évalué à chaque appel, pas à la définition.
+    const cmd = () => headerMiniEditorRef.current ?? editor;
     // Mode en-tête/pied de page en cours d'édition (voir startHeaderFooterEdit)
     // — remonte dans `EditorStats.headerFooterEditMode` pour piloter le
     // panneau latéral « Variables » de App.tsx.
@@ -843,21 +827,21 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       },
       getHTML: () => editor?.getHTML() ?? "",
       focus: () => editor?.commands.focus(),
-      undo: () => editor?.chain().focus(undefined, { scrollIntoView: false }).undo().run(),
-      redo: () => editor?.chain().focus(undefined, { scrollIntoView: false }).redo().run(),
-      toggleBold: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run(),
-      toggleItalic: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run(),
-      toggleUnderline: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run(),
-      toggleStrike: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleStrike().run(),
-      toggleHeading: (level) => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level }).run(),
-      setParagraph: () => editor?.chain().focus(undefined, { scrollIntoView: false }).setParagraph().run(),
-      toggleBulletList: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBulletList().run(),
-      toggleOrderedList: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleOrderedList().run(),
-      toggleBlockquote: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleBlockquote().run(),
-      toggleCodeBlock: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleCodeBlock().run(),
-      toggleCode: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleCode().run(),
+      undo: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).undo().run(),
+      redo: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).redo().run(),
+      toggleBold: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleBold().run(),
+      toggleItalic: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleItalic().run(),
+      toggleUnderline: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleUnderline().run(),
+      toggleStrike: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleStrike().run(),
+      toggleHeading: (level) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHeading({ level }).run(),
+      setParagraph: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setParagraph().run(),
+      toggleBulletList: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleBulletList().run(),
+      toggleOrderedList: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleOrderedList().run(),
+      toggleBlockquote: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleBlockquote().run(),
+      toggleCodeBlock: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCodeBlock().run(),
+      toggleCode: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCode().run(),
       setCodeBlockLanguage: (language) =>
-        editor?.chain().focus(undefined, { scrollIntoView: false }).updateAttributes("codeBlock", { language }).run(),
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).updateAttributes("codeBlock", { language }).run(),
       setLink: () => {
         if (!editor) return;
         const previous = editor.getAttributes("link").href as string | undefined;
@@ -950,61 +934,67 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           .run();
       },
       insertTable: (rows, cols) =>
-        editor?.chain().focus(undefined, { scrollIntoView: false }).insertTable({ rows, cols, withHeaderRow: true }).run(),
-      addRowBefore: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addRowBefore().run(),
-      addRowAfter: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addRowAfter().run(),
-      deleteRow: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteRow().run(),
-      addColumnBefore: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addColumnBefore().run(),
-      addColumnAfter: () => editor?.chain().focus(undefined, { scrollIntoView: false }).addColumnAfter().run(),
-      deleteColumn: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteColumn().run(),
-      deleteTable: () => editor?.chain().focus(undefined, { scrollIntoView: false }).deleteTable().run(),
-      mergeCells: () => editor?.chain().focus(undefined, { scrollIntoView: false }).mergeCells().run(),
-      splitCell: () => editor?.chain().focus(undefined, { scrollIntoView: false }).splitCell().run(),
-      toggleHeaderRow: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleHeaderRow().run(),
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertTable({ rows, cols, withHeaderRow: true }).run(),
+      addRowBefore: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).addRowBefore().run(),
+      addRowAfter: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).addRowAfter().run(),
+      deleteRow: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).deleteRow().run(),
+      addColumnBefore: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).addColumnBefore().run(),
+      addColumnAfter: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).addColumnAfter().run(),
+      deleteColumn: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).deleteColumn().run(),
+      deleteTable: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).deleteTable().run(),
+      mergeCells: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).mergeCells().run(),
+      splitCell: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).splitCell().run(),
+      toggleHeaderRow: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHeaderRow().run(),
       clearCellContents: () => {
-        if (!editor) return;
-        clearSelectedCellContents(editor);
+        const ed = cmd();
+        if (!ed) return;
+        clearSelectedCellContents(ed);
       },
       setCellBackgroundColor: (color) => {
-        if (!editor) return;
-        applyToSelectedCells(editor, { backgroundColor: color });
+        const ed = cmd();
+        if (!ed) return;
+        applyToSelectedCells(ed, { backgroundColor: color });
       },
       setCellBorder: (sides, css) => {
-        if (!editor) return;
+        const ed = cmd();
+        if (!ed) return;
         const targetSides = sides.length ? sides : (["top", "right", "bottom", "left"] as const);
         const patch: Record<string, unknown> = {};
         for (const side of targetSides) {
           patch[`border${side[0].toUpperCase()}${side.slice(1)}`] = css;
         }
-        applyToSelectedCells(editor, patch);
+        applyToSelectedCells(ed, patch);
       },
       setCellVerticalAlign: (align) => {
-        if (!editor) return;
-        applyToSelectedCells(editor, { verticalAlign: align === "middle" ? "middle" : align });
+        const ed = cmd();
+        if (!ed) return;
+        applyToSelectedCells(ed, { verticalAlign: align === "middle" ? "middle" : align });
       },
       setCellBorderPreset: (preset, css) => {
-        if (!editor) return;
-        applyBorderPreset(editor, preset, css);
+        const ed = cmd();
+        if (!ed) return;
+        applyBorderPreset(ed, preset, css);
       },
       setGridLineBorder: (lines, css) => {
-        if (!editor) return;
+        const ed = cmd();
+        if (!ed) return;
         setGridLineBorder(editor, lines, css);
       },
-      insertHorizontalRule: () => editor?.chain().focus(undefined, { scrollIntoView: false }).setHorizontalRule().run(),
-      insertPageBreak: () => editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "pageBreak" }).run(),
-      setFontFamily: (family) => editor?.chain().focus(undefined, { scrollIntoView: false }).setFontFamily(family).run(),
-      unsetFontFamily: () => editor?.chain().focus(undefined, { scrollIntoView: false }).unsetFontFamily().run(),
-      setFontSize: (size) => editor?.chain().focus(undefined, { scrollIntoView: false }).setFontSize(size).run(),
-      unsetFontSize: () => editor?.chain().focus(undefined, { scrollIntoView: false }).unsetFontSize().run(),
-      setColor: (color) => editor?.chain().focus(undefined, { scrollIntoView: false }).setColor(color).run(),
-      unsetColor: () => editor?.chain().focus(undefined, { scrollIntoView: false }).unsetColor().run(),
-      toggleHighlight: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleHighlight().run(),
-      setTextAlign: (align) => editor?.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(align).run(),
-      toggleSubscript: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleSubscript().run(),
-      toggleSuperscript: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleSuperscript().run(),
-      toggleTaskList: () => editor?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run(),
+      insertHorizontalRule: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setHorizontalRule().run(),
+      insertPageBreak: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "pageBreak" }).run(),
+      setFontFamily: (family) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setFontFamily(family).run(),
+      unsetFontFamily: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetFontFamily().run(),
+      setFontSize: (size) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setFontSize(size).run(),
+      unsetFontSize: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetFontSize().run(),
+      setColor: (color) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setColor(color).run(),
+      unsetColor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetColor().run(),
+      toggleHighlight: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHighlight().run(),
+      setTextAlign: (align) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(align).run(),
+      toggleSubscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSubscript().run(),
+      toggleSuperscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSuperscript().run(),
+      toggleTaskList: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run(),
       clearFormatting: () =>
-        editor?.chain().focus(undefined, { scrollIntoView: false }).unsetAllMarks().unsetFontFamily().unsetFontSize().unsetColor().run(),
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetAllMarks().unsetFontFamily().unsetFontSize().unsetColor().run(),
       getStats: () => ({
         words: editor?.storage.characterCount.words() ?? 0,
         characters: editor?.storage.characterCount.characters() ?? 0,
@@ -1029,28 +1019,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // appliquées en direct — il ne reste qu'à refermer).
         headerFooterCommitRef.current?.();
       },
-      // --- Commandes du champ riche en-tête/pied de page (mini-éditeur) ---
-      hfSetFontFamily: (family) => headerMiniEditorRef.current?.chain().focus().setFontFamily(family).run(),
-      hfUnsetFontFamily: () => headerMiniEditorRef.current?.chain().focus().unsetFontFamily().run(),
-      hfSetFontSize: (size) => headerMiniEditorRef.current?.chain().focus().setFontSize(size).run(),
-      hfUnsetFontSize: () => headerMiniEditorRef.current?.chain().focus().unsetFontSize().run(),
-      hfSetColor: (color) => headerMiniEditorRef.current?.chain().focus().setColor(color).run(),
-      hfUnsetColor: () => headerMiniEditorRef.current?.chain().focus().unsetColor().run(),
-      hfSetTextAlign: (align) => headerMiniEditorRef.current?.chain().focus().setTextAlign(align).run(),
-      hfToggleBold: () => headerMiniEditorRef.current?.chain().focus().toggleBold().run(),
-      hfToggleItalic: () => headerMiniEditorRef.current?.chain().focus().toggleItalic().run(),
-      hfToggleUnderline: () => headerMiniEditorRef.current?.chain().focus().toggleUnderline().run(),
-      hfInsertTable: (rows, cols) =>
-        headerMiniEditorRef.current?.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(),
-      hfAddRowBefore: () => headerMiniEditorRef.current?.chain().focus().addRowBefore().run(),
-      hfAddRowAfter: () => headerMiniEditorRef.current?.chain().focus().addRowAfter().run(),
-      hfDeleteRow: () => headerMiniEditorRef.current?.chain().focus().deleteRow().run(),
-      hfAddColumnBefore: () => headerMiniEditorRef.current?.chain().focus().addColumnBefore().run(),
-      hfAddColumnAfter: () => headerMiniEditorRef.current?.chain().focus().addColumnAfter().run(),
-      hfDeleteColumn: () => headerMiniEditorRef.current?.chain().focus().deleteColumn().run(),
-      hfDeleteTable: () => headerMiniEditorRef.current?.chain().focus().deleteTable().run(),
-      insertTocMarker: () => editor?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
-      generateToc: () => editor?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
+      insertTocMarker: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
+      generateToc: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
       insertFootnote: () => {
         if (!editor) return;
         let maxId = 0;
@@ -1079,18 +1049,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
       },
       insertMermaidDiagram: () =>
-        editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "mermaidDiagram" }).run(),
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "mermaidDiagram" }).run(),
       insertInlineMath: () => {
         const source = window.prompt("Formule LaTeX (en ligne) :", "E = mc^2");
         if (!source) return;
-        editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "inlineMath", attrs: { source } }).run();
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "inlineMath", attrs: { source } }).run();
       },
       insertBlockMath: () => {
         const source = window.prompt("Formule LaTeX (bloc) :", "\\int_0^\\infty e^{-x} dx = 1");
         if (!source) return;
-        editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "blockMath", attrs: { source } }).run();
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "blockMath", attrs: { source } }).run();
       },
-      insertEmoji: (emoji) => editor?.chain().focus(undefined, { scrollIntoView: false }).insertContent(emoji).run(),
+      insertEmoji: (emoji) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent(emoji).run(),
       // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
       insertBookmark: () => {
         if (!editor) return;
@@ -1181,6 +1151,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       };
       repaintCaretRef.current = repaintCaretOnly;
 
+      // En-tête/pied de page : le template est stocké en MARKDOWN dans
+      // `layout.header/footer.text` (sérialisé par le mini-éditeur) mais
+      // le peintre (paintPages.ts) rend du HTML — conversion via le
+      // parseur Markdown de tiptap-markdown, qui traverse aussi le HTML
+      // historique grâce à `html: true`. Retourne une chaîne HTML
+      // (innerHTML) ; vide si template vide.
+      const mdToHtml = (md: string): string => {
+        if (!md) return "";
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        return editor.storage.markdown.parser.parse(md) as string;
+      };
+
       const repaint = () => {
         const canvas = canvasRef.current;
         const liveHost = liveHostRef.current;
@@ -1244,8 +1226,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageHeightPx: geometry.pageHeightPx,
           marginTopPx: geometry.marginTopPx,
           marginBottomPx: geometry.marginBottomPx,
-          header: layout.header,
-          footer: layout.footer,
+          header: { ...layout.header, html: mdToHtml(layout.header.text) },
+          footer: { ...layout.footer, html: mdToHtml(layout.footer.text) },
           context: {
             date: formatTodayForHeaderFooter(),
             filename: documentTitleRef.current,
@@ -1315,13 +1297,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
       };
 
-      // Champ RICHE (2026-10-17) : l'en-tête/pied de page se met à former
-      // comme un mini-document — police/taille/couleur/alignement ET
-      // tableaux, pilotés par le panneau latéral (voir
-      // `HeaderFooterPanel.tsx` et les méthodes `hf*` du handle). Le texte
-      // simple historique reste valide (il est encadré d'un <p> à l'édition).
-      const looksHtml = /<\/?[a-z][^>]*>/i.test(template);
-      const initialContent = looksHtml ? template : template ? `<p>${escapeHtmlText(template)}</p>` : "";
+      // Champ RICHE : l'en-tête/pied de page est du contenu MARKDOWN
+      // ordinaire, simplement dupliqué sur chaque page — le mini-éditeur
+      // embarque l'extension `Markdown` de tiptap-markdown : le template
+      // (stocké en Markdown dans `layout.header/footer.text`) est parsé
+      // tel quel à l'ouverture (le HTML historique passe aussi grâce à
+      // `html: true`), et la frappe est re-sérialisée en Markdown à chaque
+      // mise à jour. Le RUBAN principal s'applique au champ via le routage
+      // `cmd()` — aucune commande dédiée.
+      const initialContent = template;
 
       const host = document.createElement("div");
       host.className = "xmd-header-footer-edit xmd-header-footer-rich";
@@ -1346,6 +1330,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             TableRow,
             TableCell,
             TableHeader,
+            Markdown.configure({ html: true }),
           ],
           content: initialContent,
           editorProps: { attributes: { class: "xmd-hf-prosemirror" } },
@@ -1365,7 +1350,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const field = isHeader ? "header" : "footer";
       mini.on("update", () => {
         const current = layoutRef.current;
-        onLayoutChangeRef.current({ ...current, [field]: { ...current[field], text: mini.getHTML() } });
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const md: string = mini.storage.markdown.getMarkdown();
+        onLayoutChangeRef.current({ ...current, [field]: { ...current[field], text: md } });
       });
 
       // Recalage du champ sur la zone peinte : l'ouverture du panneau
