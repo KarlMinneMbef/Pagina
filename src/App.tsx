@@ -439,6 +439,7 @@ function App() {
           <TablePropertiesPanel
             actions={actions}
             disabled={!activeTab}
+            shape={stats.tableSelectionShape}
             onClose={() => setTablePanelOpen(false)}
           />
         )}

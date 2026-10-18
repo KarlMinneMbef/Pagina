@@ -103,6 +103,34 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Fonctionnalités du panneau « Tableau » RÉCUPÉRÉES (2026-10-17, fin de
+  journée)** — retour utilisateur après la refonte sobre : "on a perdu
+  beaucoup de côtés sur ce panneau, il faut récupérer les fonctionnalités
+  perdues". La présentation sobre est conservée, TOUT ce que l'ancien
+  panneau savait faire est de retour, restylé avec la palette
+  `--tp-*` (aucun vert) :
+  - **Lignes : 4 boutons** (Au-dessus, En dessous, Supprimer, **En-tête**
+    = `toggleHeaderRow`, restauré).
+  - **Cellules : 4 boutons** (Fusionner, Diviser, Vider, **Fond** =
+    nuancier ColorPicker de fond de cellule avec « Automatique » =
+    transparent, pastille damier, restauré).
+  - **Section Alignement vertical** restaurée (Haut/Milieu/Bas, icônes
+    `IconValign*` DÉRIVÉES — aucun tracé fourni par la maquette pour ces
+    trois commandes, même grille/épaisseur que les autres).
+  - **Section Bordures restaurée** : présets Tout/Extérieur/Intérieur/
+    Aucune, schéma SVG cliquable des lignes de grille (extérieures ET
+    internes selon la sélection, `setGridLineBorder`), champs
+    Style/Épaisseur/Couleur, Retirer/Appliquer, note de repli HTML.
+  - Le panneau reprend sa prop `shape` (`stats.tableSelectionShape`),
+  largeur par défaut revenue à 260px. Piège de sérialisation : les
+  bordures s'écrivent `border-width:…; border-style:…; border-color:…`
+  (pas `border-top:`) — les regex de test doivent être larges
+  (`/border/`). Vérifié 18/18 par CDP sur fichier jetable : structure
+  (5 sections, 14 boutons + présets + schéma + champs), En-tête
+  (bascule → HTML puis undo → GFM), Fond (background-color), alignement
+  vertical (vertical-align:middle), préset Tout (bordures au .md),
+  schéma + Appliquer/Retirer, commandes de base inchangées. `tsc`,
+  build, 38 tests verts.
 - **Présentation du panneau latéral « Tableau » refaite (2026-10-17,
   maquette sobre gris clair)** — FORME UNIQUEMENT, aucun handler changé :
   en-tête sobre (titre « Tableau » seul + ✕, aucun texte « Contextuel »),
