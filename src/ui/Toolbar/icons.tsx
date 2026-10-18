@@ -437,3 +437,34 @@ export function IconTableHeader({ size, className }: IconProps) {
     </Svg24>
   );
 }
+
+/** Alignement vertical de cellule — AUCUN tracé fourni par la maquette
+ * pour ces trois commandes : dérivation minimale (cadre de cellule +
+ * barre de texte pleine largeur positionnée en haut/au milieu/en bas),
+ * même grille et même épaisseur que les autres tracés. */
+export function IconValignTop({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="1" />
+      <rect x="6.5" y="7" width="11" height="2.4" rx="1" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
+
+export function IconValignMiddle({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="1" />
+      <rect x="6.5" y="10.8" width="11" height="2.4" rx="1" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
+
+export function IconValignBottom({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="4" y="5" width="16" height="14" rx="1" />
+      <rect x="6.5" y="14.6" width="11" height="2.4" rx="1" fill="currentColor" stroke="none" />
+    </Svg24>
+  );
+}
