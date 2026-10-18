@@ -16,8 +16,6 @@ import { useEffect, useState } from "react";
 import type { ToolbarActions } from "../Toolbar/Toolbar";
 import type { GridLine } from "../Editor/MarkdownEditor";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
-import { useHorizontalResize } from "../ResizeHandle/useHorizontalResize";
-import { ResizeHandle } from "../ResizeHandle/ResizeHandle";
 import {
   IconClearCell,
   IconColDelete,
@@ -139,11 +137,10 @@ export function TablePropertiesPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style, width, color]);
 
-  const { width: panelWidth, onHandleMouseDown } = useHorizontalResize(260, { min: 220, max: 520, anchor: "right" });
+
 
   return (
-    <aside className="tp-panel" style={{ width: panelWidth }}>
-      <ResizeHandle side="left" onMouseDown={onHandleMouseDown} />
+    <div className="tp-panel">
       <header className="tp-header">
         <span className="tp-title">Tableau</span>
         <button
@@ -368,7 +365,7 @@ export function TablePropertiesPanel({
           Supprimer le tableau
         </button>
       </div>
-    </aside>
+    </div>
   );
 }
 

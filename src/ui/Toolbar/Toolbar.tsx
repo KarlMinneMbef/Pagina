@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import type { GridLine } from "../Editor/MarkdownEditor";
 import { FONT_SIZE_STEPS } from "../Editor/MarkdownEditor";
+import { TableSizePicker } from "./TableSizePicker";
 import {
   IconAlignCenter,
   IconAlignJustify,
@@ -56,7 +57,6 @@ import {
   IconOrderedList,
   IconPageBreak,
   IconPaste,
-  IconTable,
   IconTaskList,
   IconTocMarker,
   IconTocRefresh,
@@ -794,87 +794,6 @@ function HeadingPicker({
 }
 
 
-const TABLE_PICKER_MAX_COLS = 8;
-const TABLE_PICKER_MAX_ROWS = 6;
-
-/** Sélecteur de taille de tableau façon Word : une grille survolée, la
- * portion en haut à gauche du pointeur se surligne, un libellé "R × C"
- * indique la taille qui serait insérée, cliquer insère exactement cette
- * taille. Le DÉCLENCHEUR est un bouton de type A (grande icône Tableau +
- * libellé), façon groupe "Tableaux" de l'onglet Insertion. */
-function TableSizePicker({
-  disabled,
-  onPick,
-}: {
-  disabled: boolean;
-  onPick: (rows: number, cols: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [hover, setHover] = useState<{ rows: number; cols: number } | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
-
-  const closeAndReset = () => {
-    setOpen(false);
-    setHover(null);
-  };
-
-  return (
-    <div className="tb-table-picker tb-heading-picker" ref={rootRef}>
-      <button
-        type="button"
-        className="tb-big-btn tb-btn-with-caret"
-        disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
-        title="Tableau — choisir la taille dans la grille"
-      >
-        <span className="tb-big-btn-icon">
-          <IconTable size={28} />
-        </span>
-        <span className="tb-big-btn-label">Tableau</span>
-        <span className="tb-swatch-caret">▾</span>
-      </button>
-      {open && (
-        <div className="tb-table-size-menu" onMouseLeave={() => setHover(null)}>
-          <div className="tb-table-size-grid">
-            {Array.from({ length: TABLE_PICKER_MAX_ROWS }, (_, r) =>
-              Array.from({ length: TABLE_PICKER_MAX_COLS }, (_, c) => {
-                const rows = r + 1;
-                const cols = c + 1;
-                const active = !!hover && rows <= hover.rows && cols <= hover.cols;
-                return (
-                  <button
-                    key={`${rows}x${cols}`}
-                    type="button"
-                    className={`tb-table-size-cell${active ? " tb-table-size-cell-active" : ""}`}
-                    onMouseEnter={() => setHover({ rows, cols })}
-                    onClick={() => {
-                      onPick(rows, cols);
-                      closeAndReset();
-                    }}
-                  />
-                );
-              })
-            )}
-          </div>
-          <div className="tb-table-size-label">
-            {hover ? `${hover.rows} × ${hover.cols}` : "Taille du tableau"}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Menu d'insertion d'emoji — grille plutôt qu'une liste verticale (les
  * libellés textuels des autres menus n'ont pas de sens ici, l'emoji EST

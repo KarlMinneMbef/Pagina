@@ -31,6 +31,25 @@ export const SRC_POS_ATTR = "data-src-pos";
 export const HEADER_TEMPLATE_ATTR = "data-header-template";
 export const FOOTER_TEMPLATE_ATTR = "data-footer-template";
 
+/** Construit le contenu affiché d'une zone en-tête/pied de page : texte
+ * simple historique (texte substitué, aucun HTML interprété) ou contenu
+ * RICHE (2026-10-17 — le champ d'édition est un mini-éditeur Tiptap,
+ * `layout.header.text` peut contenir du HTML : mises en forme,
+ * tableaux…). Les variables `{{page}}` etc. sont substituées dans les
+ * DEUX cas. Retourne un élément (pas une chaîne) pour ne jamais passer
+ * par `innerHTML` sur du texte simple non échappé. */
+function buildHeaderFooterContent(template: string, ctx: HeaderFooterContext): HTMLElement {
+  const resolved = resolveHeaderFooterText(template, ctx);
+  const wrap = document.createElement("div");
+  wrap.className = "xmd-header-footer-content";
+  if (/<\/?[a-z][^>]*>/i.test(resolved)) {
+    wrap.innerHTML = resolved;
+  } else {
+    wrap.textContent = resolved;
+  }
+  return wrap;
+}
+
 export interface PaintPagesOptions {
   pageHeightPx: number;
   marginTopPx: number;
@@ -110,7 +129,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       if (header.showOnFirstPage || !isFirstPage) {
         const headerEl = document.createElement("div");
         headerEl.className = "xmd-page-header";
-        headerEl.textContent = resolveHeaderFooterText(header.text, fullContext);
+        headerEl.appendChild(buildHeaderFooterContent(header.text, fullContext));
         headerEl.setAttribute(HEADER_TEMPLATE_ATTR, header.text);
         headerEl.title = "Cliquer pour modifier l'en-tête";
         page.appendChild(headerEl);
@@ -140,7 +159,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       if (footer.showOnFirstPage || !isFirstPage) {
         const footerEl = document.createElement("div");
         footerEl.className = "xmd-page-footer";
-        footerEl.textContent = resolveHeaderFooterText(footer.text, fullContext);
+        footerEl.appendChild(buildHeaderFooterContent(footer.text, fullContext));
         footerEl.setAttribute(FOOTER_TEMPLATE_ATTR, footer.text);
         footerEl.title = "Cliquer pour modifier le pied de page";
         page.appendChild(footerEl);

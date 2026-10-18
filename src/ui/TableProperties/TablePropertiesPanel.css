@@ -14,13 +14,13 @@
   --tp-btn-active: #c5c9ca;
   --tp-danger: #b3261e;
 
-  position: relative;
+  /* Contenu monté dans `ContextualPanelHost` (2026-10-17) : c'est l'hôte
+   * qui fournit le châssis (fond, bordure, largeur, onglets). */
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--tp-bg);
+  flex: 1;
+  min-height: 0;
   color: var(--tp-text);
-  border-left: 1px solid var(--tp-line);
   font-family: Arial, sans-serif;
   font-size: 12px;
   overflow: hidden;
