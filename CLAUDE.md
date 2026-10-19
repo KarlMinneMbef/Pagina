@@ -112,6 +112,52 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Audit de code après la grosse session de refonte du 2026-10-17
+  (2026-10-19)**, demandé explicitement par l'utilisateur ("j'ai fait pas
+  mal de modification tu peux faire un audit, pour faire un point") après
+  le lot de changements ruban/panneaux contextuels/en-tête-pied riche
+  documenté juste en dessous. Vérifications techniques : `git status`
+  propre (24 commits locaux d'avance sur `origin`, rien en attente),
+  `npx tsc --noEmit` propre, `npm test` (Vitest) 38/38 verts, `npm run
+  build` propre (seul l'avertissement de taille de chunk préexistant,
+  Tiptap/mermaid), `cargo check` propre.
+  - **Audit structurel délégué à un agent** (balayage code mort,
+    cohérence `ToolbarActions`/`MarkdownEditorHandle`/`App.tsx`/
+    `PaginaLight.tsx`, exports/CSS orphelins, `any`/`@ts-expect-error`
+    récents, couverture de tests) : **résultat très propre**. Aucun hook
+    de debug oublié (`window.__paginaEditor` etc.), aucun `console.log`
+    résiduel, aucun `TODO`/`FIXME`, les composants que CLAUDE.md dit
+    supprimés (`ContextualRibbonPanel`, `TableBorderDialog`,
+    `VariablePicker`/`HEADER_FOOTER_VARIABLES`, `src/ui/PrintPreview/`)
+    sont bien absents du code (pas seulement désactivés). Les 59 méthodes
+    de `ToolbarActions` sont exactement répercutées dans
+    `MarkdownEditorHandle`/`App.tsx`/`PaginaLight.tsx` (3 stubs no-op
+    volontaires et documentés dans PaginaLight pour Mermaid/LaTeX,
+    absents de la version légère). Aucun export de panneau/icône inutilisé
+    (`ContextualPanelHost`, `HeaderFooterPanel`, `TablePropertiesPanel`,
+    les 50 icônes de `icons.tsx`). Aucun `any`/`@ts-expect-error` dans le
+    code du nouveau lot (ruban, panneaux) — les seuls présents dans tout le
+    projet sont dans les extensions ProseMirror/markdown-it préexistantes
+    (API amont non typées) ou dans `MarkdownEditor.tsx` (accès à
+    `storage.markdown`, pattern déjà établi).
+  - **Deux reliquats mineurs trouvés et corrigés** : CSS mort dans
+    `Toolbar.css` (`.tb-stack-select`/`.tb-heading-option-token`, restes du
+    sélecteur de langage déplacé vers la pastille flottante et de l'ancien
+    menu Variable supprimé), et un commentaire dans `App.tsx` citant encore
+    `TableBorderDialog` par son nom alors que ce dialogue n'existe plus
+    (reformulé). `npx tsc --noEmit` revérifié propre après ces deux
+    retouches.
+  - **Écart de couverture de tests confirmé mais DÉJÀ connu** (pas une
+    découverte) : aucun test pour l'éditeur riche d'en-tête/pied de page,
+    `ContextualPanelHost`, le schéma de bordures/lignes de grille du
+    panneau Tableau, Signet/Renvoi, la pastille de langage de bloc de code,
+    ni les catégories du sélecteur d'emoji — CLAUDE.md note déjà que
+    plusieurs de ces lots ont été construits explicitement "sans séance de
+    tests" sur demande de l'utilisateur ; le seul dossier de tests du
+    projet reste `src/ui/FileExplorer/__tests__/` (7 fichiers, chantier
+    explorateur). À garder en tête si l'un de ces panneaux montre un jour
+    un comportement inattendu — pas de filet de sécurité automatisé dessus
+    pour l'instant.
 - **Fenêtre Emoji refaite (2026-10-17, demande : « refaire la fenêtre
   emoji, mettre le bouton avec Éléments sans le cadre sur le bouton »)** :
   - L'ancienne liste plate de 30 émojis (menu 6 colonnes) est
