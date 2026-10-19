@@ -206,27 +206,6 @@
   margin-left: 1px;
 }
 
-/* Sélecteur posé dans une pile type B (ex. "Langage…" du bloc de code),
- * même hauteur/apparence qu'un bouton de pile. Padding droit suffisant
- * pour la flèche native du select + largeur minimale pour que le plus long
- * langage de la liste (javascript/typescript) ne soit jamais coupé. */
-.tb-stack-select {
-  background: transparent;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
-  padding: 3px 20px 3px 6px;
-  font-size: 11px;
-  font-family: Arial, sans-serif;
-  min-width: 88px;
-  max-width: 118px;
-}
-
-.tb-stack-select option {
-  color: #343334;
-  background: #ffffff;
-}
-
 /* --- Boutons lettrés (exceptions admises : G/I/S/x²/x₂/Aa/A) --- */
 .tb-letter {
   font-size: 13px;
@@ -524,14 +503,6 @@
 
 .tb-heading-option:hover {
   background: #dfeff8;
-}
-
-.tb-heading-option-token {
-  font-weight: normal;
-  font-family: "Courier New", monospace;
-  font-size: 11px;
-  color: #6b6b69;
-  margin-left: 4px;
 }
 
 /* Fenêtre Emoji (refaite 2026-10-17, groupe « Panneau ») : popup à

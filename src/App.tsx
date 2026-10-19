@@ -61,8 +61,7 @@ function App() {
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [headingStylesOpen, setHeadingStylesOpen] = useState(false);
   // Panneau latéral contextuel de mise en forme de tableau (voir
-  // TablePropertiesPanel.tsx) — remplace l'ancienne boîte de dialogue
-  // modale `TableBorderDialog`. S'ouvre automatiquement au FRONT MONTANT de
+  // TablePropertiesPanel.tsx). S'ouvre automatiquement au FRONT MONTANT de
   // `stats.insideTable` (même principe que la bascule d'onglet ruban
   // "Tableau" dans Toolbar.tsx) ; une fermeture manuelle n'est pas annulée
   // tant que le curseur reste dans le même tableau.
