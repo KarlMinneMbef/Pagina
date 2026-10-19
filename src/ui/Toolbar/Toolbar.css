@@ -461,6 +461,16 @@
   cursor: default;
 }
 
+/* Marque/option active sous le curseur (Gras, alignement, type de liste...),
+ * comme Word — accent Prairie (couleur MBEF des éléments actifs). */
+.tb-btn-icon-active {
+  background: #24ac6e;
+  color: #ffffff;
+}
+.tb-btn-icon-active:hover:not(:disabled) {
+  background: #1f9961;
+}
+
 .tb-heading-picker {
   position: relative;
 }

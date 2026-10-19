@@ -112,6 +112,286 @@ projets"). Constats et actions :
 ## État d'avancement par fonctionnalité
 
 ### Fait et fonctionnel
+- **Débordement de page d'un sommaire généré (2026-10-19/20)**, remonté par
+  l'utilisateur ("dans un sommaire il déborde de la pages tu peut
+  vérifier?"). Confirmé par mesure directe (`getBoundingClientRect()`) : un
+  sommaire généré trop long débordait le bas de sa page de plus de 1600px,
+  sans jamais être réparti sur la page suivante. **Cause** : la pagination
+  (`paintPages.ts`) ne découpe le document qu'entre BLOCS DE PREMIER NIVEAU
+  — un sommaire généré est un SEUL bloc (`bulletList`) ; s'il est plus haut
+  que l'espace restant sur la page, il ne peut pas être coupé en deux et
+  déborde purement et simplement (même limite qu'un très long tableau ou
+  un très long paragraphe — pas spécifique au sommaire).
+  - **Fix, accepté comme solution PARTIELLE mais suffisante en pratique** :
+    une liste (`bulletList`/`orderedList`/`taskList`, nouvelle constante
+    partagée `LIST_NODE_NAMES` dans `paintPages.ts`) est désormais paginée
+    **item par item** (nouvelle fonction `collectListItemUnits` +
+    restructuration de la boucle principale de `paintPages`), pas comme un
+    bloc unique — elle peut donc se couper ENTRE deux de ses items de
+    premier niveau pour passer à la page suivante, comme n'importe quel
+    autre contenu. **Limite acceptée, documentée en commentaire** : la
+    coupure se fait seulement ENTRE deux items de PREMIER niveau d'une
+    liste, jamais À L'INTÉRIEUR d'un item ni de sa sous-liste imbriquée —
+    un item (avec tout son sous-arbre, ex. un titre H1 avec des dizaines de
+    sous-titres nichés) plus haut qu'une page entière déborde quand même,
+    comme n'importe quel bloc atomique trop grand. Un découpage récursif
+    à l'intérieur même d'un item n'a pas été fait (complexité/risque
+    disproportionnés pour un gain marginal — la plupart des sommaires
+    réels ont plusieurs titres de premier niveau, pas un seul titre
+    géant).
+  - **Pièges de compatibilité résolus** : trois autres fichiers du module
+    de pagination supposaient "un bloc de premier niveau = un seul clone
+    portant `SRC_POS_ATTR`, de la taille du bloc entier" — tous les trois
+    corrigés pour reconnaître la nouvelle granularité "item de liste" :
+    - `caretPosition.ts` (`computeCaretScreenPosition`) : calculait le
+      "bloc contenant la position" via `resolved.before(1)` (toujours
+      l'ancêtre de PROFONDEUR 1, donc la liste ENTIÈRE) — désormais, si cet
+      ancêtre est une liste (`LIST_NODE_NAMES`), c'est l'ITEM (profondeur 2,
+      `resolved.before(2)`) qui est utilisé, puisque c'est LUI qui porte
+      `SRC_POS_ATTR` maintenant. Sans ce correctif, le curseur dessiné
+      aurait disparu dès qu'il se trouve dans N'IMPORTE QUELLE liste, même
+      une liste courte jamais coupée entre deux pages.
+    - `selectionHighlight.ts` (`computeSelectionRects`) : la boucle
+      générique sur les blocs de premier niveau cherchait le clone par la
+      position de la LISTE entière — remplacée par une récursion dans les
+      items d'une liste (même principe que `caretPosition.ts`), sinon la
+      surbrillance de sélection aurait disparu dans n'importe quelle liste.
+    - Le rendu de chaque fragment (`paintPages.ts`) clone un wrapper
+      `<ul>`/`<ol>` NEUF (même balise/attributs que l'original — préserve
+      puces/numérotation/`data-type="taskList"`) contenant les clones des
+      SEULS items qui reviennent à cette page ; **chaque `<li>` cloné porte
+      SON PROPRE `SRC_POS_ATTR`** (pas le wrapper) — c'est ce qui permet au
+      reste du module de continuer à fonctionner SANS adaptation
+      supplémentaire (clic, glisser-sélection) : un item cloné correspond
+      toujours à UN SEUL nœud, exactement comme n'importe quel bloc de
+      premier niveau avant cette fonctionnalité.
+  - **`resolveClickPosition.ts` n'a nécessité AUCUN changement** : il
+    retrouve déjà le clone par recherche du plus proche ancêtre portant
+    `SRC_POS_ATTR` (`findClonedBlock`), qui tombe désormais naturellement
+    sur le `<li>` plutôt que sur la liste — comportement correct sans
+    modification.
+  - **Vérification PARTIELLE seulement, piège méthodologique important** :
+    `npx tsc --noEmit` et `npm test` (38/38) restent propres. La
+    vérification VISUELLE en conditions réelles (Playwright/CDP) s'est
+    heurtée à une panne plus grave que la staleness HMR déjà documentée
+    plusieurs fois : dans la session `tauri dev` en cours (ouverte et
+    modifiée de très nombreuses fois dans la même journée), **AUCUNE
+    repaint ne se déclenchait plus du tout**, même pour une VRAIE frappe
+    clavier réelle (pas seulement pour des commandes appelées via le hook
+    de debug `window.__paginaEditor`) : `canvas.innerHTML.length` restait
+    identique au caractère près avant/après insertion d'un paragraphe
+    canari, et le nombre de pages affiché ne changeait jamais quelle que
+    soit la quantité de contenu ajoutée. Un `page.reload()` (recharge
+    frontend) n'a pas suffi à corriger ça cette fois — contrairement aux
+    occurrences précédentes de staleness (boutons du ruban) qui se
+    corrigeaient avec un simple rechargement. **Vérifié malgré tout, par
+    inspection DIRECTE du document ProseMirror** (pas du rendu) : la
+    structure générée par `generateToc()` est correcte (ex. avec un
+    document ayant 1 titre niveau-1 existant + 20 nouveaux titres
+    niveau-1 ajoutés à la fin, le sommaire généré a bien 6+ items DIRECTS
+    à la racine de son `bulletList`, pas tout imbriqué sous un seul
+    parent) — donc le problème rencontré est dans le PIPELINE DE REPAINT
+    de cette session précise, pas dans la logique de pagination
+    elle-même. **À refaire dès qu'un redémarrage COMPLET de `tauri dev`
+    (pas juste un rechargement de page) aura eu lieu** : générer un
+    sommaire avec suffisamment de titres de premier niveau pour dépasser
+    une page, confirmer qu'il se répartit sur plusieurs pages sans
+    déborder, et revérifier curseur/sélection dans une liste courte restée
+    sur une seule page (non régression).
+  - Hook de debug temporaire (`window.__paginaEditor`) et tous les scripts
+    de test jetables utilisés pendant cette investigation retirés/supprimés.
+- **Ruban réactif à la mise en forme sous le curseur, façon Word (2026-10-19)**,
+  sur demande explicite de l'utilisateur ("quand je sur sur [suis sur] du
+  texte gras j'ai le bouton gras activé, quand je suis sur du texte j'ai la
+  police d'afficher et la taille") — jusqu'ici seul le style de bloc
+  (Normal/Titre 1-6, `activeBlockStyle`) se mettait à jour automatiquement ;
+  les boutons Gras/Italique/Souligné/Barré/Indice/Exposant/Code en
+  ligne/Surlignage, les boutons d'alignement, les boutons de liste/citation,
+  et les sélecteurs Police/Taille restaient figés quelle que soit la
+  sélection.
+  - **`EditorStats` étendu** (`MarkdownEditor.tsx`) : `activeMarks`
+    (8 booléens, `editor.isActive("bold")` etc.), `activeAlign`
+    (`"left"|"center"|"right"|"justify"|null`), `activeList`
+    (`"bullet"|"ordered"|"task"|"blockquote"|null`), `activeFontFamily`
+    (attribut `fontFamily` de la marque `textStyle`, `null` si absent),
+    `activeFontSizePt` (réutilise `currentFontSizePt`, qui existait déjà
+    pour Agrandir/Réduire — replie sur 12pt). Calculés par 4 nouvelles
+    fonctions (`getActiveMarks`/`getActiveAlign`/`getActiveListType`/
+    `currentFontFamily`) et ajoutés aux 5 points d'émission de stats déjà
+    en place pour `activeBlockStyle` (même convention : `onUpdate`,
+    `getStats()`, `onSelectionUpdate`, et les deux émissions liées au
+    repaint/suivi de page — un oubli à un seul des 5 aurait laissé le
+    ruban "en retard" uniquement dans ce cas précis, piège déjà identifié
+    pour `activeBlockStyle`/`insideTable` par le passé).
+  - **`Toolbar.tsx`** : nouvelles props (toutes avec une valeur par défaut
+    neutre, comme `activeBlockStyle`) répercutées sur les boutons concernés
+    via un nouveau helper `activeBtnClass(active)` (classe
+    `tb-btn-icon-active` en plus de `tb-btn-icon`) et sur les deux
+    `<select>` Police/Taille, rendus CONTRÔLÉS (`value={...}` au lieu de
+    `defaultValue=""`) — si la police/taille de la sélection ne correspond à
+    AUCUNE option de la liste fixe, le sélecteur retombe sur le placeholder
+    plutôt que d'afficher une valeur fausse.
+  - **`App.tsx`/`PaginaLight.tsx`** (même contrat `EditorStats`, doivent
+    rester synchronisés) : `EMPTY_STATS`/`STATS_INITIALES` complétés avec
+    les valeurs neutres, nouvelles props transmises au `<Toolbar>`.
+  - **Couleur de l'état actif** : accent Prairie (#24ac6e, couleur MBEF des
+    éléments actifs) — cohérent avec l'onglet actif/les cases cochées
+    ailleurs dans l'app, mais DIFFÉRENT du blanc+vert Sapin déjà utilisé par
+    la galerie de styles (`tb-style-btn-active`) — choix délibéré : les deux
+    conventions coexistaient déjà dans Word (bouton de ruban simple en
+    bleu accentué, galerie de styles en blanc) sans qu'aucune règle commune
+    n'ait été demandée par l'utilisateur ici.
+  - **Vérifié par Playwright/CDP** sur le document réel
+    `GUIDE-NF-C-15-100-2024-VERSION-ANNOTEE-VERIFIEE.md` (texte de test
+    "demotest" tapé en fin de document, jamais sauvegardé, annulé
+    intégralement par `Ctrl+Z` en boucle puis confirmé : onglet sans point
+    "non enregistré", texte de test absent de la page) : bouton Gras
+    inactif avant toggle, actif après toggle sur la sélection, actif avec un
+    simple curseur dans le mot (sans sélection), inactif avec le curseur
+    replacé hors du mot ; sélecteur "Taille" affichant bien `18pt` après
+    l'avoir choisi. `npx tsc --noEmit` propre, `npm test` 38/38 verts.
+- **Correctif : impossible de changer la couleur/le style de bordure via le
+  schéma interactif (2026-10-19)**, remonté par l'utilisateur ("je n'arrive
+  plus à changer couleur et forme" — en précisant que la suppression du
+  bouton "Appliquer" était volontaire, pas le bug à chercher). Causé par le
+  **même piège déjà documenté trois fois dans ce fichier** (glisser de
+  fenêtre, panneau `ColorPicker`, menu "Variable" d'en-tête/pied de page) :
+  les groupes SVG cliquables du schéma de bordure (`<g className="tp-bd-
+  edge-group">`, `TablePropertiesPanel.tsx`, `BorderDiagram`) n'avaient
+  **aucun garde `onMouseDown={(e) => e.preventDefault()}`**, contrairement
+  au panneau `ColorPicker` qui, lui, l'a déjà (ajouté plus tôt dans cette
+  même session pour exactement ce problème). Un clic RÉEL de souris émet
+  `mousedown` AVANT `click` — ce `mousedown` fait perdre le focus DOM de
+  l'éditeur invisible, ce qui vide la sélection de cellule(s) en cours
+  avant même que `onClick`/`toggleLine` ne s'exécute : le clic sur une
+  ligne du schéma retombait alors sur une sélection vide, sans effet
+  visible — exactement le symptôme "je n'arrive plus à changer couleur et
+  forme" (le changement de Style/Couleur se réapplique bien aux lignes
+  actives via l'effet `[style, width, color]`, mais si la première
+  activation d'une ligne n'a jamais pris, il n'y a toujours aucune ligne
+  active à réappliquer quoi que ce soit).
+  - **Piège de méthode de test rencontré pendant le diagnostic** : mes
+    scripts de test Playwright utilisaient `element.dispatchEvent(new
+    MouseEvent("click", {bubbles:true}))` — qui ne simule PAS un vrai clic
+    de souris (aucun `mousedown` préalable émis). Résultat : ces tests
+    passaient tous avec succès (poser une bordure, changer le style,
+    changer la couleur, tout fonctionnait "en synthétique"), masquant
+    totalement le bug réel — qui ne se manifeste QUE sur un vrai
+    `mousedown`+`click`. **À RETENIR** : pour tester tout composant
+    interactif qui agit sur la sélection de l'éditeur (menu, panneau,
+    schéma cliquable...), ne jamais se contenter d'un `dispatchEvent`
+    `click` seul — ce type de test ne peut PAS détecter cette classe de
+    bug, qui est pourtant déjà survenue 4 fois dans ce projet.
+  - **Fix** : ajout de `onMouseDown={(e) => e.preventDefault()}` sur le
+    `<g>` de chaque ligne du schéma, même remède que pour `ColorPicker`.
+  - **Découverte annexe pendant le diagnostic, sans lien avec le bug** : le
+    fichier de test jetable "Nouveau document.md" du dossier de travail
+    de l'utilisateur porte déjà, réellement enregistré sur disque, des
+    bordures `3px solid` sur une cellule de tableau — confirmé par lecture
+    directe du fichier (pas un résidu de test, un contenu réel déjà
+    présent). Non modifié (lecture seule pendant l'enquête).
+  - `npx tsc --noEmit` propre, 38 tests Vitest verts. Script de
+    vérification final nettoyé, hook de debug temporaire
+    (`window.__paginaEditor`) retiré du code source.
+- **Redimensionnement de colonne de tableau à la souris (2026-10-19)**, sur
+  demande explicite de l'utilisateur après avoir remarqué que "la sélection
+  des bordures pour réduire ou agrandir la taille des colonnes ou lignes"
+  ne marchait pas — diagnostic confirmé : cette fonction n'a en réalité
+  **jamais** fonctionné dans Pagina, pour une raison structurelle (la vraie
+  zone éditable ProseMirror est invisible/hors écran — `.xmd-live-editor-
+  host`, `position: fixed; left: -5000px` — la souris de l'utilisateur ne
+  la survole donc jamais, et la poignée native `ColumnResizing` de
+  `prosemirror-tables` n'apparaît que sur SURVOL de la vraie zone
+  éditable). Confirmé en regardant comment le projet de référence
+  CasualOffice/docs (`../pagina-docx-engine`) contourne exactement le même
+  problème structurel : ils ne s'appuient PAS non plus sur le plugin
+  natif — ils peignent leurs PROPRES poignées directement dans la couche
+  visible (`layout-painter/renderTable.ts`) et gèrent le glisser à la main
+  dans `PagedEditor.tsx` (mousedown sur la poignée → suivi visuel pendant
+  `mousemove` → une seule vraie transaction ProseMirror au `mouseup`).
+  **Repris pour la seule largeur de COLONNE** (la hauteur de LIGNE est
+  notée en suite logique plus bas, pas encore faite — notre schéma de
+  ligne de tableau n'a aujourd'hui aucun attribut `height`, contrairement
+  à CasualOffice qui en a un).
+  - **Poignées peintes** (`paintPages.ts`, `injectColumnResizeHandles`) :
+    à chaque frontière de colonne, un petit `<div>` (6px de large,
+    `cursor: col-resize`) ajouté dans la couche peinte, positionné en
+    mesurant les éléments `<col>` du tableau ORIGINAL (déjà attaché au
+    document invisible, donc mesurable) — PAS la première ligne de
+    cellules, qui donnerait de fausses frontières dès qu'une cellule
+    fusionnée (`colspan`) apparaît ailleurs dans le tableau. `.tableWrapper`
+    (généré par `Table.configure({resizable:true})`) passe à
+    `position: relative` pour que ces poignées (position:absolute)
+    s'alignent dessus plutôt que sur un ancêtre positionné plus haut dans
+    la page. Exclues explicitement de `@media print` (même piège déjà
+    rencontré une fois avec `.tbar` — ajouté dès l'écriture cette fois,
+    pas après coup).
+  - **Glisser géré dans `MarkdownEditor.tsx`**, même effet que le
+    glisser-sélection de cellules existant (`onMouseDown`/`onMouseMove`/
+    `onMouseUp` sur le canvas peint) : au `mousedown` sur une poignée,
+    mesure la largeur de départ via le `<col>` de la table ORIGINALE
+    (`view.nodeDOM(tablePos)`) ; au `mousemove`, ne déplace QUE
+    visuellement la poignée (`style.left`, converti écran→logique via
+    `/ zoomRef.current` — sans ça, glisser à 150% de zoom déplacerait la
+    poignée 1,5× trop vite) ; au `mouseup`, UNE seule vraie transaction
+    (`applyColumnWidth`, nouvelle fonction utilisant `TableMap` — même
+    outil déjà utilisé par `applyBorderPreset`/`setGridLineBorder`) pose
+    la largeur sur l'attribut `colwidth` de chaque cellule qui touche
+    cette colonne (déduplique les cellules vues deux fois via un
+    `rowspan`, gère le bon index local si la cellule est elle-même
+    fusionnée horizontalement via `colspan`). `colwidth` est un attribut
+    DÉJÀ existant sur nos cellules (hérité de `@tiptap/extension-table-
+    cell` par `TableCellStyle.ts`, jamais exploité jusqu'ici) — aucun
+    nouveau schéma à écrire, juste une nouvelle façon de le renseigner.
+  - **Piège méthodologique rencontré PENDANT la vérification, encore le
+    même que d'habitude** : le tout premier test de glisser réel
+    (`page.mouse.down/move/up` de Playwright, pas un simple clic) n'a
+    RIEN déplacé du tout — poignée immobile, `colwidth` resté `null`.
+    Après un redémarrage COMPLET et propre de `tauri dev` (les modifs de
+    `MarkdownEditor.tsx` dans cette même session avaient déclenché
+    plusieurs cycles de Fast Refresh), le même test a fonctionné
+    parfaitement du premier coup (largeur passée de ≈486px à 547px pour
+    un glisser de +60px). **Confirme une fois de plus le piège déjà
+    documenté deux fois aujourd'hui** : après une succession de modifs sur
+    `MarkdownEditor.tsx` pendant une session de travail, un redémarrage
+    complet (pas juste HMR) est nécessaire avant de conclure qu'une
+    interaction souris/clic ne fonctionne pas.
+  - **Vérifié par Playwright/CDP** avec un VRAI glisser de souris (pas un
+    `dispatchEvent` synthétique) sur le document de test habituel : la
+    poignée suit la souris, `colwidth` posé sur la bonne cellule avec la
+    bonne valeur arrondie, le `<col>` du tableau réel change de largeur en
+    conséquence. Annulé via l'API (`editor.commands.undo()`, plusieurs
+    fois jusqu'à épuisement de la pile) — confirmé qu'aucune trace ne
+    persiste et que l'indicateur "non enregistré" de l'onglet disparaît.
+    `npx tsc --noEmit` propre, `npm test` 38/38 verts.
+  - **Redimensionnement de LIGNE (hauteur), fait dans la foulée (même
+    jour)**, sur confirmation de l'utilisateur ("on le fait aussi pour les
+    lignes?") : même technique, miroir vertical exact. Nouvel attribut
+    `height` ajouté via une nouvelle extension `TableRowStyle.ts` (étend
+    `@tiptap/extension-table-row`, même schéma que `TableCellStyle.ts` —
+    aucun attribut de ce type n'existait avant sur nos lignes de tableau).
+    Poignées peintes (`injectRowResizeHandles`, horizontales cette fois,
+    mesurées sur les `<tr>` du tableau original) + glisser/relâcher dans
+    `MarkdownEditor.tsx` (`applyRowHeight`, plus simple que la colonne :
+    une ligne n'a pas de `rowspan` à gérer à SON propre niveau). Vérifié
+    par un vrai glisser de souris Playwright, du PREMIER coup cette fois
+    (redémarrage propre fait AVANT de tester, piège HMR évité d'emblée) :
+    hauteur appliquée correctement (106px pour un glisser de +40px),
+    annulation propre.
+  - **Correctif découvert en cours de route (pas une régression du jour,
+    un oubli du tout premier correctif de colonne)** : `colwidth` (posé
+    par `applyColumnWidth`) n'était PAS pris en compte par
+    `hasAdvancedStyle` dans `TableMarkdown.ts` — une colonne redimensionnée
+    aurait donc été **silencieusement réenregistrée en GFM standard**,
+    perdant la largeur personnalisée au premier aller-retour (GFM n'a
+    aucune notion de largeur de colonne). Ajouté au même test que
+    couleur de fond/bordures/alignement vertical, plus une nouvelle
+    fonction symétrique `hasRowHeight` pour la hauteur de ligne. Vérifié
+    par Playwright : après un redimensionnement de colonne OU de ligne,
+    `editor.storage.markdown.getMarkdown()` contient bien `<table` (repli
+    HTML), pas la syntaxe `|---|` qui aurait perdu l'info.
+  - `npx tsc --noEmit` propre, `npm test` 38/38 verts après l'ajout du
+    redimensionnement de ligne et du correctif de repli HTML.
 - **Audit de code après la grosse session de refonte du 2026-10-17
   (2026-10-19)**, demandé explicitement par l'utilisateur ("j'ai fait pas
   mal de modification tu peux faire un audit, pour faire un point") après

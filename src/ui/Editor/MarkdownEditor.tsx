@@ -29,7 +29,7 @@ import { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { TableMarkdown as Table } from "./extensions/TableMarkdown";
-import TableRow from "@tiptap/extension-table-row";
+import { TableRowStyled as TableRow } from "./extensions/TableRowStyle";
 import { TableCellStyled as TableCell, TableHeaderStyled as TableHeader, type BorderSide } from "./extensions/TableCellStyle";
 import { CellSelection, TableMap } from "@tiptap/pm/tables";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -56,7 +56,17 @@ import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
 import { MermaidDiagram } from "./extensions/MermaidDiagram";
 import { InlineMath, BlockMath } from "./extensions/Math";
 import { applyHeadingNumbering } from "./extensions/HeadingAutoNumber";
-import { paintPages, HEADER_TEMPLATE_ATTR, FOOTER_TEMPLATE_ATTR } from "./pagination/paintPages";
+import {
+  paintPages,
+  HEADER_TEMPLATE_ATTR,
+  FOOTER_TEMPLATE_ATTR,
+  COL_RESIZE_HANDLE_CLASS,
+  COL_RESIZE_TABLE_POS_ATTR,
+  COL_RESIZE_COL_INDEX_ATTR,
+  ROW_RESIZE_HANDLE_CLASS,
+  ROW_RESIZE_TABLE_POS_ATTR,
+  ROW_RESIZE_ROW_INDEX_ATTR,
+} from "./pagination/paintPages";
 import { CODE_BLOCK_LANGUAGE_OPTIONS } from "./codeBlockLanguages";
 import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClickPosition";
 import { computeCaretScreenPosition } from "./pagination/caretPosition";
@@ -311,6 +321,49 @@ function getActiveBlockStyle(editor: Editor): EditorStats["activeBlockStyle"] {
   return "paragraph";
 }
 
+/** Marques actives sous le curseur/la sélection — pilote la mise en
+ * évidence des boutons correspondants du ruban (Gras, Italique...), comme
+ * Word. */
+function getActiveMarks(editor: Editor): EditorStats["activeMarks"] {
+  return {
+    bold: editor.isActive("bold"),
+    italic: editor.isActive("italic"),
+    underline: editor.isActive("underline"),
+    strike: editor.isActive("strike"),
+    code: editor.isActive("code"),
+    subscript: editor.isActive("subscript"),
+    superscript: editor.isActive("superscript"),
+    highlight: editor.isActive("highlight"),
+  };
+}
+
+/** Alignement de paragraphe actif sous le curseur, ou `null` si aucun
+ * alignement explicite (défaut "left" du navigateur, pas marqué actif). */
+function getActiveAlign(editor: Editor): EditorStats["activeAlign"] {
+  for (const align of ["left", "center", "right", "justify"] as const) {
+    if (editor.isActive({ textAlign: align })) return align;
+  }
+  return null;
+}
+
+/** Type de liste/bloc actif sous le curseur — pilote la mise en évidence
+ * des boutons Puces/Numérotée/Tâches/Citation. */
+function getActiveListType(editor: Editor): EditorStats["activeList"] {
+  if (editor.isActive("bulletList")) return "bullet";
+  if (editor.isActive("orderedList")) return "ordered";
+  if (editor.isActive("taskList")) return "task";
+  if (editor.isActive("blockquote")) return "blockquote";
+  return null;
+}
+
+/** Police de la sélection (attribut `fontSize`/`fontFamily` de la marque
+ * `textStyle`, voir `currentFontSizePt`) — `null` si aucune police
+ * personnalisée n'est posée (police par défaut du document). */
+function currentFontFamily(editor: Editor): string | null {
+  const family = editor.getAttributes("textStyle").fontFamily;
+  return typeof family === "string" && family ? family : null;
+}
+
 /** Position du nœud cellule (`tableCell`/`tableHeader`) qui contient `pos`,
  * ou `null` si `pos` n'est dans aucun tableau. Même principe que
  * `findCellPosFromPmPos` dans le projet CasualOffice/docs (qui nous a
@@ -555,6 +608,72 @@ function setGridLineBorder(editor: Editor, lines: GridLine[], css: string | null
   editor.view.dispatch(tr);
 }
 
+/** Pose la largeur `widthPx` (en pixels) sur TOUTES les cellules qui
+ * touchent la colonne `colIndex` d'un tableau (position `tablePos`) —
+ * potentiellement plusieurs si des lignes ont des cellules fusionnées
+ * (`rowspan`) ou si la colonne visée fait partie d'une fusion horizontale
+ * (`colspan`, auquel cas seule l'entrée correspondante de son tableau
+ * `colwidth` est modifiée, les autres entrées de la même cellule restant
+ * inchangées — attribut standard de `@tiptap/extension-table-cell`, déjà
+ * utilisé par le plugin natif `ColumnResizing` que ce mécanisme remplace
+ * ici par un vrai glisser sur la couche peinte, voir `MarkdownEditor.css`/
+ * `paintPages.ts`). */
+function applyColumnWidth(editor: Editor, tablePos: number, colIndex: number, widthPx: number) {
+  const tableNode = editor.state.doc.nodeAt(tablePos);
+  if (!tableNode || tableNode.type.name !== "table") return;
+  const map = TableMap.get(tableNode);
+  if (colIndex < 0 || colIndex >= map.width) return;
+
+  const tr = editor.state.tr;
+  const seen = new Set<number>();
+  for (let row = 0; row < map.height; row++) {
+    const cellOffset = map.map[row * map.width + colIndex];
+    if (seen.has(cellOffset)) continue; // même cellule revue via un rowspan
+    seen.add(cellOffset);
+    const cellNode = tableNode.nodeAt(cellOffset);
+    if (!cellNode) continue;
+    const cellRect = map.findCell(cellOffset);
+    const colspan = (cellNode.attrs.colspan as number | undefined) ?? 1;
+    const localIndex = colIndex - cellRect.left;
+    if (localIndex < 0 || localIndex >= colspan) continue;
+    const existing: (number | null)[] = Array.isArray(cellNode.attrs.colwidth)
+      ? [...(cellNode.attrs.colwidth as (number | null)[])]
+      : new Array(colspan).fill(null);
+    while (existing.length < colspan) existing.push(null);
+    existing[localIndex] = widthPx;
+    tr.setNodeMarkup(tablePos + 1 + cellOffset, undefined, { ...cellNode.attrs, colwidth: existing });
+  }
+  if (tr.steps.length === 0) return;
+  editor.view.dispatch(tr);
+}
+
+/** Pose la hauteur `heightPx` sur la ligne `rowIndex` d'un tableau (position
+ * `tablePos`) — même principe que `applyColumnWidth`, plus simple côté
+ * document : une ligne n'est jamais partagée entre colonnes (pas de notion
+ * de "colspan" à son échelle), une seule cellule... une seule ligne à
+ * modifier. */
+function applyRowHeight(editor: Editor, tablePos: number, rowIndex: number, heightPx: number) {
+  const tableNode = editor.state.doc.nodeAt(tablePos);
+  if (!tableNode || tableNode.type.name !== "table") return;
+
+  let rowOffset = 0;
+  let idx = 0;
+  let targetRowPos: number | null = null;
+  let targetRowNode: any = null;
+  tableNode.forEach((row) => {
+    if (idx === rowIndex) {
+      targetRowPos = tablePos + 1 + rowOffset;
+      targetRowNode = row;
+    }
+    rowOffset += row.nodeSize;
+    idx++;
+  });
+  if (targetRowPos === null || !targetRowNode) return;
+
+  const tr = editor.state.tr.setNodeMarkup(targetRowPos, undefined, { ...targetRowNode.attrs, height: heightPx });
+  editor.view.dispatch(tr);
+}
+
 export interface EditorStats {
   words: number;
   characters: number;
@@ -563,6 +682,27 @@ export interface EditorStats {
   /** Style de bloc sous le curseur — pour surligner le bon bouton dans la
    * galerie de styles du ruban (voir RibbonGroup "Styles" dans Toolbar.tsx). */
   activeBlockStyle: "paragraph" | 1 | 2 | 3 | 4 | 5 | 6;
+  /** Marques actives sous le curseur/la sélection (Gras, Italique...) —
+   * pilote la mise en évidence des boutons du groupe Police, comme Word. */
+  activeMarks: {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strike: boolean;
+    code: boolean;
+    subscript: boolean;
+    superscript: boolean;
+    highlight: boolean;
+  };
+  /** Alignement de paragraphe actif, `null` si aucun n'est posé. */
+  activeAlign: "left" | "center" | "right" | "justify" | null;
+  /** Type de liste/bloc actif (Puces/Numérotée/Tâches/Citation), `null` sinon. */
+  activeList: "bullet" | "ordered" | "task" | "blockquote" | null;
+  /** Police de la sélection, `null` si aucune n'est posée explicitement. */
+  activeFontFamily: string | null;
+  /** Taille de police de la sélection, en pt (toujours une valeur — voir
+   * `currentFontSizePt`, replie sur 12pt par défaut). */
+  activeFontSizePt: number;
   /** Le curseur est-il actuellement dans un tableau — pilote l'apparition/
    * bascule automatique de l'onglet contextuel "Tableau" du ruban (voir
    * `Toolbar.tsx`), façon "Outils de tableau" de Word. */
@@ -813,6 +953,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
           activeBlockStyle: getActiveBlockStyle(editor),
+          activeMarks: getActiveMarks(editor),
+          activeAlign: getActiveAlign(editor),
+          activeList: getActiveListType(editor),
+          activeFontFamily: currentFontFamily(editor),
+          activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
@@ -1003,6 +1148,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         words: editor?.storage.characterCount.words() ?? 0,
         characters: editor?.storage.characterCount.characters() ?? 0,
         activeBlockStyle: editor ? getActiveBlockStyle(editor) : "paragraph",
+        activeMarks: editor
+          ? getActiveMarks(editor)
+          : { bold: false, italic: false, underline: false, strike: false, code: false, subscript: false, superscript: false, highlight: false },
+        activeAlign: editor ? getActiveAlign(editor) : null,
+        activeList: editor ? getActiveListType(editor) : null,
+        activeFontFamily: editor ? currentFontFamily(editor) : null,
+        activeFontSizePt: editor ? currentFontSizePt(editor) : 12,
         insideTable: editor?.isActive("table") ?? false,
         tableSelectionShape: editor ? getSelectionShape(editor) : null,
         pageCount: pageCountRef.current,
@@ -1256,6 +1408,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
           activeBlockStyle: getActiveBlockStyle(editor),
+          activeMarks: getActiveMarks(editor),
+          activeAlign: getActiveAlign(editor),
+          activeList: getActiveListType(editor),
+          activeFontFamily: currentFontFamily(editor),
+          activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
@@ -1391,6 +1548,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
           activeBlockStyle: getActiveBlockStyle(editor),
+          activeMarks: getActiveMarks(editor),
+          activeAlign: getActiveAlign(editor),
+          activeList: getActiveListType(editor),
+          activeFontFamily: currentFontFamily(editor),
+          activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: mode,
@@ -1551,6 +1713,34 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // `findCellPos` plus haut. `null` si le glisser n'a pas démarré dans un
       // tableau, auquel cas on reste sur une sélection de texte normale.
       let cellAnchorPos: number | null = null;
+      // Glisser une poignée de redimensionnement de colonne (voir
+      // paintPages.ts) — état séparé du glisser-sélection ci-dessus,
+      // mutuellement exclusif avec lui (un mousedown sur une poignée
+      // retourne avant d'atteindre la logique de sélection).
+      let resizingCol: {
+        tablePos: number;
+        colIndex: number;
+        startClientX: number;
+        startHandleLeft: number;
+        /** Largeur mesurée au mousedown — JAMAIS modifiée pendant le
+         * glisser, sert de référence pour calculer `currentWidthPx` à
+         * chaque déplacement. */
+        startWidthPx: number;
+        /** Largeur courante recalculée à chaque `mousemove` — c'est elle
+         * qui est appliquée au document au `mouseup`. */
+        currentWidthPx: number;
+        handle: HTMLElement;
+      } | null = null;
+      // Même principe que `resizingCol`, sur l'axe vertical (hauteur de ligne).
+      let resizingRow: {
+        tablePos: number;
+        rowIndex: number;
+        startClientY: number;
+        startHandleTop: number;
+        startHeightPx: number;
+        currentHeightPx: number;
+        handle: HTMLElement;
+      } | null = null;
 
       const posFromEvent = (e: MouseEvent): number | null => {
         const block = findClonedBlock(e.target);
@@ -1559,6 +1749,62 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       };
 
       const onMouseDown = (e: MouseEvent) => {
+        // Poignée de redimensionnement de colonne (voir paintPages.ts) —
+        // vérifiée en tout premier : une poignée peut visuellement se
+        // trouver à l'intérieur d'un tableau d'en-tête/pied de page, donc
+        // AVANT le test `headerFooterTarget` ci-dessous pour ne jamais lui
+        // laisser la priorité par erreur.
+        const resizeHandleTarget = (e.target as HTMLElement)?.closest<HTMLElement>(`.${COL_RESIZE_HANDLE_CLASS}`);
+        if (resizeHandleTarget) {
+          e.preventDefault();
+          const tablePos = Number(resizeHandleTarget.getAttribute(COL_RESIZE_TABLE_POS_ATTR));
+          const colIndex = Number(resizeHandleTarget.getAttribute(COL_RESIZE_COL_INDEX_ATTR));
+          // Largeur de départ mesurée sur le tableau ORIGINAL (invisible,
+          // mais attaché au document donc mesurable) via son `<col>` — pas
+          // sur la cellule, qui n'a pas forcément d'attribut `colwidth`
+          // explicite tant qu'elle n'a jamais été redimensionnée.
+          const originalWrapper = editor.view.nodeDOM(tablePos) as HTMLElement | null;
+          const originalTable = originalWrapper?.matches("table") ? originalWrapper : originalWrapper?.querySelector("table");
+          const col = originalTable?.querySelectorAll(":scope > colgroup > col")[colIndex] as HTMLElement | undefined;
+          const startWidthPx = col?.getBoundingClientRect().width;
+          if (!startWidthPx) return;
+          resizingCol = {
+            tablePos,
+            colIndex,
+            startClientX: e.clientX,
+            startHandleLeft: parseFloat(resizeHandleTarget.style.left),
+            startWidthPx,
+            currentWidthPx: startWidthPx,
+            handle: resizeHandleTarget,
+          };
+          resizeHandleTarget.classList.add("xmd-col-resize-active");
+          return;
+        }
+        // Poignée de redimensionnement de LIGNE — même principe, miroir
+        // vertical du cas colonne ci-dessus.
+        const rowResizeHandleTarget = (e.target as HTMLElement)?.closest<HTMLElement>(`.${ROW_RESIZE_HANDLE_CLASS}`);
+        if (rowResizeHandleTarget) {
+          e.preventDefault();
+          const tablePos = Number(rowResizeHandleTarget.getAttribute(ROW_RESIZE_TABLE_POS_ATTR));
+          const rowIndex = Number(rowResizeHandleTarget.getAttribute(ROW_RESIZE_ROW_INDEX_ATTR));
+          const originalWrapper = editor.view.nodeDOM(tablePos) as HTMLElement | null;
+          const originalTable = originalWrapper?.matches("table") ? originalWrapper : originalWrapper?.querySelector("table");
+          const rows = originalTable?.querySelectorAll(":scope > tbody > tr, :scope > tr");
+          const row = rows?.[rowIndex] as HTMLElement | undefined;
+          const startHeightPx = row?.getBoundingClientRect().height;
+          if (!startHeightPx) return;
+          resizingRow = {
+            tablePos,
+            rowIndex,
+            startClientY: e.clientY,
+            startHandleTop: parseFloat(rowResizeHandleTarget.style.top),
+            startHeightPx,
+            currentHeightPx: startHeightPx,
+            handle: rowResizeHandleTarget,
+          };
+          rowResizeHandleTarget.classList.add("xmd-row-resize-active");
+          return;
+        }
         const headerFooterTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-page-header, .xmd-page-footer");
         if (headerFooterTarget) {
           e.preventDefault();
@@ -1626,6 +1872,32 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         editor.commands.setTextSelection(pos);
       };
       const onMouseMove = (e: MouseEvent) => {
+        if (resizingCol) {
+          // Delta en pixels ÉCRAN (`clientX`) converti en pixels LOGIQUES
+          // (avant le `transform: scale(zoom)` de `.xmd-page-canvas`) —
+          // sans cette division, glisser à 150% de zoom déplacerait la
+          // poignée 1,5× plus vite que la souris. Mêmes unités que
+          // `caretPosition.ts`/`selectionHighlight.ts` pour la même raison.
+          const logicalDelta = (e.clientX - resizingCol.startClientX) / zoomRef.current;
+          const MIN_COL_WIDTH_PX = 40;
+          resizingCol.currentWidthPx = Math.max(MIN_COL_WIDTH_PX, resizingCol.startWidthPx + logicalDelta);
+          // La poignée ne bouge que de l'écart réellement appliqué (clampé
+          // à la largeur minimale), pas du delta brut — sinon elle
+          // continuerait de suivre la souris au-delà de la limite tout en
+          // laissant la largeur réelle bloquée, décalage visible et
+          // trompeur.
+          const appliedDelta = resizingCol.currentWidthPx - resizingCol.startWidthPx;
+          resizingCol.handle.style.left = `${resizingCol.startHandleLeft + appliedDelta}px`;
+          return;
+        }
+        if (resizingRow) {
+          const logicalDelta = (e.clientY - resizingRow.startClientY) / zoomRef.current;
+          const MIN_ROW_HEIGHT_PX = 24;
+          resizingRow.currentHeightPx = Math.max(MIN_ROW_HEIGHT_PX, resizingRow.startHeightPx + logicalDelta);
+          const appliedDeltaY = resizingRow.currentHeightPx - resizingRow.startHeightPx;
+          resizingRow.handle.style.top = `${resizingRow.startHandleTop + appliedDeltaY}px`;
+          return;
+        }
         if (!dragging || anchorPos === null) return;
         const pos = posFromEvent(e);
         if (pos === null) return;
@@ -1653,6 +1925,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         editor.commands.setTextSelection({ from: anchorPos, to: pos });
       };
       const onMouseUp = () => {
+        if (resizingCol) {
+          resizingCol.handle.classList.remove("xmd-col-resize-active");
+          applyColumnWidth(editor, resizingCol.tablePos, resizingCol.colIndex, Math.round(resizingCol.currentWidthPx));
+          resizingCol = null;
+          return;
+        }
+        if (resizingRow) {
+          resizingRow.handle.classList.remove("xmd-row-resize-active");
+          applyRowHeight(editor, resizingRow.tablePos, resizingRow.rowIndex, Math.round(resizingRow.currentHeightPx));
+          resizingRow = null;
+          return;
+        }
         dragging = false;
         anchorPos = null;
         cellAnchorPos = null;
@@ -1735,6 +2019,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             pageCount: pageCountRef.current,
             currentPage: page,
             activeBlockStyle: getActiveBlockStyle(editor),
+            activeMarks: getActiveMarks(editor),
+            activeAlign: getActiveAlign(editor),
+            activeList: getActiveListType(editor),
+            activeFontFamily: currentFontFamily(editor),
+            activeFontSizePt: currentFontSizePt(editor),
             insideTable: editor.isActive("table"),
             tableSelectionShape: getSelectionShape(editor),
             headerFooterEditMode: headerFooterModeRef.current,

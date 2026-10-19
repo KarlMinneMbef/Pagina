@@ -455,7 +455,12 @@ function BorderDiagram({
       : `${line.axis === "row" ? "horizontale" : "verticale"} interne n°${line.index}`;
 
     return (
-      <g key={lineKey(line)} className="tp-bd-edge-group" onClick={() => !disabled && onToggle(line)}>
+      <g
+        key={lineKey(line)}
+        className="tp-bd-edge-group"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => !disabled && onToggle(line)}
+      >
         <title>{`${positionLabel} ${active ? "(bordure posée — cliquer pour la retirer du tableau)" : "(absente — cliquer pour la poser dans le tableau)"}`}</title>
         <line x1={x1e} y1={y1e} x2={x2e} y2={y2e} stroke="transparent" strokeWidth={10} className="tp-bd-hit" />
         {offset > 0 ? (

@@ -14,7 +14,7 @@
 import type { EditorView } from "@tiptap/pm/view";
 import type { Selection } from "@tiptap/pm/state";
 import { CellSelection } from "@tiptap/pm/tables";
-import { SRC_POS_ATTR } from "./paintPages";
+import { LIST_NODE_NAMES, SRC_POS_ATTR } from "./paintPages";
 
 export interface SelectionRect {
   left: number;
@@ -113,7 +113,11 @@ export function computeSelectionRects(
   const frameRect = (canvas.parentElement as HTMLElement).getBoundingClientRect();
   const rects: SelectionRect[] = [];
 
-  view.state.doc.forEach((node, offset) => {
+  // Calcule les rects de surbrillance pour UN nœud peint individuellement
+  // (identifié par sa propre position `offset`, qui doit correspondre à un
+  // clone portant `SRC_POS_ATTR` — un bloc de premier niveau normal, OU un
+  // item de liste — voir l'appel récursif plus bas pour les listes).
+  const collectForNode = (node: any, offset: number) => {
     const nodeFrom = offset;
     const nodeTo = offset + node.nodeSize;
     const overlapFrom = Math.max(from, nodeFrom);
@@ -162,6 +166,21 @@ export function computeSelectionRects(
         height: rect.height * zoom,
       });
     }
+  };
+
+  view.state.doc.forEach((node, offset) => {
+    // Une liste (voir `LIST_NODE_NAMES`/`paintPages.ts`) est peinte item par
+    // item — SRC_POS_ATTR est porté par chaque `<li>` cloné, pas par la
+    // liste entière, qui peut être coupée entre deux pages. Il faut donc
+    // chercher le clone au niveau de chaque ITEM, jamais au niveau de la
+    // liste elle-même.
+    if (LIST_NODE_NAMES.has(node.type.name)) {
+      node.forEach((child: any, relOffset: number) => {
+        collectForNode(child, offset + 1 + relOffset);
+      });
+      return;
+    }
+    collectForNode(node, offset);
   });
 
   return rects;

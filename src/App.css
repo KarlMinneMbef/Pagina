@@ -92,6 +92,8 @@ body {
   .ctx-host,
   .tabbar,
   .sb-bar,
+  .xmd-col-resize-handle,
+  .xmd-row-resize-handle,
   .xmd-live-editor-host,
   .xmd-fake-caret,
   .xmd-selection-layer,

@@ -2,7 +2,7 @@
 // (faux, dessiné à la main) dans la couche peinte, à partir de la vraie
 // position de sélection dans l'éditeur invisible.
 import type { EditorView } from "@tiptap/pm/view";
-import { SRC_POS_ATTR } from "./paintPages";
+import { LIST_NODE_NAMES, SRC_POS_ATTR } from "./paintPages";
 
 export interface CaretScreenPosition {
   left: number;
@@ -30,10 +30,19 @@ export function computeCaretScreenPosition(
     return null;
   }
 
-  // Retrouve le bloc de premier niveau contenant `pos`, pour savoir quel
-  // clone (identifié par sa position source) chercher dans la couche peinte.
+  // Retrouve le bloc PEINT contenant `pos`, pour savoir quel clone (identifié
+  // par sa position source) chercher dans la couche peinte. Normalement le
+  // bloc de PREMIER NIVEAU (depth 1) — SAUF à l'intérieur d'une liste (voir
+  // `LIST_NODE_NAMES`), où c'est désormais l'ITEM (depth 2) qui porte
+  // `SRC_POS_ATTR`, pas la liste entière (une longue liste peut être coupée
+  // entre deux pages, voir `paintPages.ts` — le bloc "peint" n'est alors
+  // plus la liste, mais chacun de ses items).
   const resolved = view.state.doc.resolve(pos);
-  const blockPos = resolved.depth === 0 ? pos : resolved.before(1);
+  let blockPos = pos;
+  if (resolved.depth >= 1) {
+    const topNode = resolved.node(1);
+    blockPos = resolved.depth >= 2 && LIST_NODE_NAMES.has(topNode.type.name) ? resolved.before(2) : resolved.before(1);
+  }
   const originalBlock = view.nodeDOM(blockPos) as HTMLElement | null;
   if (!originalBlock || !(originalBlock instanceof HTMLElement)) return null;
 

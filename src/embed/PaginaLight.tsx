@@ -36,7 +36,21 @@ export interface PaginaLightProps {
 }
 
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5];
-const STATS_INITIALES: EditorStats = { words: 0, characters: 0, pageCount: 1, currentPage: 1, activeBlockStyle: "paragraph", insideTable: false, tableSelectionShape: null, headerFooterEditMode: null };
+const STATS_INITIALES: EditorStats = {
+  words: 0,
+  characters: 0,
+  pageCount: 1,
+  currentPage: 1,
+  activeBlockStyle: "paragraph",
+  activeMarks: { bold: false, italic: false, underline: false, strike: false, code: false, subscript: false, superscript: false, highlight: false },
+  activeAlign: null,
+  activeList: null,
+  activeFontFamily: null,
+  activeFontSizePt: 12,
+  insideTable: false,
+  tableSelectionShape: null,
+  headerFooterEditMode: null,
+};
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
 
@@ -174,6 +188,11 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           onOpenPageSetup={AUCUNE_ACTION_DIALOGUE}
           onOpenHeadingStyles={AUCUNE_ACTION_DIALOGUE}
           activeBlockStyle={stats.activeBlockStyle}
+          activeMarks={stats.activeMarks}
+          activeAlign={stats.activeAlign}
+          activeList={stats.activeList}
+          activeFontFamily={stats.activeFontFamily}
+          activeFontSizePt={stats.activeFontSizePt}
         />
       </div>
       <div className="xmd-embed-editor-area">
