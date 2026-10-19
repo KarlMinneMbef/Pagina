@@ -27,6 +27,11 @@ const EMPTY_STATS: EditorStats = {
   pageCount: 1,
   currentPage: 1,
   activeBlockStyle: "paragraph",
+  activeMarks: { bold: false, italic: false, underline: false, strike: false, code: false, subscript: false, superscript: false, highlight: false },
+  activeAlign: null,
+  activeList: null,
+  activeFontFamily: null,
+  activeFontSizePt: 12,
   insideTable: false,
   tableSelectionShape: null,
   headerFooterEditMode: null,
@@ -399,6 +404,11 @@ function App() {
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
         activeBlockStyle={stats.activeBlockStyle}
+        activeMarks={stats.activeMarks}
+        activeAlign={stats.activeAlign}
+        activeList={stats.activeList}
+        activeFontFamily={stats.activeFontFamily}
+        activeFontSizePt={stats.activeFontSizePt}
       />
       <div className="app-body">
         {sidebarOpen && (

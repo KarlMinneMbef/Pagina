@@ -215,6 +215,17 @@ const FONT_SIZES = FONT_SIZE_STEPS.map((pt) => `${pt}pt`);
 
 type RibbonTab = "accueil" | "insertion";
 
+const EMPTY_ACTIVE_MARKS = {
+  bold: false,
+  italic: false,
+  underline: false,
+  strike: false,
+  code: false,
+  subscript: false,
+  superscript: false,
+  highlight: false,
+};
+
 export function Toolbar({
   actions,
   onToggleSidebar,
@@ -222,6 +233,11 @@ export function Toolbar({
   onOpenPageSetup,
   onOpenHeadingStyles,
   activeBlockStyle = "paragraph",
+  activeMarks = EMPTY_ACTIVE_MARKS,
+  activeAlign = null,
+  activeList = null,
+  activeFontFamily = null,
+  activeFontSizePt = 12,
   leger = false,
 }: {
   actions: ToolbarActions | null;
@@ -236,6 +252,25 @@ export function Toolbar({
   /** Style de bloc sous le curseur — surligne le bon bouton de la galerie
    * "Styles" (voir `EditorStats.activeBlockStyle` dans MarkdownEditor.tsx). */
   activeBlockStyle?: "paragraph" | 1 | 2 | 3 | 4 | 5 | 6;
+  /** Marques actives sous le curseur — surligne Gras/Italique/Souligné... comme Word. */
+  activeMarks?: {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strike: boolean;
+    code: boolean;
+    subscript: boolean;
+    superscript: boolean;
+    highlight: boolean;
+  };
+  /** Alignement actif — surligne le bon bouton d'alignement. */
+  activeAlign?: "left" | "center" | "right" | "justify" | null;
+  /** Type de liste/bloc actif — surligne Puces/Numérotée/Tâches/Citation. */
+  activeList?: "bullet" | "ordered" | "task" | "blockquote" | null;
+  /** Police de la sélection — affichée dans le sélecteur "Police". */
+  activeFontFamily?: string | null;
+  /** Taille de police de la sélection (pt) — affichée dans le sélecteur "Taille". */
+  activeFontSizePt?: number;
 }) {
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
@@ -313,7 +348,10 @@ export function Toolbar({
               <select
                 className="tb-select"
                 disabled={disabled}
-                defaultValue=""
+                /* Contrôlé par la sélection courante (voir `EditorStats.activeFontFamily`) —
+                 * reste sur le placeholder si aucune police personnalisée n'est posée, ou si la
+                 * police posée ne fait pas partie de cette liste fixe. */
+                value={FONT_FAMILIES.some((f) => f.value === activeFontFamily) ? activeFontFamily! : ""}
                 title="Police"
                 onChange={(e) => {
                   if (e.target.value) actions?.setFontFamily(e.target.value);
@@ -330,7 +368,9 @@ export function Toolbar({
               <select
                 className="tb-select tb-select-narrow"
                 disabled={disabled}
-                defaultValue=""
+                /* Contrôlé par la taille courante (voir `EditorStats.activeFontSizePt`) — reste
+                 * sur le placeholder si cette taille ne fait pas partie de l'échelle fixe. */
+                value={FONT_SIZES.includes(`${activeFontSizePt}pt`) ? `${activeFontSizePt}pt` : ""}
                 title="Taille"
                 onChange={(e) => {
                   if (e.target.value) actions?.setFontSize(e.target.value);
@@ -380,26 +420,26 @@ export function Toolbar({
               </button>
             </div>
             <div className="tb-group-row">
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBold()} title="Gras (Ctrl+B)">
+              <button className={activeBtnClass(activeMarks.bold)} disabled={disabled} onClick={() => actions?.toggleBold()} title="Gras (Ctrl+B)">
                 <span className="tb-letter tb-letter-bold">G</span>
               </button>
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleItalic()} title="Italique (Ctrl+I)">
+              <button className={activeBtnClass(activeMarks.italic)} disabled={disabled} onClick={() => actions?.toggleItalic()} title="Italique (Ctrl+I)">
                 <span className="tb-letter tb-letter-italic">I</span>
               </button>
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleUnderline()} title="Souligné (Ctrl+U)">
+              <button className={activeBtnClass(activeMarks.underline)} disabled={disabled} onClick={() => actions?.toggleUnderline()} title="Souligné (Ctrl+U)">
                 <span className="tb-letter tb-letter-underline">S</span>
               </button>
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleStrike()} title="Texte barré">
+              <button className={activeBtnClass(activeMarks.strike)} disabled={disabled} onClick={() => actions?.toggleStrike()} title="Texte barré">
                 <span className="tb-letter tb-letter-strike">S</span>
               </button>
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleSubscript()} title="Indice">
+              <button className={activeBtnClass(activeMarks.subscript)} disabled={disabled} onClick={() => actions?.toggleSubscript()} title="Indice">
                 <span className="tb-letter">x<span className="tb-letter-sub">2</span></span>
               </button>
-              <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleSuperscript()} title="Exposant">
+              <button className={activeBtnClass(activeMarks.superscript)} disabled={disabled} onClick={() => actions?.toggleSuperscript()} title="Exposant">
                 <span className="tb-letter">x<span className="tb-letter-sup">2</span></span>
               </button>
               <button
-                className="tb-btn-icon"
+                className={activeBtnClass(activeMarks.code)}
                 disabled={disabled}
                 onClick={() => actions?.toggleCode()}
                 title="Code en ligne — distinct du bloc de code (dans une phrase, ex. `variable`)"
@@ -421,7 +461,7 @@ export function Toolbar({
                 onChange={(color) => actions?.setColor(color)}
               />
               <button
-                className="tb-btn-icon"
+                className={activeBtnClass(activeMarks.highlight)}
                 disabled={disabled}
                 onClick={() => actions?.toggleHighlight()}
                 title="Surlignage"
@@ -437,30 +477,30 @@ export function Toolbar({
             label="Paragraphe"
             launcher={leger ? undefined : { onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
           >
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
+            <button className={activeBtnClass(activeList === "bullet")} disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
               <IconBulletList size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
+            <button className={activeBtnClass(activeList === "ordered")} disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
               <IconOrderedList size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
+            <button className={activeBtnClass(activeList === "task")} disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
               <IconTaskList size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
+            <button className={activeBtnClass(activeList === "blockquote")} disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
               <IconBlockquote size={16} />
             </button>
             {/* Ordre demandé par l'utilisateur (2026-10-17) :
              * gauche, droite, centré, justifié. */}
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
+            <button className={activeBtnClass(activeAlign === "left")} disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
               <IconAlignLeft size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
+            <button className={activeBtnClass(activeAlign === "right")} disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
               <IconAlignRight size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
+            <button className={activeBtnClass(activeAlign === "center")} disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
               <IconAlignCenter size={16} />
             </button>
-            <button className="tb-btn-icon" disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
+            <button className={activeBtnClass(activeAlign === "justify")} disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
               <IconAlignJustify size={16} />
             </button>
           </RibbonGroup>
@@ -637,6 +677,13 @@ export function Toolbar({
 
     </div>
   );
+}
+
+/** Classe d'un bouton `.tb-btn-icon`, avec le modificateur actif (fond/texte
+ * accentués) quand la marque/l'option correspondante est active sous le
+ * curseur — voir `EditorStats.activeMarks`/`activeAlign`/`activeList`. */
+function activeBtnClass(active: boolean): string {
+  return active ? "tb-btn-icon tb-btn-icon-active" : "tb-btn-icon";
 }
 
 /** Bouton de type A : grande icône (~28px) + libellé dessous. */

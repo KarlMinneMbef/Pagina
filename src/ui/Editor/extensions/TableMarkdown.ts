@@ -28,7 +28,11 @@ function hasSpan(node: any): boolean {
 
 /** Couleur de fond / bordures par côté (voir `TableCellStyle.ts`, onglet
  * "Format avancé") : sans équivalent GFM, forcent le même repli HTML que la
- * fusion de cellules. */
+ * fusion de cellules. `colwidth` (largeur de colonne redimensionnée à la
+ * souris, voir `applyColumnWidth` dans `MarkdownEditor.tsx`) de même : GFM
+ * n'a aucune notion de largeur de colonne personnalisée, une largeur non
+ * nulle quelque part serait SILENCIEUSEMENT perdue à l'enregistrement sans
+ * ce repli. */
 function hasAdvancedStyle(node: any): boolean {
   return !!(
     node.attrs.backgroundColor ||
@@ -36,8 +40,15 @@ function hasAdvancedStyle(node: any): boolean {
     node.attrs.borderRight ||
     node.attrs.borderBottom ||
     node.attrs.borderLeft ||
-    node.attrs.verticalAlign
+    node.attrs.verticalAlign ||
+    (Array.isArray(node.attrs.colwidth) && node.attrs.colwidth.some((w: number | null) => w))
   );
+}
+
+/** Hauteur de ligne personnalisée (voir `TableRowStyle.ts`) : même absence
+ * d'équivalent GFM, même repli HTML nécessaire. */
+function hasRowHeight(row: any): boolean {
+  return !!row.attrs.height;
 }
 
 function childNodes(node: any): any[] {
@@ -51,6 +62,9 @@ function isMarkdownSerializable(node: any): boolean {
   const firstRow = rows[0];
   const bodyRows = rows.slice(1);
 
+  if (rows.some(hasRowHeight)) {
+    return false;
+  }
   if (
     childNodes(firstRow).some(
       (cell) => cell.type.name !== "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || cell.childCount > 1,

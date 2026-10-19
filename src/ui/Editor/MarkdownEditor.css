@@ -561,6 +561,35 @@
   margin: 12px 0;
 }
 
+/* `.tableWrapper` (ajouté par Tiptap avec `resizable: true`) doit être
+ * positionné pour que les poignées de redimensionnement de colonne
+ * (position:absolute, voir paintPages.ts/MarkdownEditor.tsx) s'alignent
+ * sur SA boîte plutôt que sur un ancêtre positionné plus haut dans la
+ * page. */
+.tableWrapper {
+  position: relative;
+}
+
+.xmd-col-resize-handle {
+  cursor: col-resize;
+  z-index: 15;
+  background: transparent;
+}
+.xmd-col-resize-handle:hover,
+.xmd-col-resize-handle.xmd-col-resize-active {
+  background: rgba(28, 90, 60, 0.25);
+}
+
+.xmd-row-resize-handle {
+  cursor: row-resize;
+  z-index: 15;
+  background: transparent;
+}
+.xmd-row-resize-handle:hover,
+.xmd-row-resize-handle.xmd-row-resize-active {
+  background: rgba(28, 90, 60, 0.25);
+}
+
 .xmd-prosemirror td,
 .xmd-prosemirror th {
   border: 1px solid #ccc;
