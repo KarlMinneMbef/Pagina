@@ -14,6 +14,8 @@ import { PageSetupDialog } from "./ui/PageSetup/PageSetupDialog";
 import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
 import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel";
 import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
+import { TocPanel } from "./ui/Toc/TocPanel";
+import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
@@ -35,6 +37,7 @@ const EMPTY_STATS: EditorStats = {
   insideTable: false,
   tableSelectionShape: null,
   headerFooterEditMode: null,
+  insideToc: false,
 };
 
 function App() {
@@ -72,10 +75,19 @@ function App() {
   // tant que le curseur reste dans le même tableau.
   const [tablePanelOpen, setTablePanelOpen] = useState(false);
   const wasInsideTableRef = useRef(false);
-  // Onglet actif de l'hôte de panneaux contextuels (« tableau » | « hf ») :
-  // quand deux contextes sont actifs en même temps (curseur dans un tableau
-  // + édition d'en-tête/pied de page), l'utilisateur choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf">("tableau");
+  // Panneau latéral contextuel « Sommaire » (Mettre à jour/Supprimer) — même
+  // principe de front montant que `tablePanelOpen`, piloté par
+  // `stats.insideToc` (voir `isTocList` dans TocMarker.ts).
+  const [tocPanelOpen, setTocPanelOpen] = useState(false);
+  const wasInsideTocRef = useRef(false);
+  // Onglet actif de l'hôte de panneaux contextuels (« tableau » | « hf » |
+  // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
+  // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
+  // choisit l'onglet.
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles">("tableau");
+  // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
+  // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
+  const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
   const prevHfModeRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -94,6 +106,17 @@ function App() {
     }
   }, [stats.insideTable]);
 
+  useEffect(() => {
+    const wasInside = wasInsideTocRef.current;
+    wasInsideTocRef.current = stats.insideToc;
+    if (stats.insideToc && !wasInside) {
+      setTocPanelOpen(true);
+      setCtxTab("toc");
+    } else if (!stats.insideToc && wasInside) {
+      setTocPanelOpen(false);
+    }
+  }, [stats.insideToc]);
+
   // Sélection automatique de l'onglet : une édition d'en-tête/pied qui
   // DÉMARRE prend la main (l'utilisateur vient de cliquer dessus), sa fin
   // rend la main à l'onglet Tableau s'il est encore ouvert.
@@ -110,10 +133,10 @@ function App() {
   // Un onglet Tableau ouvert doit toujours être sélectionné si aucun
   // contexte en-tête/pied n'est actif (état initial, retour de l'hôte).
   useEffect(() => {
-    if (tablePanelOpen && !stats.headerFooterEditMode && ctxTab !== "tableau") {
+    if (tablePanelOpen && !stats.headerFooterEditMode && !stats.insideToc && !headingPanelOpen && ctxTab !== "tableau") {
       setCtxTab("tableau");
     }
-  }, [tablePanelOpen, stats.headerFooterEditMode]);
+  }, [tablePanelOpen, stats.headerFooterEditMode, stats.insideToc]);
 
   // Ouverture depuis l'Explorateur Windows (double-clic sur un .md/.xmd
   // associé à Pagina, ou "Ouvrir avec") — voir `startup_files.rs` côté Rust.
@@ -372,6 +395,8 @@ function App() {
       insertHeaderFooterVariable: (token) => handle.insertHeaderFooterVariable(token),
       insertTocMarker: () => handle.insertTocMarker(),
       generateToc: () => handle.generateToc(),
+      updateTocAtCursor: () => handle.updateTocAtCursor(),
+      deleteTocAtCursor: () => handle.deleteTocAtCursor(),
       insertFootnote: () => handle.insertFootnote(),
       insertMermaidDiagram: () => handle.insertMermaidDiagram(),
       insertInlineMath: () => handle.insertInlineMath(),
@@ -403,6 +428,11 @@ function App() {
         sidebarOpen={sidebarOpen}
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
+        onToggleHeadingPanel={() => {
+          setHeadingPanelOpen((o) => !o);
+          setCtxTab("styles");
+        }}
+        headingPanelOpen={headingPanelOpen}
         activeBlockStyle={stats.activeBlockStyle}
         activeMarks={stats.activeMarks}
         activeAlign={stats.activeAlign}
@@ -477,7 +507,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -485,12 +515,14 @@ function App() {
                 ...(stats.headerFooterEditMode
                   ? [{ id: "hf", label: stats.headerFooterEditMode === "header" ? "En-tête" : "Pied de page" }]
                   : []),
+                ...(tocPanelOpen ? [{ id: "toc", label: "Sommaire" }] : []),
+                ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles")}
           >
-            {ctxTab !== "hf" &&
+            {ctxTab === "tableau" &&
               tablePanelOpen &&
               actions && (
                 <TablePropertiesPanel
@@ -507,6 +539,27 @@ function App() {
                   mode={stats.headerFooterEditMode}
                   onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
                   onClose={() => editorRef.current?.closeHeaderFooterEdit()}
+                />
+              )}
+            {ctxTab === "styles" &&
+              headingPanelOpen &&
+              actions && (
+                <HeadingStylesPanel
+                  headingStyles={activeTab.layout.headingStyles}
+                  active={stats.activeBlockStyle}
+                  onPick={(level) => actions.toggleHeading(level)}
+                  onPickParagraph={() => actions.setParagraph()}
+                  onOpenSettings={() => setHeadingStylesOpen(true)}
+                  onClose={() => setHeadingPanelOpen(false)}
+                />
+              )}
+            {ctxTab === "toc" &&
+              tocPanelOpen &&
+              actions && (
+                <TocPanel
+                  onUpdate={() => actions?.updateTocAtCursor()}
+                  onDelete={() => actions?.deleteTocAtCursor()}
+                  onClose={() => setTocPanelOpen(false)}
                 />
               )}
           </ContextualPanelHost>

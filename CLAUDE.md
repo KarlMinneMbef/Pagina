@@ -111,7 +111,229 @@ projets"). Constats et actions :
 
 ## État d'avancement par fonctionnalité
 
+### À reprendre en priorité à la prochaine session (le plus récent — voir aussi « En cours / cassé » plus bas)
+- **Sommaire : le découpage entre pages ne déborde plus, mais retour
+  explicite de l'utilisateur en fin de session (2026-10-20) : "il faut que
+  l'on améliore ça encore, ce n'est pas très lisible à l'utilisation. pour
+  aujourd'hui on arrête".** Pas de précision donnée sur CE QUI est peu
+  lisible exactement — à clarifier avec lui en priorité à la prochaine
+  session (`AskUserQuestion` plutôt que deviner) avant de coder quoi que ce
+  soit. Pistes à explorer SANS présumer laquelle est la bonne :
+  - La coupure d'un sommaire entre deux pages, même sans déborder, reste
+    peut-être visuellement confuse (une sous-liste qui reprend en haut
+    d'une page sans que son titre PARENT soit rappelé/visible — voir le
+    "scaffolding" vide de `buildNestedFragment` dans `paintPages.ts`, qui
+    préserve l'indentation mais pas le contexte).
+  - Le sommaire lui-même (une fois généré) est peut-être juste visuellement
+    dense/indigeste à lire (pas d'espacement entre niveaux, pas de style
+    différent par niveau de titre, tout en bleu souligné uniforme).
+  - Le PANNEAU latéral "Sommaire" (Mettre à jour/Supprimer) est peut-être
+    ce qui est jugé peu lisible/pratique, pas le sommaire généré lui-même —
+    voir la discussion du 2026-10-19 sur un panneau de CONFIGURATION plus
+    riche (niveaux de titre à inclure, etc.), jamais implémentée au-delà
+    des deux boutons actuels.
+  - Voir aussi la section "Panneau latéral « Sommaire »" plus bas pour
+    l'état actuel exact de ce qui existe déjà.
+
 ### Fait et fonctionnel
+- **Panneau latéral « Styles de titres » (2026-10-20)**, demandé par
+  l'utilisateur (« on ne voit que 3 niveaux sur 6, on n'est pas sûr du niveau
+  sous le curseur »). `src/ui/HeadingStyles/HeadingStylesPanel.tsx` : le
+  chevron de la galerie de styles du ruban ouvre/ferme (à la main, pas
+  automatiquement) un onglet « Styles » de `ContextualPanelHost` à la place
+  de l'ancien menu déroulant (conservé seulement si `onToggleHeadingPanel`
+  est absent, ex. PaginaLight). Liste Normal + Titre 1-6 rendus avec leur
+  VRAIE mise en forme (`layout.headingStyles`), niveau actif surligné +
+  ligne « Style actuel », clic = `toggleHeading`/`setParagraph`, bouton
+  « Régler les styles… » = dialogue existant. `onMouseDown preventDefault`
+  sur les items (piège du focus). Vérifié CDP : ouverture, niveau actif,
+  clic Titre 4 → `<h4>`, annulation propre. Non fait : réglage des styles
+  directement dans le panneau.
+- **Correctif : pagination dépendante du zoom (2026-10-20)**, remonté par
+  l'utilisateur avec captures ("lors d'un zoom on perd la zone de texte").
+  Mesuré par CDP : 15 pages à 100 %, 12 à 200 %, et des blocs qui débordent
+  de leur page selon le zoom. **Cause** : l'alignement de la largeur de
+  l'éditeur invisible sur `.xmd-page-content` (`MarkdownEditor.tsx`, bloc
+  `liveHost.style.width`) lisait `getBoundingClientRect().width` d'un
+  élément DANS `.xmd-page-canvas` (donc multiplié par `scale(zoom)`) mais
+  retranchait un padding en px logiques → zone invisible `zoom`× trop large,
+  autre retour à la ligne, mauvaise pagination. **Fix** : division par
+  `zoomRef.current`. Vérifié : 15 pages à tous les zooms (25 %-400 %).
+  **Tableau plus haut qu'une page (2026-10-20, même jour)** : débordait de sa
+  page (recouvrait le pied de page). `planTableSplit`/`buildTableFragment`
+  (`paintPages.ts`) répartissent désormais un tel tableau LIGNE PAR LIGNE
+  (jamais au milieu d'un rowspan) ; un tableau qui tient sur une page reste
+  un bloc atomique comme avant. Fragment : colonnes figées (`table-layout:
+  fixed`), chaque `<tr>` porte son `SRC_POS_ATTR` ; `caretPosition.ts` et
+  `selectionHighlight.ts` gèrent ce cas. Vérifié CDP : 0 débordement à tous
+  les zooms, clic + frappe + curseur OK dans un fragment. Limites : pas de
+  ligne d'en-tête répétée sur chaque page, pas de poignées de
+  redimensionnement colonne/ligne sur un tableau coupé.
+- **Correctif du débordement de sommaire à imbrication PROFONDE (2026-10-20,
+  même jour)**, remonté par l'utilisateur avec capture d'écran : "le
+  sommaire se génère à peu près correctement [...] mais quand il déborde de
+  la page la suite se retrouve en fin de document et pas sur la page
+  suivante [...] est-ce que le bloc Sommaire n'est pas généré comme du
+  texte ?". Le correctif du 2026-10-19/20 ("Débordement de page d'un
+  sommaire généré", voir plus bas) ne découpait qu'ENTRE deux items de
+  PREMIER niveau d'une liste — insuffisant dans ce cas précis : le document
+  n'a qu'UN SEUL vrai titre de niveau 1, donc la liste de premier niveau
+  générée n'a elle-même qu'UN SEUL item (rien à découper "entre"), et TOUT
+  le reste (niveaux 2, 3…) est imbriqué À L'INTÉRIEUR de cet unique item —
+  exactement la "limite acceptée" documentée hier, qui s'est révélée être le
+  cas RÉEL le plus courant plutôt qu'un cas pathologique marginal.
+  - **Fix, bien plus général** : le découpage opère désormais sur une
+    séquence APLATIE de TOUTES les entrées du sommaire, à N'IMPORTE QUEL
+    niveau d'imbrication (`flattenListEntries`, nouvelle fonction
+    récursive dans `paintPages.ts`, remplace `collectListItemUnits`) —
+    chaque entrée ne porte que SA PROPRE ligne (son paragraphe/titre
+    propre, jamais sa sous-liste), ce qui permet de couper entre N'IMPORTE
+    QUELLES deux entrées consécutives, à la même profondeur ou non.
+  - **Reconstruction de la structure imbriquée par page**
+    (`buildNestedFragment`, nouvelle fonction) : à partir des entrées
+    aplaties qui reviennent à UNE page, reconstruit une hiérarchie
+    `<ul>`/`<ol>` imbriquée correcte — y compris quand la coupure tombe en
+    PLEIN MILIEU d'une sous-liste (le fragment de la page suivante
+    commence alors directement à une profondeur > 0, sans item "parent"
+    visible sur cette page : des conteneurs `<ul>` "scaffold" vides sont
+    recréés pour préserver le bon niveau d'INDENTATION visuelle, clonés
+    depuis la liste d'origine correspondante pour garder la même classe/
+    attributs).
+  - **`caretPosition.ts`/`selectionHighlight.ts` généralisés en
+    conséquence** : hier, ces deux fichiers supposaient que le "granule"
+    peint portant `SRC_POS_ATTR` était toujours exactement à la profondeur
+    2 (l'item direct d'une liste de premier niveau, pas plus profond) —
+    plus vrai avec une imbrication à PLUSIEURS niveaux. `caretPosition.ts`
+    cherche désormais le `listItem`/`taskItem` ANCÊTRE LE PLUS PROFOND
+    (pas une profondeur fixe) ; `selectionHighlight.ts` descend
+    RÉCURSIVEMENT dans les sous-listes (pas une seule fois).
+  - **Vérifié par Playwright/CDP** sur un fichier fixture jetable (un seul
+    titre de niveau 1 + 60 titres de niveau 2, tous imbriqués dessous —
+    61 entrées au total, créé/supprimé pour l'occasion) : le sommaire
+    généré se répartit sur DEUX pages (11 entrées puis 50), AUCUNE des deux
+    ne débordant de sa page (marge de plusieurs centaines de pixels dans
+    les deux cas) ; l'indentation de la deuxième page est bien le DOUBLE de
+    la première (80px vs 40px) — confirmant que la continuation reprend
+    correctement au bon niveau d'imbrication malgré la coupure en plein
+    milieu de la liste. `npx tsc --noEmit` propre, `npm test` 38/38 verts.
+  - **Piège méthodologique rencontré pendant cette vérification** :
+    rouvrir un fichier déjà ouvert via double-clic dans l'Explorateur ne
+    relit PAS son contenu depuis le disque si l'onglet est déjà ouvert
+    (focus simplement l'onglet existant, contenu en mémoire inchangé) —
+    un premier essai avec un fichier RÉÉCRIT sur disque (15 → 60 titres)
+    a donc testé l'ANCIEN contenu en mémoire sans que rien ne le signale.
+    **À RETENIR** : pour forcer une vraie relecture depuis le disque
+    pendant un test, soit fermer l'onglet avant de rouvrir, soit (plus
+    simple si l'onglet refuse de se fermer à cause d'un état "modifié"
+    laissé par un test précédent) utiliser un NOM DE FICHIER différent à
+    chaque itération plutôt que de réécrire le même fichier sur place.
+- **Correctifs du panneau « Sommaire » (2026-10-20, même jour, remontés par
+  l'utilisateur avec capture d'écran)** : "il faut modifier les boutons
+  (changer le nom et supprimer Mettre à jour), de plus le marqueur de
+  sommaire n'ouvre pas le panneau".
+  - **Ruban** : le groupe « Sommaire » (onglet Insertion) n'a plus qu'un
+    SEUL bouton — l'ancien « Marqueur » renommé **« Sommaire »** (confirmé
+    avec l'utilisateur), l'ancien bouton « Mettre à jour » (qui appelait
+    `generateToc` sans tenir compte d'un sommaire déjà en place) est
+    SUPPRIMÉ : le panneau latéral couvre désormais ce rôle.
+  - **Cliquer sur le marqueur `<!-- toc -->` peint génère directement le
+    sommaire** (nouveau cas dans le routeur de clics de
+    `MarkdownEditor.tsx`, même famille que le clic sur en-tête/pied de
+    page ou une ancre de sommaire) — jusqu'ici rien ne se passait au clic
+    dessus, SEUL le bouton ruban supprimé pouvait générer.
+  - **`generateToc` repositionne désormais le curseur DANS le sommaire
+    généré** (même technique que le correctif `updateTocAtCursor` de la
+    veille — `positions[0]` reste valide sans `tr.mapping`, puisque les
+    remplacements plus tardifs dans la boucle ne touchent jamais les
+    positions qui les précèdent) : sans ça, `insideToc` restait `false`
+    après un clic sur le marqueur et le panneau ne s'ouvrait jamais —
+    exactement le "n'ouvre pas le panneau" remonté.
+  - Vérifié par Playwright/CDP sur un fichier fixture jetable (créé/
+    supprimé pour l'occasion) avec un VRAI `<!-- toc -->` dans la source :
+    groupe ruban réduit à un seul bouton "Sommaire", clic sur le marqueur
+    peint → 3 liens générés + panneau ouvert immédiatement. `npx tsc
+    --noEmit` propre, `npm test` 38/38 verts.
+- **Panneau latéral « Sommaire » (2026-10-20)**, sur demande explicite de
+  l'utilisateur : "il faut que l'on rajoute le panneau pour édité un
+  sommaire, il est déjà compliqué de cliquer dans un sommaire et impossible
+  à supprimer". Même principe que les panneaux Tableau/En-tête-pied : un
+  panneau contextuel (`src/ui/Toc/TocPanel.tsx`) qui s'ouvre automatiquement
+  quand le curseur entre dans un sommaire déjà généré, avec deux actions —
+  **Mettre à jour** (régénère en place avec les titres actuels) et
+  **Supprimer le sommaire** (efface la liste entière).
+  - **Détection SANS marqueur ni attribut persisté** (`isTocList` dans
+    `TocMarker.ts`) : un sommaire généré n'a plus de `<!-- toc -->` à
+    proximité une fois créé (remplacé par la vraie liste) — pour le
+    retrouver après coup (y compris après fermeture/réouverture du
+    fichier, où un éventuel attribut personnalisé ne survivrait pas à
+    l'aller-retour Markdown), la liste est reconnue par sa FORME : chaque
+    item commence par un paragraphe réduit à un seul lien `#slug`
+    (exactement ce que `buildTocContent` génère). `EditorStats.insideToc`
+    pilote l'ouverture automatique du panneau, même mécanisme de "front
+    montant" que `insideTable`.
+  - **Deux nouvelles commandes** `updateTocAtCursor`/`deleteTocAtCursor`
+    (`TocMarker.ts`) : retrouvent la liste de sommaire englobant le
+    curseur via `findTocListAt`, puis remplacent/suppriment son étendue
+    `[pos, pos+nodeSize)`.
+  - **Bug trouvé et corrigé pendant la vérification, pas anecdotique** :
+    `findTocListAt` s'arrêtait au PREMIER ancêtre de type liste satisfaisant
+    `isTocList` en remontant depuis le curseur — or un sommaire généré est
+    IMBRIQUÉ (chaque titre de niveau N contient une sous-liste de ses
+    titres de niveau N+1, qui satisfait ELLE AUSSI `isTocList`) : cliquer
+    sur l'entrée de PREMIER niveau (ex. un sommaire à 1 titre racine + 3
+    sous-titres) retrouvait la SOUS-liste imbriquée (3 items) plutôt que le
+    sommaire ENTIER (4 items) — confirmé par un test ciblé (sélection
+    exacte retournée : `childCount: 3` au lieu de l'attendu `childCount: 1`
+    pour la liste racine) : "Supprimer" ne retirait alors que les
+    sous-titres, laissant le titre racine orphelin (un item de sommaire
+    tout seul, sans ses enfants) — exactement le "impossible à supprimer"
+    remonté par l'utilisateur. **Fix** : `findTocListAt` ne s'arrête plus
+    au premier match, il continue de remonter tous les ancêtres et garde
+    le PLUS ENGLOBANT — cible désormais toujours le sommaire dans son
+    ensemble, quel que soit le niveau de titre cliqué pour y entrer.
+  - **Second correctif, découvert au même endroit** : juste après
+    `updateTocAtCursor`, ProseMirror replace la sélection à la position
+    valide la plus proche après un `replaceWith` qui couvre l'ancienne
+    position du curseur — souvent JUSTE APRÈS le nouveau sommaire plutôt
+    que dedans, ce qui faisait retomber `insideToc` à `false` et refermait
+    le panneau immédiatement après avoir cliqué "Mettre à jour" (constaté
+    en test : le panneau disparaissait, empêchant d'enchaîner avec
+    "Supprimer" depuis la même session). **Fix** : `updateTocAtCursor`
+    replace désormais explicitement la sélection À L'INTÉRIEUR du sommaire
+    régénéré (`TextSelection.near(tr.doc.resolve(found.pos + 1))`).
+  - **Piège méthodologique rencontré PENDANT cette vérification, à
+    RETENIR** : le fichier `Démonstration des fonctionnalités Pagina.md`
+    (créé par moi plus tôt comme démo, pas un document de l'utilisateur)
+    portait des sommaires et titres de test RÉSIDUELS d'une session
+    antérieure jamais nettoyés — tester dessus donnait des comptages de
+    liens incohérents d'un run à l'autre (contamination croisée entre
+    essais), rendant le diagnostic illisible pendant un bon moment avant
+    que je ne m'en rende compte. **Basculé sur un fichier fixture CRÉÉ
+    EXPRÈS pour ce test** (4 titres connus, jetable, supprimé après coup)
+    — a immédiatement rendu le bug net et reproductible. À refaire
+    systématiquement pour tout futur diagnostic nécessitant un comptage
+    précis : ne jamais réutiliser un fichier de démo/test qui a déjà
+    accumulé plusieurs sessions de manipulations.
+  - **Autre piège méthodologique, plus général** : dans cette même session
+    de vérification, le bouton "Titre 1" du ruban (StyleGallery) semblait
+    ne plus avoir aucun effet après plusieurs manipulations (typer du
+    texte, Entrée, flèches, sélection) — mais fonctionnait PARFAITEMENT
+    juste après un rechargement complet de page suivi d'un clic DIRECT
+    (sans frappe préalable). Non élucidé avec certitude (plusieurs essais
+    de correctifs — garde `onMouseDown preventDefault` sur les boutons
+    de la galerie de styles, ajoutée par prudence même si elle ne semble
+    pas être la cause isolée — n'ont pas permis de reproduire le problème
+    à volonté par la suite) ; probablement encore une variante de la
+    staleness déjà documentée ailleurs dans ce fichier, cette fois
+    sensible à l'ENCHAÎNEMENT precis des manipulations plutôt qu'au seul
+    temps écoulé. À surveiller si un comportement similaire revient.
+  - `npx tsc --noEmit` propre, `npm test` 38/38 verts. Vérifié de bout en
+    bout avec de VRAIS clics/frappes clavier (pas de hook de debug dans la
+    version finale) sur un fichier fixture jetable : génération (4 liens),
+    ouverture automatique du panneau au clic dans le sommaire, "Mettre à
+    jour" (4 liens, pas de doublon, panneau reste ouvert), "Supprimer" (0
+    lien, panneau se referme), annulation complète (retour aux 4 titres
+    d'origine, onglet non modifié).
 - **Débordement de page d'un sommaire généré (2026-10-19/20)**, remonté par
   l'utilisateur ("dans un sommaire il déborde de la pages tu peut
   vérifier?"). Confirmé par mesure directe (`getBoundingClientRect()`) : un
@@ -438,6 +660,48 @@ projets"). Constats et actions :
     explorateur). À garder en tête si l'un de ces panneaux montre un jour
     un comportement inattendu — pas de filet de sécurité automatisé dessus
     pour l'instant.
+- **Refonte de la résolution clic → position + sélection (2026-10-17,
+  suite à la comparaison demandée avec le paged-editor de CasualOffice
+  — 3 défauts remontés : « la sélection des cases de tableau saute »,
+  « compliqué de positionner le curseur », « pas de défilement des
+  pages quand on sélectionne beaucoup de texte »)** — même
+  architecture des deux côtés (éditeur invisible + couche peinte),
+  la différence était dans la RÉSOLUTION :
+  - **Nouveau `pagination/cloneIndex.ts`** : à chaque repaint, les
+    clones sont INDEXÉS en parcourant original et clone EN PARALLÈLE
+    (TreeWalker synchronisé — structures identiques par construction) :
+    nœuds texte du clone → position PM du premier caractère
+    (`view.posAtDOM`), cellules td/th du clone → plage [from,to] du
+    nœud cellule. Coût O(nœuds) par repaint, retourné dans
+    `PaintResult.cloneIndex`, gardé dans `cloneIndexRef`.
+  - **`resolveClickPosition` refait** : CHEMIN RAPIDE
+    `document.caretRangeFromPoint` sur le texte VISIBLE du clone +
+    position indexée = précision CARACTÈRE, insensible au zoom, ZÉRO
+    traduction clone↔original, la cellule cliquée est un contenant
+    naturel (impossible d'atterrir dans la voisine). Le balayage
+    linéaire O(N)×2 `coordsAtPos` ne survit que comme REPLI (zones
+    sans texte indexé : cellules vides, marges, atomes rendus),
+    désormais BORNE À LA CELLULE cliquée quand il y en a une — le
+    « saut » venait du balayage qui mettait toutes les cellules de la
+    ligne à égalité.
+  - **Auto-scroll au glisser-sélection** (concept de leur
+    useDragAutoScroll, réimplémenté) : boucle rAF, zone 40px des
+    bords de .xmd-page-wrap, vitesse proportionnelle max 12px/frame,
+    étend la sélection à chaque tick (posFromCoords par
+    elementFromPoint) — sélectionner sur plusieurs pages marche.
+  - **Bonus** : double-clic = sélection du MOT (frontières
+    unicode), triple-clic = sélection du BLOC entier (pas les
+    tableaux), Maj+clic = étend depuis l'ancre.
+  - Vérifié par Playwright/CDP : clic précis au caractère, cellules
+    pleines ET VIDES cliquées sans saut, glisser 2 cellules → vraie
+    CellSelection, auto-scroll 0→710px avec sélection étendue sur
+    plusieurs pages (44 rects), double/triple/Maj+clic corrects.
+    PIÈGE de test : Playwright n'envoie pas de clickCount>1 sur des
+    clics séparés (e.detail reste 1) — le double-clic natif
+    (dblclick) marche, le triple se teste par MouseEvent synthétique
+    {detail:3} ; et TOUJOURS scrollIntoView la cible avant de
+    cliquer (clics hors viewport = silencieusement ignorés par le
+    handler). tsc, build, 38 tests verts.
 - **Fenêtre Emoji refaite (2026-10-17, demande : « refaire la fenêtre
   emoji, mettre le bouton avec Éléments sans le cadre sur le bouton »)** :
   - L'ancienne liste plate de 30 émojis (menu 6 colonnes) est

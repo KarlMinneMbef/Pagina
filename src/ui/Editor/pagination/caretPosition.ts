@@ -33,21 +33,42 @@ export function computeCaretScreenPosition(
   // Retrouve le bloc PEINT contenant `pos`, pour savoir quel clone (identifié
   // par sa position source) chercher dans la couche peinte. Normalement le
   // bloc de PREMIER NIVEAU (depth 1) — SAUF à l'intérieur d'une liste (voir
-  // `LIST_NODE_NAMES`), où c'est désormais l'ITEM (depth 2) qui porte
-  // `SRC_POS_ATTR`, pas la liste entière (une longue liste peut être coupée
-  // entre deux pages, voir `paintPages.ts` — le bloc "peint" n'est alors
-  // plus la liste, mais chacun de ses items).
+  // `LIST_NODE_NAMES`), où c'est désormais le LISTITEM LE PLUS PROFOND
+  // contenant `pos` qui porte `SRC_POS_ATTR`, pas la liste elle-même : une
+  // liste imbriquée sur PLUSIEURS niveaux (ex. un sommaire généré à partir
+  // d'un document n'ayant qu'un seul titre de niveau 1 — tout le reste
+  // imbriqué dessous, voir `flattenListEntries`) peut être coupée entre
+  // deux pages À N'IMPORTE QUEL NIVEAU, pas seulement entre deux items de
+  // premier niveau — chercher spécifiquement "depth 2" ne suffit donc plus.
   const resolved = view.state.doc.resolve(pos);
   let blockPos = pos;
   if (resolved.depth >= 1) {
     const topNode = resolved.node(1);
-    blockPos = resolved.depth >= 2 && LIST_NODE_NAMES.has(topNode.type.name) ? resolved.before(2) : resolved.before(1);
+    if (LIST_NODE_NAMES.has(topNode.type.name)) {
+      let itemDepth = -1;
+      for (let d = resolved.depth; d >= 2; d--) {
+        const n = resolved.node(d);
+        if (n.type.name === "listItem" || n.type.name === "taskItem") {
+          itemDepth = d;
+          break;
+        }
+      }
+      blockPos = itemDepth >= 0 ? resolved.before(itemDepth) : resolved.before(1);
+    } else {
+      blockPos = resolved.before(1);
+    }
   }
+  let clone = canvas.querySelector<HTMLElement>(`[${SRC_POS_ATTR}="${blockPos}"]`);
+  // Tableau plus haut qu'une page, peint LIGNE PAR LIGNE (voir
+  // `planTableSplit` dans paintPages.ts) : c'est alors le `<tr>` qui porte
+  // `SRC_POS_ATTR`, pas le tableau.
+  if (!clone && resolved.depth >= 2 && resolved.node(1).type.name === "table") {
+    blockPos = resolved.before(2);
+    clone = canvas.querySelector<HTMLElement>(`[${SRC_POS_ATTR}="${blockPos}"]`);
+  }
+  if (!clone) return null;
   const originalBlock = view.nodeDOM(blockPos) as HTMLElement | null;
   if (!originalBlock || !(originalBlock instanceof HTMLElement)) return null;
-
-  const clone = canvas.querySelector<HTMLElement>(`[${SRC_POS_ATTR}="${blockPos}"]`);
-  if (!clone) return null;
 
   const originalRect = originalBlock.getBoundingClientRect();
   const cloneRect = clone.getBoundingClientRect();

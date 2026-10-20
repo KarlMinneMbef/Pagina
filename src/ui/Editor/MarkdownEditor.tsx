@@ -51,7 +51,7 @@ import { useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useState, 
 import { PageBreak } from "./extensions/PageBreak";
 import { Bookmark } from "./extensions/Bookmark";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
-import { TocMarker } from "./extensions/TocMarker";
+import { TocMarker, isInsideToc } from "./extensions/TocMarker";
 import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
 import { MermaidDiagram } from "./extensions/MermaidDiagram";
 import { InlineMath, BlockMath } from "./extensions/Math";
@@ -69,6 +69,7 @@ import {
 } from "./pagination/paintPages";
 import { CODE_BLOCK_LANGUAGE_OPTIONS } from "./codeBlockLanguages";
 import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClickPosition";
+import type { CloneIndex } from "./pagination/cloneIndex";
 import { computeCaretScreenPosition } from "./pagination/caretPosition";
 import { computeSelectionRects } from "./pagination/selectionHighlight";
 import { resolvePageSizeMm, formatTodayForHeaderFooter, type PageLayoutSettings } from "../../core/pageLayout";
@@ -191,6 +192,13 @@ export interface MarkdownEditorHandle {
   closeHeaderFooterEdit: () => void;
   insertTocMarker: () => void;
   generateToc: () => void;
+  /** Régénère en place le sommaire qui contient le curseur (panneau latéral
+   * « Sommaire ») — sans effet si le curseur n'est pas dans un sommaire. */
+  updateTocAtCursor: () => void;
+  /** Supprime entièrement le sommaire qui contient le curseur (panneau
+   * latéral « Sommaire ») — sans effet si le curseur n'est pas dans un
+   * sommaire. */
+  deleteTocAtCursor: () => void;
   /** Insère une référence `[^n]` au curseur ET la définition correspondante
    * en fin de document (n = 1 + le plus grand id de note déjà utilisé). */
   insertFootnote: () => void;
@@ -359,6 +367,11 @@ function getActiveListType(editor: Editor): EditorStats["activeList"] {
 /** Police de la sélection (attribut `fontSize`/`fontFamily` de la marque
  * `textStyle`, voir `currentFontSizePt`) — `null` si aucune police
  * personnalisée n'est posée (police par défaut du document). */
+/** Le curseur est-il dans un sommaire généré — voir `EditorStats.insideToc`. */
+function getInsideToc(editor: Editor): boolean {
+  return isInsideToc(editor.state.doc, editor.state.selection.from);
+}
+
 function currentFontFamily(editor: Editor): string | null {
   const family = editor.getAttributes("textStyle").fontFamily;
   return typeof family === "string" && family ? family : null;
@@ -714,6 +727,11 @@ export interface EditorStats {
    * — pilote le panneau latéral « Variables » (voir `HeaderFooterPanel`
    * dans App.tsx) ; `null` quand aucun champ n'est ouvert. */
   headerFooterEditMode: "header" | "footer" | null;
+  /** Le curseur est-il actuellement dans un sommaire généré (voir
+   * `isTocList` dans TocMarker.ts) — pilote l'ouverture automatique du
+   * panneau latéral « Sommaire » (Mettre à jour/Supprimer), même principe
+   * que `insideTable`. */
+  insideToc: boolean;
 }
 
 interface MarkdownEditorProps {
@@ -803,6 +821,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Tiptap, d'appeler la version toujours à jour de `repaint`.
     const repaintRef = useRef<() => void>(() => {});
     const repaintCaretRef = useRef<() => void>(() => {});
+    // Index des clones peints (refonte 2026-10-17 de la résolution clic →
+    // position, voir cloneIndex.ts) : nœuds texte du clone → position PM,
+    // cellules → plage. Représenté à CHAQUE repaint (result.cloneIndex).
+    const cloneIndexRef = useRef<CloneIndex | null>(null);
 
     // Constantes physiques (mm → px) : indépendantes du zoom, recalculées
     // seulement quand la mise en page change (format papier, orientation,
@@ -959,6 +981,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeFontFamily: currentFontFamily(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
+          insideToc: getInsideToc(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1156,6 +1179,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         activeFontFamily: editor ? currentFontFamily(editor) : null,
         activeFontSizePt: editor ? currentFontSizePt(editor) : 12,
         insideTable: editor?.isActive("table") ?? false,
+        insideToc: editor ? getInsideToc(editor) : false,
         tableSelectionShape: editor ? getSelectionShape(editor) : null,
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
@@ -1177,6 +1201,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       },
       insertTocMarker: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
       generateToc: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
+      updateTocAtCursor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).updateTocAtCursor().run(),
+      deleteTocAtCursor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).deleteTocAtCursor().run(),
       insertFootnote: () => {
         if (!editor) return;
         let maxId = 0;
@@ -1366,8 +1392,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             // ici, sur la largeur cette fois — recommencé deux fois avant
             // de s'en souvenir.
             const style = getComputedStyle(renderedContent);
+            // `renderedContent` vit dans `.xmd-page-canvas`, qui porte
+            // `transform: scale(zoom)` : son rect est donc MULTIPLIÉ par le
+            // zoom alors que le padding (computed style) reste en px CSS
+            // logiques. Sans cette division, à 150% la zone invisible devenait
+            // 1,5× trop large → autre retour à la ligne → pagination fausse
+            // (moins de pages, blocs qui débordent de leur page).
             const realWidth =
-              renderedContent.getBoundingClientRect().width -
+              renderedContent.getBoundingClientRect().width / zoomRef.current -
               (parseFloat(style.paddingLeft) || 0) -
               (parseFloat(style.paddingRight) || 0);
             if (Math.abs(realWidth - liveHost.getBoundingClientRect().width) > 0.01) {
@@ -1396,6 +1428,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           },
         });
         pageCountRef.current = result.pageCount;
+        // L'index texte/cellules des clones vient d'être reconstruit —
+        // c'est LUI que resolveClickPosition consultera pour la
+        // résolution exacte au caractère (ancien index périmé).
+        cloneIndexRef.current = result.cloneIndex;
         repaintCaretOnly();
         // Les clones viennent d'être recréés : recolle la pastille de
         // langage sur le bloc peint correspondant.
@@ -1414,6 +1450,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeFontFamily: currentFontFamily(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
+          insideToc: getInsideToc(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1554,6 +1591,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeFontFamily: currentFontFamily(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
+          insideToc: getInsideToc(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: mode,
         });
@@ -1745,7 +1783,93 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const posFromEvent = (e: MouseEvent): number | null => {
         const block = findClonedBlock(e.target);
         if (!block) return null;
-        return resolveClickPosition(editor.view, e.clientX, e.clientY, block, zoomRef.current);
+        return resolveClickPosition(editor.view, e.clientX, e.clientY, block, zoomRef.current, cloneIndexRef.current ?? undefined, e.target as Element);
+      };
+
+      /** Résolution par COORDONNÉES seules (sans événement) — utilisée par
+       * l'auto-scroll de glissement : après un scroll programmatique il n'y
+       * a pas de nouvel événement souris, il faut retrouver ce qui se
+       * trouve maintenant sous le point mémorisé. */
+      const posFromCoords = (x: number, y: number): number | null => {
+        const el = document.elementFromPoint(x, y);
+        if (!(el instanceof Element)) return null;
+        const block = findClonedBlock(el);
+        if (!block) return null;
+        return resolveClickPosition(editor.view, x, y, block, zoomRef.current, cloneIndexRef.current ?? undefined, el);
+      };
+
+      /** Plage du MOT sous un point (double-clic) — via l'index du clone :
+       * le nœud texte VISIBLE sous le point, précision caractère, donc
+       * insensible au zoom et à la cellule. */
+      const wordRangeAtPoint = (x: number, y: number): { from: number; to: number } | null => {
+        const index = cloneIndexRef.current;
+        if (!index) return null;
+        const caret = document.caretRangeFromPoint(x, y);
+        const container = caret?.startContainer;
+        if (!caret || !container || container.nodeType !== Node.TEXT_NODE) return null;
+        const textNode = container as Text;
+        const start = index.text.get(textNode);
+        if (start === undefined) return null;
+        const text = textNode.data;
+        const off = caret.startOffset;
+        const isWordChar = (ch: string) => /[\p{L}\p{N}_'’-]/u.test(ch);
+        let s = off;
+        let e = off;
+        while (s > 0 && isWordChar(text[s - 1])) s--;
+        while (e < text.length && isWordChar(text[e])) e++;
+        if (s === e) return null;
+        return { from: start + s, to: start + e };
+      };
+
+      // --- Auto-scroll pendant le glisser-sélection (refonte 2026-10-17,
+      // réimplémentation du concept de useDragAutoScroll de CasualOffice,
+      // voir ROADMAP-CASUALOFFICE.md) : quand la souris s'approche du bord
+      // haut/bas du wrapper de pages, une boucle requestAnimationFrame
+      // fait défeler le conteneur à vitesse proportionnelle à la proximité
+      // et étend la sélection à chaque tick — sélectionner sur plusieurs
+      // pages devient possible (avant : le glissement s'arrêtait net au
+      // bord du viewport).
+      const DRAG_EDGE_ZONE = 40;
+      const DRAG_MAX_SPEED = 12;
+      let dragAutoScrollRaf: number | null = null;
+      const lastDragPoint = { x: 0, y: 0 };
+      const wrap = canvas.closest(".xmd-page-wrap") as HTMLElement | null;
+      const stopDragAutoScroll = () => {
+        if (dragAutoScrollRaf !== null) {
+          cancelAnimationFrame(dragAutoScrollRaf);
+          dragAutoScrollRaf = null;
+        }
+      };
+      const extendDragAt = (x: number, y: number) => {
+        const pos = posFromCoords(x, y);
+        if (pos === null || anchorPos === null) return;
+        const cellPos = findCellPos(editor.state.doc, pos);
+        if (cellAnchorPos !== null && cellPos !== null && cellPos !== cellAnchorPos) {
+          try {
+            const sel = CellSelection.create(editor.state.doc, cellAnchorPos, cellPos);
+            editor.view.dispatch(editor.state.tr.setSelection(sel));
+            return;
+          } catch {
+            // Repli texte ci-dessous.
+          }
+        }
+        editor.commands.setTextSelection({ from: Math.min(anchorPos, pos), to: Math.max(anchorPos, pos) });
+      };
+      const dragAutoScrollTick = () => {
+        dragAutoScrollRaf = null;
+        if (!dragging || !wrap) return;
+        const r = wrap.getBoundingClientRect();
+        let delta = 0;
+        if (lastDragPoint.y < r.top + DRAG_EDGE_ZONE) {
+          delta = -Math.min(DRAG_MAX_SPEED, ((r.top + DRAG_EDGE_ZONE - lastDragPoint.y) / DRAG_EDGE_ZONE) * DRAG_MAX_SPEED);
+        } else if (lastDragPoint.y > r.bottom - DRAG_EDGE_ZONE) {
+          delta = Math.min(DRAG_MAX_SPEED, ((lastDragPoint.y - (r.bottom - DRAG_EDGE_ZONE)) / DRAG_EDGE_ZONE) * DRAG_MAX_SPEED);
+        }
+        if (delta !== 0) {
+          wrap.scrollTop += delta;
+          extendDragAt(lastDragPoint.x, lastDragPoint.y);
+        }
+        dragAutoScrollRaf = requestAnimationFrame(dragAutoScrollTick);
       };
 
       const onMouseDown = (e: MouseEvent) => {
@@ -1811,6 +1935,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           startHeaderFooterEdit(headerFooterTarget);
           return;
         }
+        // Marqueur de sommaire (voir TocMarker.ts) : cliquer dessus le
+        // remplit directement — remonté par l'utilisateur ("le marqueur de
+        // sommaire n'ouvre pas le panneau"), le bouton ruban dédié
+        // ("Mettre à jour") ayant été retiré au profit du panneau latéral
+        // « Sommaire », qui s'ouvre automatiquement une fois le sommaire
+        // généré (voir `insideToc`/le curseur repositionné dedans par
+        // `generateToc`).
+        const tocMarkerTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-toc-marker");
+        if (tocMarkerTarget) {
+          e.preventDefault();
+          editor.chain().focus(undefined, { scrollIntoView: false }).generateToc().run();
+          return;
+        }
         // Ancre de sommaire (voir TocMarker.ts, generateToc) : un lien
         // `#slug` ne peut pas être laissé au navigateur (la couche peinte
         // n'est pas un document normal, et le clic serait de toute façon
@@ -1865,11 +2002,53 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         const pos = posFromEvent(e);
         if (pos === null) return;
         e.preventDefault();
+        editor.commands.focus(undefined, { scrollIntoView: false });
+
+        // Maj+clic (simple) : étend la sélection existante depuis son
+        // ancre (comme un glisser-sélection, sans glisser).
+        if (e.shiftKey && e.detail === 1) {
+          const { anchor } = editor.state.selection;
+          editor.commands.setTextSelection({ from: anchor, to: pos });
+          return;
+        }
+        // Double-clic : sélectionne le MOT sous le point (le repli = un
+        // simple clic si le point n'est pas sur du texte indexé).
+        if (e.detail === 2) {
+          const word = wordRangeAtPoint(e.clientX, e.clientY);
+          if (word) {
+            editor.commands.setTextSelection(word);
+            return;
+          }
+        }
+        // Triple-clic : sélectionne le BLOC entier (sauf tableau — une
+        // grille ne se sélectionne pas d'un triple-clic, ça n'aurait pas
+        // de sens d'englober tout le tableau).
+        if (e.detail === 3) {
+          const block = findClonedBlock(e.target);
+          const srcPosAttr = block?.getAttribute("data-src-pos");
+          if (block && srcPosAttr != null) {
+            const srcPos = parseInt(srcPosAttr, 10);
+            const node = editor.state.doc.nodeAt(srcPos);
+            if (node && node.type.name !== "table") {
+              const from = srcPos + 1;
+              const to = srcPos + node.nodeSize - 1;
+              if (from < to) {
+                editor.commands.setTextSelection({ from, to });
+                return;
+              }
+            }
+          }
+        }
+
         dragging = true;
         anchorPos = pos;
         cellAnchorPos = findCellPos(editor.state.doc, pos);
-        editor.commands.focus(undefined, { scrollIntoView: false });
         editor.commands.setTextSelection(pos);
+        // Démarre la boucle d'auto-scroll (sans effet tant que la souris
+        // n'approche pas un bord — le tick ne fait alors rien).
+        lastDragPoint.x = e.clientX;
+        lastDragPoint.y = e.clientY;
+        if (dragAutoScrollRaf === null) dragAutoScrollRaf = requestAnimationFrame(dragAutoScrollTick);
       };
       const onMouseMove = (e: MouseEvent) => {
         if (resizingCol) {
@@ -1899,6 +2078,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           return;
         }
         if (!dragging || anchorPos === null) return;
+        // Point mémorisé pour l'auto-scroll de glissement (le tick rAF
+        // étend la sélection à CE point après chaque scroll programmatique).
+        lastDragPoint.x = e.clientX;
+        lastDragPoint.y = e.clientY;
         const pos = posFromEvent(e);
         if (pos === null) return;
         // Glisser à travers plusieurs cellules d'un tableau DOIT produire une
@@ -1940,6 +2123,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         dragging = false;
         anchorPos = null;
         cellAnchorPos = null;
+        stopDragAutoScroll();
       };
 
       // Filet de sécurité : un lien réel (`<a href="https://…">`) cliqué
@@ -1989,6 +2173,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         canvas.removeEventListener("contextmenu", onContextMenu);
         window.removeEventListener("mousemove", onMouseMove);
         window.removeEventListener("mouseup", onMouseUp);
+        stopDragAutoScroll();
       };
     }, [editor]);
 
@@ -2025,6 +2210,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             activeFontFamily: currentFontFamily(editor),
             activeFontSizePt: currentFontSizePt(editor),
             insideTable: editor.isActive("table"),
+            insideToc: getInsideToc(editor),
             tableSelectionShape: getSelectionShape(editor),
             headerFooterEditMode: headerFooterModeRef.current,
           });

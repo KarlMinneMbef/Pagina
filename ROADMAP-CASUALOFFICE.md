@@ -27,6 +27,30 @@ l'identité du projet.
 
 ## Phase 1 — Tableaux (en cours, priorité immédiate)
 
+- ✅ **Résolution clic/sélection refonte complète (2026-10-17)** — comparaison
+  demandée avec leur `paged-editor/` (même architecture : éditeur invisible
+  + couche peinte). Porté/réimplémenté sur notre modèle, SANS copie :
+  - Leur `ClickPositionResolver` (runs indexés `data-pm-start` + recherche
+    binaire) → notre `pagination/cloneIndex.ts` (index texte/cellules des
+    clones reconstruit à chaque repaint) + chemin rapide
+    `caretRangeFromPoint` sur le texte visible dans `resolveClickPosition` ;
+    le balayage `coordsAtPos` ne survit que comme repli BORNE À LA CELLULE
+    cliquée. Corrige les remontées « la sélection des cellules saute » et
+    « difficile de positionner le curseur ».
+  - Leur `useDragAutoScroll` (rAF, zone 40px, vitesse proportionnelle) →
+    réimplémenté dans le gestionnaire souris de MarkdownEditor.tsx :
+    sélectionner par glissement à travers les pages défile maintenant.
+  - Bonus ajoutés au passage : double-clic = mot, triple-clic = bloc,
+    Maj+clic = étendre (leur `PointerEventHandler` les implémentait, nous
+    pas).
+  - Leur `LayoutSelectionGate` (verrou séquence état/layout pour la
+    peinture de sélection) : 🔶 évalué, NON porté pour l'instant — notre
+    repaint est synchrone à la frappe, le besoin se fera sentir si la
+    pagination devient asynchrone un jour.
+  - Vérifié par Playwright/CDP : cellules pleines et vides sans saut, vraie
+    `CellSelection` au glisser, auto-scroll multi-pages, clic précis au
+    caractère. Détails dans CLAUDE.md.
+
 Déjà bien avancé côté Pagina (fusion, bordures par côté, alignement
 vertical, menu clic-droit, glisser-sélectionner correctement reconnu comme
 `CellSelection`). Reste à porter :
