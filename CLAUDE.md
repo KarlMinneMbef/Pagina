@@ -736,9 +736,9 @@ projets"). Constats et actions :
     formule → réouverture avec valeur, clic dans un paragraphe →
     fermeture propre. tsc, build, 38 tests verts. MathLive en
     dépendance (package.json) — chargé à la demande.
-  - **Reste à faire (passe 2, demandée)** : éditeur de GRAPHE sans code
-    Mermaid (formulaire nœuds + flèches + aperçu) dans le même panneau
-    latéral.
+  - **Éditeur de GRAPHE sans code Mermaid (formulaire nœuds +
+    flèches + aperçu) : MIS DE CÔTÉ sur demande de l'utilisateur
+    (2026-10-17) — à redemander avant de le développer.**
 - **Refonte de la résolution clic → position + sélection (2026-10-17,
   suite à la comparaison demandée avec le paged-editor de CasualOffice
   — 3 défauts remontés : « la sélection des cases de tableau saute »,
