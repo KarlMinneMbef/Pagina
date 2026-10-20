@@ -25,7 +25,7 @@
  * comme l'explorateur à gauche) qui s'ouvre automatiquement quand le
  * curseur entre dans un tableau.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import type { GridLine } from "../Editor/MarkdownEditor";
 import { FONT_SIZE_STEPS } from "../Editor/MarkdownEditor";
@@ -45,6 +45,7 @@ import {
   IconCrossReference,
   IconCut,
   IconEmoji,
+  IconSpecialChar,
   IconExplorer,
   IconFooter,
   IconFootnote,
@@ -63,6 +64,55 @@ import {
   IconTocMarker,
 } from "./icons";
 import "./Toolbar.css";
+
+/** Caractères spéciaux (bouton « Caractères spéciaux » de l'onglet Insertion) :
+ * insérés comme caractère Unicode réel, comme les emoji. Évite volontairement
+ * les caractères à signification Markdown/HTML (antislash, astérisque,
+ * tiret bas, dièse, esperluette, chevrons, accent grave) : l'insertion passe
+ * par le parseur Markdown. Sélection orientée usage MBEF (génie
+ * climatique/fluides : °C, m³/h, Ω, Δ, ±, ⌀…). */
+const SPECIAL_CHAR_CATEGORIES: { id: string; label: string; emojis: string[] }[] = [
+  {
+    id: "technique",
+    label: "Unités et technique",
+    emojis: ["°", "℃", "℉", "²", "³", "µ", "Ω", "±", "×", "÷", "‰", "‱", "⌀", "∅", "№", "㎡", "㎥", "㎜", "㎝", "㎞", "㎏", "㎖"],
+  },
+  {
+    id: "maths",
+    label: "Mathématiques",
+    emojis: ["≤", "≥", "≠", "≈", "≡", "∞", "√", "∛", "∑", "∏", "∫", "∂", "∆", "∇", "∝", "∈", "∉", "∪", "∩", "⊂", "⊃", "∀", "∃", "∴", "∵", "¬", "∧", "∨", "⊕", "⊗", "∥", "⊥", "∠", "′", "″"],
+  },
+  {
+    id: "grec",
+    label: "Lettres grecques",
+    emojis: ["α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "π", "ρ", "σ", "τ", "υ", "φ", "χ", "ψ", "ω", "Γ", "Δ", "Θ", "Λ", "Ξ", "Π", "Σ", "Φ", "Ψ", "Ω"],
+  },
+  {
+    id: "fleches",
+    label: "Flèches",
+    emojis: ["←", "→", "↑", "↓", "↔", "↕", "⇐", "⇒", "⇑", "⇓", "⇔", "↩", "↪", "↗", "↘", "↙", "↖", "⟵", "⟶", "⟷"],
+  },
+  {
+    id: "ponctuation",
+    label: "Ponctuation et typographie",
+    emojis: ["«", "»", "“", "”", "‘", "’", "„", "‹", "›", "…", "–", "—", "•", "·", "§", "¶", "†", "‡", "©", "®", "™", "¡", "¿", "‣", "※"],
+  },
+  {
+    id: "monnaies",
+    label: "Monnaies, fractions, exposants",
+    emojis: ["€", "£", "¥", "¢", "$", "₣", "₹", "₽", "₿", "½", "⅓", "⅔", "¼", "¾", "⅕", "⅛", "⅜", "⅝", "⅞", "¹", "⁰", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹", "₀", "₁", "₂", "₃", "₄"],
+  },
+  {
+    id: "lettres",
+    label: "Lettres accentuées et latines",
+    emojis: ["À", "Â", "Ä", "Ç", "É", "È", "Ê", "Ë", "Î", "Ï", "Ô", "Ö", "Ù", "Û", "Ü", "Ÿ", "Œ", "Æ", "à", "â", "ä", "ç", "é", "è", "ê", "ë", "î", "ï", "ô", "ö", "ù", "û", "ü", "ÿ", "œ", "æ", "ß", "Ñ", "ñ", "ª", "º"],
+  },
+  {
+    id: "formes",
+    label: "Formes et cases",
+    emojis: ["■", "□", "▪", "▫", "▲", "△", "▼", "▽", "◆", "◇", "●", "○", "◉", "★", "☆", "✓", "✔", "✗", "✘", "☐", "☑", "☒", "♠", "♣", "♥", "♦", "⚠", "☎", "✉", "☀", "☁", "❄"],
+  },
+];
 
 /** Emoji courants — insérés comme caractère Unicode réel (pas un code
  * `:smile:` à convertir), donc lisibles tels quels dans n'importe quel
@@ -241,6 +291,7 @@ export function Toolbar({
   activeAlign = null,
   activeList = null,
   activeFontFamily = null,
+  activeColor = null,
   activeFontSizePt = 12,
   leger = false,
 }: {
@@ -277,6 +328,8 @@ export function Toolbar({
   activeList?: "bullet" | "ordered" | "task" | "blockquote" | null;
   /** Police de la sélection — affichée dans le sélecteur "Police". */
   activeFontFamily?: string | null;
+  /** Couleur de texte de la sélection — colore la barre sous le « A ». */
+  activeColor?: string | null;
   /** Taille de police de la sélection (pt) — affichée dans le sélecteur "Taille". */
   activeFontSizePt?: number;
 }) {
@@ -460,7 +513,9 @@ export function Toolbar({
                 triggerClassName="tb-btn-icon tb-btn-with-caret"
                 trigger={
                   <>
-                    <span className="tb-letter">A</span>
+                    <span className="tb-letter tb-letter-highlight">
+                      A<span className="tb-highlight-bar" style={{ background: activeColor ?? "#ffffff" }} />
+                    </span>
                     <span className="tb-swatch-caret">▾</span>
                   </>
                 }
@@ -581,13 +636,27 @@ export function Toolbar({
                 icon={<IconHorizontalRule size={15} />}
                 label="Séparateur"
               />
-              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
               <StackButton
                 disabled={disabled}
                 onClick={() => actions?.toggleCodeBlock()}
                 title="Bloc de code"
                 icon={<IconCodeBlock size={15} />}
                 label="Bloc de code"
+              />
+            </div>
+          </RibbonGroup>
+
+          <RibbonGroup label="Symboles" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <div className="tb-stack">
+              <EmojiPicker disabled={disabled} onPick={(emoji) => actions?.insertEmoji(emoji)} />
+              {/* Même action que les emoji : insère un caractère Unicode réel. */}
+              <EmojiPicker
+                disabled={disabled}
+                onPick={(c) => actions?.insertEmoji(c)}
+                label="Caractères spéciaux"
+                title="Insérer un caractère spécial (°, ², Ω, ≤, →, «…)"
+                categories={SPECIAL_CHAR_CATEGORIES}
+                icon={<IconSpecialChar size={15} />}
               />
             </div>
           </RibbonGroup>
@@ -897,7 +966,24 @@ function HeadingPicker({
  * libellés textuels des autres menus n'ont pas de sens ici, l'emoji EST
  * son propre libellé). Le DÉCLENCHEUR porte l'icône SVG fournie (visage),
  * pas un emoji. */
-function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: string) => void }) {
+/** Sélecteur à catégories (fenêtre popup) : sert aux Emoji ET aux Caractères
+ * spéciaux — mêmes comportements (recalage dans la fenêtre, Échap, clic
+ * extérieur), seuls libellé/icône/catégories changent. */
+function EmojiPicker({
+  disabled,
+  onPick,
+  label = "Emoji",
+  title = "Insérer un emoji",
+  categories = EMOJI_CATEGORIES,
+  icon = <IconEmoji size={15} />,
+}: {
+  disabled: boolean;
+  onPick: (emoji: string) => void;
+  label?: string;
+  title?: string;
+  categories?: { id: string; label: string; emojis: string[] }[];
+  icon?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -913,6 +999,12 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
     const overflowRight = rect.right - (window.innerWidth - 8);
     if (overflowRight > 0) {
       pop.style.right = `${parseFloat(pop.style.right || "0") + overflowRight}px`;
+    }
+    // Débordement à GAUCHE (le bouton est ancré à droite de la fenêtre et le
+    // groupe « Symboles » est plus au centre du ruban) : on décale vers la droite.
+    const overflowLeft = 8 - pop.getBoundingClientRect().left;
+    if (overflowLeft > 0) {
+      pop.style.right = `${parseFloat(pop.style.right || "0") - overflowLeft}px`;
     }
   }, [open]);
 
@@ -940,18 +1032,16 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
         className="tb-stack-btn tb-stack-btn-with-caret"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
-        title="Insérer un emoji"
+        title={title}
       >
-        <span className="tb-stack-btn-icon">
-          <IconEmoji size={15} />
-        </span>
-        <span className="tb-stack-btn-label">Emoji</span>
+        <span className="tb-stack-btn-icon">{icon}</span>
+        <span className="tb-stack-btn-label">{label}</span>
         <span className="tb-stack-caret">▾</span>
       </button>
       {open && (
-        <div className="tb-emoji-pop" ref={popRef} role="dialog" aria-label="Emoji">
-          <div className="tb-emoji-pop-title">Emoji</div>
-          {EMOJI_CATEGORIES.map((cat) => (
+        <div className="tb-emoji-pop" ref={popRef} role="dialog" aria-label={label}>
+          <div className="tb-emoji-pop-title">{label}</div>
+          {categories.map((cat) => (
             <div key={cat.id} className="tb-emoji-cat">
               <div className="tb-emoji-cat-label">{cat.label}</div>
               <div className="tb-emoji-grid">
@@ -961,6 +1051,7 @@ function EmojiPicker({ disabled, onPick }: { disabled: boolean; onPick: (emoji: 
                     type="button"
                     className="tb-emoji-cell"
                     title={emoji}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       onPick(emoji);
                       setOpen(false);

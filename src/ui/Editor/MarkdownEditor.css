@@ -726,3 +726,22 @@
     display: none !important;
   }
 }
+
+/* Menu contextuel : libellé à gauche, raccourci à droite, état désactivé. */
+.xmd-table-ctx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.xmd-table-ctx-shortcut {
+  color: #75766f;
+  font-size: 11px;
+}
+.xmd-table-ctx-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.xmd-table-ctx-item:disabled:hover {
+  background: transparent;
+}

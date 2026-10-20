@@ -1,0 +1,95 @@
+/* Mini-barre flottante de mise en forme à la sélection (voir SelectionBar.tsx).
+ * `position: fixed` : positionnée en coordonnées écran par MarkdownEditor. */
+.xmd-selbar {
+  position: fixed;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #ffffff;
+  border: 1px solid #d9d9d7;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  font-family: Arial, sans-serif;
+  color: #343334;
+  user-select: none;
+}
+
+.xmd-selbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #343334;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.xmd-selbar-btn:hover {
+  background: #dfeff8; /* azur */
+}
+
+.xmd-selbar-btn-active {
+  background: #24ac6e; /* prairie */
+  color: #ffffff;
+}
+
+.xmd-selbar-btn-active:hover {
+  background: #1f9660;
+}
+
+.xmd-selbar-sep {
+  width: 1px;
+  height: 18px;
+  background: #e0e0de;
+  margin: 0 3px;
+}
+
+/* Bouton couleur : lettre A + barre de la couleur courante + chevron. */
+.xmd-selbar-btn-color {
+  position: relative;
+  gap: 2px;
+}
+
+.xmd-selbar-letter {
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.xmd-selbar-colorbar {
+  position: absolute;
+  left: 8px;
+  bottom: 4px;
+  width: 12px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.xmd-selbar-caret {
+  font-size: 10px;
+  margin-left: 6px;
+}
+
+.xmd-selbar-highlight {
+  background: #fff176;
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: #343334;
+}
+
+.xmd-selbar-btn-active .xmd-selbar-highlight {
+  background: #ffe500;
+}
+
+@media print {
+  .xmd-selbar {
+    display: none !important;
+  }
+}

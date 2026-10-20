@@ -339,7 +339,11 @@ function planTableSplit(node: any, offset: number, nodeDom: HTMLElement, content
  * et des hauteurs mesurées. Chaque `<tr>` cloné porte SON PROPRE
  * `SRC_POS_ATTR` (comme les `<li>` des listes) : la résolution de clic, le
  * curseur et la sélection fonctionnent ligne par ligne. */
-function buildTableFragment(tableDom: HTMLElement, rows: TableRowRef[]): HTMLElement {
+function buildTableFragment(
+  tableDom: HTMLElement,
+  rows: TableRowRef[],
+  onRowCloned?: (original: HTMLElement, clone: HTMLElement) => void,
+): HTMLElement {
   const originalTable = (tableDom.matches("table") ? tableDom : tableDom.querySelector("table")) as HTMLElement;
   const table = originalTable.cloneNode(false) as HTMLElement;
   const cols = Array.from(originalTable.querySelectorAll(":scope > colgroup > col")) as HTMLElement[];
@@ -361,6 +365,7 @@ function buildTableFragment(tableDom: HTMLElement, rows: TableRowRef[]): HTMLEle
   for (const row of rows) {
     const tr = row.dom.cloneNode(true) as HTMLElement;
     tr.setAttribute(SRC_POS_ATTR, String(row.pos));
+    onRowCloned?.(row.dom, tr);
     body.appendChild(tr);
   }
   table.appendChild(body);
@@ -552,7 +557,11 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
           }
           content.appendChild(clone);
         } else if (entry.kind === "tableRows") {
-          content.appendChild(buildTableFragment(entry.tableDom, entry.rows));
+          // Chaque ligne clonée est indexée (cloneIndex.ts) : clic exact au
+          // caractère, comme pour un bloc entier.
+          content.appendChild(
+            buildTableFragment(entry.tableDom, entry.rows, (orig, clone) => indexCloneBlock(view, orig, clone, cloneIndex)),
+          );
         } else {
           // Fragment de liste (voir `LIST_NODE_NAMES`/`flattenListEntries`) :
           // reconstruit une structure imbriquée pour CETTE page à partir des
