@@ -136,6 +136,55 @@ projets"). Constats et actions :
     l'état actuel exact de ce qui existe déjà.
 
 ### Fait et fonctionnel
+- **Mini-barre flottante de mise en forme à la sélection (2026-10-20)**,
+  demandée d'après CasualOffice. `src/ui/Editor/SelectionBar.tsx/.css` : G I S
+  S̶ x² x₂, lien, couleur du texte (`ColorPicker`), surlignage ; état actif
+  lu sur l'éditeur. Positionnée par l'effet `selBarSync` de
+  `MarkdownEditor.tsx` (rectangles de `computeSelectionRects` → coordonnées
+  écran, au-dessus de la première ligne visible, en dessous si elle sortirait
+  de la zone ; recalée au repaint/défilement/resize via `selBarSyncRef`).
+  Masquée pendant le glisser de souris (affichée au relâchement), sans
+  sélection, en sélection de cellules, bloc de code/Mermaid, lecture seule,
+  édition d'en-tête/pied. Boutons : `mousedown preventDefault` (piège du
+  focus). Vérifié CDP : apparition au double-clic, Gras (actif/inactif),
+  surlignage, couleur rouge appliquée, masquage au clic ailleurs/flèche/
+  glisser. Non testé : bouton Lien (prompt), sélection multi-pages.
+- **Bouton « Caractères spéciaux » (2026-10-20)**, onglet Insertion, demandé
+  « comme Emoji ». Nouveau groupe **« Symboles »** (Emoji + Caractères
+  spéciaux, 2 lignes) à côté d'Éléments (qui garde Séparateur + Bloc de code).
+  `EmojiPicker` (`Toolbar.tsx`) est généralisé (libellé/icône/catégories en
+  props) ; `SPECIAL_CHAR_CATEGORIES` : unités et technique (°, ², µ, Ω, ±, ⌀,
+  ㎥…), maths, lettres grecques, flèches, ponctuation, monnaies/fractions/
+  exposants, lettres accentuées, formes. Insère un caractère Unicode réel via
+  `insertEmoji` (mêmes actions, rien à câbler dans App/PaginaLight).
+  Caractères à sens Markdown/HTML volontairement exclus (l'insertion passe
+  par le parseur Markdown). Popup recalée aussi à gauche. Vérifié CDP :
+  240 cases, insertion « ° » et « ² », emoji toujours OK.
+- **Menu contextuel clic-droit sur tout le texte (2026-10-20)**, demandé
+  d'après le menu de CasualOffice (`TextContextMenu.tsx`) — SANS « Traduire »
+  ni « Commenter » (commentaires prévus plus tard avec le format .xmd).
+  `TableContextMenu` (`MarkdownEditor.tsx`) devient le menu général : Couper,
+  Copier, Coller, Coller en texte brut, Supprimer, Tout sélectionner
+  (désactivés selon sélection/lecture seule, raccourcis affichés) + les
+  actions de tableau SEULEMENT si le clic est dans un tableau. Opérations
+  presse-papiers factorisées (`copyEditorSelection`/`cutEditorSelection`/
+  `pasteIntoEditor`) et partagées avec les boutons du ruban. Le clic droit ne
+  modifie plus la sélection au `mousedown` (garde `e.button !== 0`) : une
+  sélection existante est conservée si le clic tombe dedans. Menu recalé dans
+  la fenêtre. Vérifié CDP : états du menu, Copier+Coller (+1 occurrence),
+  Tout sélectionner, menu tableau. Non fait : la mini-barre flottante de mise
+  en forme à la sélection (autre capture CasualOffice), « Coller en texte
+  brut » non testé en clic réel.
+- **Correctif : sélection/curseur dessinés décalés après redimensionnement de
+  la fenêtre ou d'un panneau (2026-10-20)**, capturé par l'utilisateur
+  (sélection de cellules décalée d'~100px vers la gauche après avoir agrandi
+  la fenêtre). Le curseur et les rectangles de sélection sont en coordonnées
+  de `.xmd-canvas-frame`, mais seul l'éditeur invisible était observé par un
+  `ResizeObserver` : quand le cadre change de largeur, la page (centrée) bouge
+  sans recalcul. Fix : second `ResizeObserver` sur le cadre →
+  `repaintCaretRef` (`MarkdownEditor.tsx`, effet de repaint). Vérifié CDP :
+  écart 0 px après masquage/affichage de l'explorateur (le bug n'a pas été
+  reproduit AVANT le fix, déduit des captures).
 - **Panneau latéral « Styles de titres » (2026-10-20)**, demandé par
   l'utilisateur (« on ne voit que 3 niveaux sur 6, on n'est pas sûr du niveau
   sous le curseur »). `src/ui/HeadingStyles/HeadingStylesPanel.tsx` : le
@@ -660,6 +709,36 @@ projets"). Constats et actions :
     explorateur). À garder en tête si l'un de ces panneaux montre un jour
     un comportement inattendu — pas de filet de sécurité automatisé dessus
     pour l'instant.
+- **Panneau « Équation » — éditeur WYSIWYG MathLive (2026-10-17, passe 1
+  de la demande : « pour chaque fonction un panneau latéral droit,
+  très simple — les utilisateurs ne peuvent pas coder une équation »)** :
+  - Les window.prompt de LaTeX brut (insertion ET clic sur formule) sont
+    SUPPRIMÉS. Nouveau src/ui/Math/EquationPanel.tsx dans
+    ContextualPanelHost (onglet « Équation ») : champ <math-field>
+    MathLive (MIT, 100 % local, import DYNAMIQUE pour ne pas le charger
+    au démarrage) — on TAPE l'équation, elle se met en forme en direct
+    (exposants, fractions imbriquées…), bouton de CLAVIER MATHÉMATIQUE
+    VIRTUEL dans le champ (fractions, racines, grec, opérateurs) ;
+    sortie LaTeX automatique, KaTeX rend dans la page comme avant.
+    Bouton « Supprimer la formule ». Locale fr.
+  - Mécanique : une formule est un ATOME — désignée par NodeSelection
+    (pas un curseur « dedans »). EditorStats.math {kind, source, pos}
+    (pos = clé d'identité : le panneau se remonte au changement de
+    formule, jamais à la frappe — sinon le curseur du champ sauterait) ;
+    front montant dans App.tsx (setMathPanelOpen + onglet) ; handle :
+    updateMathSource (setNodeAttribute EN DIRECT à chaque frappe),
+    deleteMath, insertInlineMath/insertBlockMath insèrent une formule
+    VIDE + selectMathNodeBeforeCursor (NodeSelection) → le panneau
+    s'ouvre prêt à saisir ; clic sur formule peinte → NodeSelection
+    (plus de prompt).
+  - Vérifié par Playwright/CDP : insertion → panneau ouvert, frappe
+    « E=mc^2 » → LaTeX dans le doc + rendu KaTeX live, clic sur la
+    formule → réouverture avec valeur, clic dans un paragraphe →
+    fermeture propre. tsc, build, 38 tests verts. MathLive en
+    dépendance (package.json) — chargé à la demande.
+  - **Reste à faire (passe 2, demandée)** : éditeur de GRAPHE sans code
+    Mermaid (formulaire nœuds + flèches + aperçu) dans le même panneau
+    latéral.
 - **Refonte de la résolution clic → position + sélection (2026-10-17,
   suite à la comparaison demandée avec le paged-editor de CasualOffice
   — 3 défauts remontés : « la sélection des cases de tableau saute »,

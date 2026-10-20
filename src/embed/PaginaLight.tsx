@@ -46,11 +46,13 @@ const STATS_INITIALES: EditorStats = {
   activeAlign: null,
   activeList: null,
   activeFontFamily: null,
+  activeColor: null,
   activeFontSizePt: 12,
   insideTable: false,
   tableSelectionShape: null,
   headerFooterEditMode: null,
   insideToc: false,
+  math: null,
 };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
@@ -195,6 +197,7 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           activeAlign={stats.activeAlign}
           activeList={stats.activeList}
           activeFontFamily={stats.activeFontFamily}
+        activeColor={stats.activeColor}
           activeFontSizePt={stats.activeFontSizePt}
         />
       </div>

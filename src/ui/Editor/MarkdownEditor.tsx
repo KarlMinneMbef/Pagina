@@ -205,6 +205,12 @@ export interface MarkdownEditorHandle {
   insertMermaidDiagram: () => void;
   insertInlineMath: () => void;
   insertBlockMath: () => void;
+  /** Met à jour la source LaTeX de la formule sélectionnée (panneau
+   * « Équation », éditeur MathLive) — sans effet si aucune formule
+   * n'est sélectionnée. */
+  updateMathSource: (source: string) => void;
+  /** Supprime la formule sélectionnée (panneau « Équation »). */
+  deleteMath: () => void;
   insertEmoji: (emoji: string) => void;
   /** Pose un signet (ancre invisible `<a id="…">`) à la position du
    * curseur — cible des renvois. Voir `Bookmark.ts`. */
@@ -370,6 +376,28 @@ function getActiveListType(editor: Editor): EditorStats["activeList"] {
 /** Le curseur est-il dans un sommaire généré — voir `EditorStats.insideToc`. */
 function getInsideToc(editor: Editor): boolean {
   return isInsideToc(editor.state.doc, editor.state.selection.from);
+}
+
+/** Formule mathématique sélectionnée, pour le panneau latéral
+ * « Équation » (voir `EditorStats.math`). Une formule est un nœud ATOME :
+ * la sélection la désigne par NodeSelection (posée à l'insertion ou au
+ * clic sur la formule peinte), jamais par un curseur « dedans ». */
+function getMathAtSelection(editor: Editor): EditorStats["math"] {
+  const sel = editor.state.selection;
+  const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
+  if (selNode && (selNode.type.name === "inlineMath" || selNode.type.name === "blockMath")) {
+    return {
+      kind: selNode.type.name === "inlineMath" ? "inline" : "block",
+      source: String(selNode.attrs.source ?? ""),
+      pos: sel.from,
+    };
+  }
+  return null;
+}
+
+function currentTextColor(editor: Editor): string | null {
+  const color = editor.getAttributes("textStyle").color;
+  return typeof color === "string" && color ? color : null;
 }
 
 function currentFontFamily(editor: Editor): string | null {
@@ -713,6 +741,8 @@ export interface EditorStats {
   activeList: "bullet" | "ordered" | "task" | "blockquote" | null;
   /** Police de la sélection, `null` si aucune n'est posée explicitement. */
   activeFontFamily: string | null;
+  /** Couleur de texte de la sélection (hex/rgb CSS), `null` si automatique. */
+  activeColor: string | null;
   /** Taille de police de la sélection, en pt (toujours une valeur — voir
    * `currentFontSizePt`, replie sur 12pt par défaut). */
   activeFontSizePt: number;
@@ -732,6 +762,13 @@ export interface EditorStats {
    * panneau latéral « Sommaire » (Mettre à jour/Supprimer), même principe
    * que `insideTable`. */
   insideToc: boolean;
+  /** Formule mathématique sélectionnée (`inlineMath`/`blockMath` — nœud
+   * atomique désigné par NodeSelection, posée à l'insertion ou au clic sur
+   * la formule peinte) — pilote le panneau latéral « Équation » (éditeur
+   * WYSIWYG MathLive) ; `null` quand aucune formule n'est sélectionnée.
+   * `pos` sert de CLÉ d'identité : le panneau se réinitialise quand on
+   * change de formule, jamais à la frappe. */
+  math: { kind: "inline" | "block"; source: string; pos: number } | null;
 }
 
 interface MarkdownEditorProps {
@@ -812,6 +849,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // le ruban s'y applique donc tel quel, AUCUNE commande dédiée) ; sinon
     // l'éditeur principal. Évalué à chaque appel, pas à la définition.
     const cmd = () => headerMiniEditorRef.current ?? editor;
+    // Sélectionne (NodeSelection) le nœud formule qui vient d'être inséré —
+    // l'insertion laisse le curseur APRÈS l'atome ; en le sélectionnant, le
+    // panneau latéral « Équation » s'ouvre (stats.math, front montant dans
+    // App.tsx, même principe que Tableau/Sommaire).
+    const selectMathNodeBeforeCursor = () => {
+      if (!editor) return;
+      const $from = editor.state.selection.$from;
+      const nb = $from.nodeBefore;
+      if (nb && (nb.type.name === "inlineMath" || nb.type.name === "blockMath")) {
+        editor.commands.setNodeSelection($from.pos - nb.nodeSize);
+      }
+    };
     // Mode en-tête/pied de page en cours d'édition (voir startHeaderFooterEdit)
     // — remonte dans `EditorStats.headerFooterEditMode` pour piloter le
     // panneau latéral « Variables » de App.tsx.
@@ -979,9 +1028,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeAlign: getActiveAlign(editor),
           activeList: getActiveListType(editor),
           activeFontFamily: currentFontFamily(editor),
+          activeColor: currentTextColor(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
+          math: getMathAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1177,9 +1228,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         activeAlign: editor ? getActiveAlign(editor) : null,
         activeList: editor ? getActiveListType(editor) : null,
         activeFontFamily: editor ? currentFontFamily(editor) : null,
+        activeColor: editor ? currentTextColor(editor) : null,
         activeFontSizePt: editor ? currentFontSizePt(editor) : 12,
         insideTable: editor?.isActive("table") ?? false,
         insideToc: editor ? getInsideToc(editor) : false,
+        math: editor ? getMathAtSelection(editor) : null,
         tableSelectionShape: editor ? getSelectionShape(editor) : null,
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
@@ -1233,14 +1286,28 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       insertMermaidDiagram: () =>
         cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "mermaidDiagram" }).run(),
       insertInlineMath: () => {
-        const source = window.prompt("Formule LaTeX (en ligne) :", "E = mc^2");
-        if (!source) return;
-        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "inlineMath", attrs: { source } }).run();
+        // Insère la formule VIDE et la SÉLECTIONNE (NodeSelection) : le
+        // panneau latéral « Équation » s'ouvre automatiquement (stats.math)
+        // avec l'éditeur WYSIWYG prêt à saisir — plus aucun window.prompt
+        // de LaTeX brut (les utilisateurs ne codent pas d'équation).
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "inlineMath", attrs: { source: "" } }).run();
+        selectMathNodeBeforeCursor();
       },
       insertBlockMath: () => {
-        const source = window.prompt("Formule LaTeX (bloc) :", "\\int_0^\\infty e^{-x} dx = 1");
-        if (!source) return;
-        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "blockMath", attrs: { source } }).run();
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "blockMath", attrs: { source: "" } }).run();
+        selectMathNodeBeforeCursor();
+      },
+      updateMathSource: (source) => {
+        const math = editor ? getMathAtSelection(editor) : null;
+        if (!editor || !math) return;
+        editor.view.dispatch(editor.view.state.tr.setNodeAttribute(math.pos, "source", source));
+      },
+      deleteMath: () => {
+        const math = editor ? getMathAtSelection(editor) : null;
+        if (!editor || !math) return;
+        const node = editor.state.doc.nodeAt(math.pos);
+        if (!node) return;
+        editor.view.dispatch(editor.view.state.tr.delete(math.pos, math.pos + node.nodeSize));
       },
       insertEmoji: (emoji) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent(emoji).run(),
       // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
@@ -1448,9 +1515,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeAlign: getActiveAlign(editor),
           activeList: getActiveListType(editor),
           activeFontFamily: currentFontFamily(editor),
+          activeColor: currentTextColor(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
+          math: getMathAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1589,9 +1658,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           activeAlign: getActiveAlign(editor),
           activeList: getActiveListType(editor),
           activeFontFamily: currentFontFamily(editor),
+          activeColor: currentTextColor(editor),
           activeFontSizePt: currentFontSizePt(editor),
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
+          math: getMathAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: mode,
         });
@@ -1994,12 +2065,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             node = editor.state.doc.nodeAt(mathPos);
           }
           if (!isMathNode(node)) return;
-          const next = window.prompt("Formule LaTeX :", node!.attrs.source);
-          if (next === null) return;
-          editor.view.dispatch(editor.view.state.tr.setNodeAttribute(mathPos, "source", next));
+          // Sélectionne la formule (NodeSelection) : le panneau latéral
+          // « Équation » s'ouvre automatiquement avec l'éditeur WYSIWYG
+          // MathLive pré-rempli (plus de window.prompt de LaTeX brut —
+          // les utilisateurs ne codent pas d'équation).
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setNodeSelection(mathPos);
           return;
-        }
-        const pos = posFromEvent(e);
+        }        const pos = posFromEvent(e);
         if (pos === null) return;
         e.preventDefault();
         editor.commands.focus(undefined, { scrollIntoView: false });
@@ -2208,9 +2281,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             activeAlign: getActiveAlign(editor),
             activeList: getActiveListType(editor),
             activeFontFamily: currentFontFamily(editor),
+          activeColor: currentTextColor(editor),
             activeFontSizePt: currentFontSizePt(editor),
             insideTable: editor.isActive("table"),
             insideToc: getInsideToc(editor),
+          math: getMathAtSelection(editor),
             tableSelectionShape: getSelectionShape(editor),
             headerFooterEditMode: headerFooterModeRef.current,
           });
