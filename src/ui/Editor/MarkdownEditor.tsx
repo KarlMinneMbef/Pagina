@@ -47,7 +47,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { createLowlight, common } from "lowlight";
 import { FontSize } from "./extensions/FontSize";
 import { Markdown } from "tiptap-markdown";
-import { useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useImperativeHandle, forwardRef, useRef, useMemo, useState, type CSSProperties } from "react";
 import { PageBreak } from "./extensions/PageBreak";
 import { Bookmark } from "./extensions/Bookmark";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
@@ -72,6 +72,7 @@ import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClick
 import type { CloneIndex } from "./pagination/cloneIndex";
 import { computeCaretScreenPosition } from "./pagination/caretPosition";
 import { computeSelectionRects } from "./pagination/selectionHighlight";
+import { SelectionBar } from "./SelectionBar";
 import { resolvePageSizeMm, formatTodayForHeaderFooter, type PageLayoutSettings } from "../../core/pageLayout";
 import "katex/dist/katex.min.css";
 import "./MarkdownEditor.css";
@@ -263,6 +264,59 @@ function nextCase(text: string): string {
  * ainsi fonctionnel pour tout ce qui a été copié/coupé via les boutons du
  * ruban, sans dépendre de cette permission. */
 let internalClipboard: string | null = null;
+
+/** Opérations presse-papiers partagées par le ruban (handle) ET le menu
+ * contextuel clic-droit. Sérialisation Markdown de la sélection via
+ * tiptap-markdown, puis API Clipboard (absente en contexte non sécurisé :
+ * sans effet silencieux, le presse-papiers interne prend le relais). */
+function serializeSelection(editor: Editor): string | null {
+  const { from, to, empty } = editor.state.selection;
+  if (empty) return null;
+  // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+  const md: string = editor.storage.markdown.serializer.serialize(editor.state.doc.slice(from, to).content);
+  return md;
+}
+
+function copyEditorSelection(editor: Editor): void {
+  const md = serializeSelection(editor);
+  if (md === null) return;
+  internalClipboard = md;
+  navigator.clipboard?.writeText(md).catch(() => {});
+}
+
+function cutEditorSelection(editor: Editor): void {
+  if (serializeSelection(editor) === null) return;
+  copyEditorSelection(editor);
+  editor.chain().focus(undefined, { scrollIntoView: false }).deleteSelection().run();
+}
+
+/** Colle le presse-papiers ; `plain` = texte brut (aucune mise en forme ni
+ * syntaxe Markdown interprétée — chaque ligne devient un paragraphe). */
+function pasteIntoEditor(editor: Editor, plain: boolean): void {
+  const insert = (text: string | null) => {
+    if (!text) return;
+    const chain = editor.chain().focus(undefined, { scrollIntoView: false });
+    if (!plain) {
+      // insertContent(string) passe par le parseur Markdown de
+      // tiptap-markdown : le Markdown collé devient des vrais nœuds.
+      chain.insertContent(text).run();
+      return;
+    }
+    const lines = text.replace(/\r\n?/g, "\n").split("\n");
+    if (lines.length === 1) {
+      chain.insertContent({ type: "text", text: lines[0] }).run();
+    } else {
+      chain
+        .insertContent(lines.map((l) => ({ type: "paragraph", content: l ? [{ type: "text", text: l }] : [] })))
+        .run();
+    }
+  };
+  navigator.clipboard
+    ?.readText()
+    .then((text) => insert(text || internalClipboard))
+    // Permission refusée : repli sur le presse-papiers interne.
+    .catch(() => insert(internalClipboard));
+}
 
 /** Normalise un nom de signet saisi en identifiant d'ancre sûr : minuscules,
  * sans accents, espaces → tirets, seuls [a-z0-9-_] survivent (voir
@@ -801,7 +855,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // état React classique plutôt qu'en impératif/DOM direct : c'est un
     // simple overlay ponctuel, sans lien avec la mécanique de repaint, donc
     // sans risque pour l'architecture "tout en refs" du reste du fichier.
-    const [tableContextMenu, setTableContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [tableContextMenu, setTableContextMenu] = useState<{ x: number; y: number; inTable: boolean } | null>(null);
+    // Mini-barre flottante de mise en forme à la sélection (voir
+    // SelectionBar.tsx / effet `selBarSync` plus bas). `rev` change à chaque
+    // synchro pour rafraîchir l'état actif des boutons (gras déjà appliqué…).
+    const [selBar, setSelBar] = useState<{ left: number; top: number; rev: number } | null>(null);
+    const selBarSyncRef = useRef<() => void>(() => {});
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const caretRef = useRef<HTMLDivElement>(null);
@@ -1082,46 +1141,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // non sécurisé, ex. intégration PaginaLight en file://) : dans ce
       // cas les boutons restent sans effet silencieux.
       copySelection: () => {
-        if (!editor) return;
-        const { from, to, empty } = editor.state.selection;
-        if (empty) return;
-        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
-        const md: string = editor.storage.markdown.serializer.serialize(
-          editor.state.doc.slice(from, to).content
-        );
-        internalClipboard = md;
-        navigator.clipboard?.writeText(md).catch(() => {});
+        if (editor) copyEditorSelection(editor);
       },
       cutSelection: () => {
-        if (!editor) return;
-        const { from, to, empty } = editor.state.selection;
-        if (empty) return;
-        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
-        const md: string = editor.storage.markdown.serializer.serialize(
-          editor.state.doc.slice(from, to).content
-        );
-        internalClipboard = md;
-        navigator.clipboard?.writeText(md).catch(() => {});
-        editor.chain().focus(undefined, { scrollIntoView: false }).deleteSelection().run();
+        if (editor) cutEditorSelection(editor);
       },
       pasteClipboard: () => {
-        if (!editor) return;
-        const insert = (text: string | null) => {
-          if (!text) return;
-          // insertContent(string) passe par le parseur Markdown de
-          // tiptap-markdown (override de insertContentAt) : le Markdown
-          // collé devient des vrais nœuds (gras, listes...).
-          editor.chain().focus(undefined, { scrollIntoView: false }).insertContent(text).run();
-        };
-        navigator.clipboard
-          ?.readText()
-          .then((text) => {
-            insert(text || internalClipboard);
-          })
-          .catch(() => {
-            // Permission refusée : repli sur le presse-papiers interne.
-            insert(internalClipboard);
-          });
+        if (editor) pasteIntoEditor(editor, false);
       },
       increaseFontSize: () => {
         if (!editor) return;
@@ -1357,6 +1383,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // curseur (visible ou non selon qu'on est dans un bloc de code,
         // recollée au bon clone) — avant les early-returns ci-dessous.
         codeLangSyncRef.current();
+        selBarSyncRef.current();
         const canvas = canvasRef.current;
         const caret = caretRef.current;
         const selectionLayer = selectionLayerRef.current;
@@ -1503,6 +1530,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // Les clones viennent d'être recréés : recolle la pastille de
         // langage sur le bloc peint correspondant.
         codeLangSyncRef.current();
+        selBarSyncRef.current();
         const words: number = editor.storage.characterCount.words();
         const characters: number = editor.storage.characterCount.characters();
         onStatsRef.current?.({
@@ -1533,7 +1561,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const ro = new ResizeObserver(repaint);
       const dom = editor.view.dom as HTMLElement;
       ro.observe(dom);
-      return () => ro.disconnect();
+      // Le cadre (`.xmd-canvas-frame`) change de largeur quand la fenêtre ou
+      // un panneau latéral est redimensionné, et la page (centrée dedans) se
+      // déplace — alors que l'éditeur invisible garde sa largeur. Le curseur
+      // dessiné et les rectangles de sélection sont en coordonnées du cadre :
+      // sans ce recalage ils restaient à l'ancienne position.
+      const frame = canvasRef.current?.parentElement;
+      const roFrame = new ResizeObserver(() => repaintCaretRef.current());
+      if (frame) roFrame.observe(frame);
+      return () => {
+        ro.disconnect();
+        roFrame.disconnect();
+      };
     }, [editor, geometry, layout]);
 
     // Le zoom change les mesures géométriques (transform: scale()) : on
@@ -1629,6 +1668,80 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         chip.remove();
         codeLangChipRef.current = null;
         codeLangSyncRef.current = () => {};
+      };
+    }, [editor, readOnly]);
+
+    // Mini-barre de mise en forme à la sélection : calcule où la sélection est
+    // PEINTE (mêmes rectangles que la surbrillance) et place la barre juste
+    // au-dessus de la première ligne visible (en dessous si elle sortirait de
+    // la zone visible). Masquée : pendant un glisser de souris (affichée au
+    // relâchement), sélection vide, sélection de cellules, bloc de code,
+    // lecture seule, édition d'en-tête/pied de page.
+    useEffect(() => {
+      const canvas = canvasRef.current;
+      if (!editor || !canvas) return;
+      const wrap = (canvas.closest(".xmd-page-wrap") ?? canvas) as HTMLElement;
+      let selecting = false;
+      const BAR_WIDTH = 330;
+      const BAR_HEIGHT = 40;
+
+      const hide = () => setSelBar((cur) => (cur === null ? cur : null));
+
+      const sync = () => {
+        const sel = editor.state.selection;
+        if (
+          readOnly ||
+          selecting ||
+          sel.empty ||
+          sel instanceof CellSelection ||
+          headerMiniEditorRef.current ||
+          editor.isActive("codeBlock") ||
+          editor.isActive("mermaid")
+        ) {
+          hide();
+          return;
+        }
+        const rects = computeSelectionRects(editor.view, canvas, sel, zoomRef.current);
+        const frame = (canvas.parentElement as HTMLElement).getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const screen = rects
+          .map((r) => ({ left: frame.left + r.left, top: frame.top + r.top, width: r.width, height: r.height }))
+          .filter((r) => r.top + r.height > wrapRect.top && r.top < wrapRect.bottom);
+        if (screen.length === 0) {
+          hide();
+          return;
+        }
+        const first = screen[0];
+        const last = screen[screen.length - 1];
+        let top = first.top - BAR_HEIGHT - 8;
+        if (top < wrapRect.top + 4) top = last.top + last.height + 8;
+        const center = first.left + first.width / 2;
+        const left = Math.max(wrapRect.left + 4, Math.min(center - BAR_WIDTH / 2, wrapRect.right - BAR_WIDTH - 4));
+        setSelBar((cur) => ({ left: Math.round(left), top: Math.round(top), rev: (cur?.rev ?? 0) + 1 }));
+      };
+      selBarSyncRef.current = sync;
+
+      const onDown = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        selecting = true;
+        hide();
+      };
+      const onUp = () => {
+        if (!selecting) return;
+        selecting = false;
+        // Après le traitement du mouseup de l'éditeur (sélection finale).
+        setTimeout(sync, 0);
+      };
+      canvas.addEventListener("mousedown", onDown);
+      window.addEventListener("mouseup", onUp);
+      wrap.addEventListener("scroll", sync);
+      window.addEventListener("resize", sync);
+      return () => {
+        canvas.removeEventListener("mousedown", onDown);
+        window.removeEventListener("mouseup", onUp);
+        wrap.removeEventListener("scroll", sync);
+        window.removeEventListener("resize", sync);
+        selBarSyncRef.current = () => {};
       };
     }, [editor, readOnly]);
 
@@ -1944,6 +2057,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       };
 
       const onMouseDown = (e: MouseEvent) => {
+        // Clic droit : ne touche ni la sélection ni le glisser — le menu
+        // contextuel (`onContextMenu`) décide lui-même quoi sélectionner.
+        if (e.button !== 0) return;
         // Poignée de redimensionnement de colonne (voir paintPages.ts) —
         // vérifiée en tout premier : une poignée peut visuellement se
         // trouver à l'intérieur d'un tableau d'en-tête/pied de page, donc
@@ -2223,16 +2339,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         const pos = posFromEvent(e);
         if (pos === null) return;
         const cellPos = findCellPos(editor.state.doc, pos);
-        if (cellPos === null) return;
         e.preventDefault();
-        // Préserve une sélection multi-cellules déjà en place (pour que
-        // "Fusionner" dans le menu agisse dessus) ; sinon positionne le
-        // curseur dans la cellule cliquée, comme un clic normal.
-        if (!(editor.state.selection instanceof CellSelection)) {
+        // Préserve une sélection déjà en place si le clic tombe dedans (pour
+        // que Couper/Copier/"Fusionner" agissent dessus) ; sinon positionne
+        // le curseur au point cliqué, comme un clic normal.
+        const sel = editor.state.selection;
+        const insideSelection = sel.from !== sel.to && pos >= sel.from && pos <= sel.to;
+        if (!(sel instanceof CellSelection) && !insideSelection) {
           editor.commands.focus(undefined, { scrollIntoView: false });
           editor.commands.setTextSelection(pos);
         }
-        setTableContextMenu({ x: e.clientX, y: e.clientY });
+        setTableContextMenu({ x: e.clientX, y: e.clientY, inTable: cellPos !== null });
       };
 
       canvas.addEventListener("mousedown", onMouseDown);
@@ -2389,10 +2506,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           <div className="xmd-fake-caret" ref={caretRef} />
         </div>
 
+        {selBar && editor && <SelectionBar editor={editor} left={selBar.left} top={selBar.top} />}
+
         {tableContextMenu && editor && (
           <TableContextMenu
             x={tableContextMenu.x}
             y={tableContextMenu.y}
+            inTable={tableContextMenu.inTable}
+            editable={!readOnly}
+            hasSelection={editor.state.selection.from !== editor.state.selection.to}
             onClose={() => setTableContextMenu(null)}
             onAction={(run) => {
               run(editor);
@@ -2418,15 +2540,35 @@ MarkdownEditor.displayName = "MarkdownEditor";
 function TableContextMenu({
   x,
   y,
+  inTable,
+  editable,
+  hasSelection,
   onAction,
   onClose,
 }: {
   x: number;
   y: number;
+  /** Le clic est dans un tableau : ajoute les actions de tableau. */
+  inTable: boolean;
+  editable: boolean;
+  hasSelection: boolean;
   onAction: (run: (editor: Editor) => void) => void;
   onClose: () => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: x, top: y });
+
+  // Recale dans la fenêtre (le menu s'ouvre au point du clic : près du bord
+  // droit/bas il déborderait sinon).
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({
+      left: Math.max(4, Math.min(x, window.innerWidth - r.width - 4)),
+      top: Math.max(4, Math.min(y, window.innerHeight - r.height - 4)),
+    });
+  }, [x, y, inTable]);
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -2452,14 +2594,18 @@ function TableContextMenu({
     };
   }, [onClose]);
 
-  const item = (label: string, run: (editor: Editor) => void, danger?: boolean) => (
+  const item = (label: string, run: (editor: Editor) => void, danger?: boolean, shortcut?: string, disabled?: boolean) => (
     <button
       key={label}
       type="button"
+      disabled={disabled}
       className={`xmd-table-ctx-item${danger ? " xmd-table-ctx-item-danger" : ""}`}
+      // Garde le focus (donc la sélection) dans l'éditeur invisible.
+      onMouseDown={(e) => e.preventDefault()}
       onClick={() => onAction(run)}
     >
-      {label}
+      <span>{label}</span>
+      {shortcut && <span className="xmd-table-ctx-shortcut">{shortcut}</span>}
     </button>
   );
 
@@ -2470,21 +2616,37 @@ function TableContextMenu({
     <div
       ref={rootRef}
       className="xmd-table-ctx-menu"
-      style={{ left: x, top: y }}
+      style={pos}
       role="menu"
     >
-      {item("Insérer une ligne au-dessus", chain((c) => c.addRowBefore()))}
-      {item("Insérer une ligne en dessous", chain((c) => c.addRowAfter()))}
-      {item("Supprimer la ligne", chain((c) => c.deleteRow()), true)}
+      {/* Édition de texte (inspiré du menu de CasualOffice/docs — sans
+       * « Traduire » ni « Commenter », volontairement : commentaires prévus
+       * plus tard avec le format .xmd). */}
+      {item("Couper", (ed) => cutEditorSelection(ed), false, "Ctrl+X", !editable || !hasSelection)}
+      {item("Copier", (ed) => copyEditorSelection(ed), false, "Ctrl+C", !hasSelection)}
+      {item("Coller", (ed) => pasteIntoEditor(ed, false), false, "Ctrl+V", !editable)}
+      {item("Coller en texte brut", (ed) => pasteIntoEditor(ed, true), false, "Ctrl+Maj+V", !editable)}
       <div className="xmd-table-ctx-sep" />
-      {item("Insérer une colonne à gauche", chain((c) => c.addColumnBefore()))}
-      {item("Insérer une colonne à droite", chain((c) => c.addColumnAfter()))}
-      {item("Supprimer la colonne", chain((c) => c.deleteColumn()), true)}
+      {item("Supprimer", chain((c) => c.deleteSelection()), false, "Suppr", !editable || !hasSelection)}
       <div className="xmd-table-ctx-sep" />
-      {item("Fusionner les cellules", chain((c) => c.mergeCells()))}
-      {item("Scinder la cellule", chain((c) => c.splitCell()))}
-      <div className="xmd-table-ctx-sep" />
-      {item("Supprimer le tableau", chain((c) => c.deleteTable()), true)}
+      {item("Tout sélectionner", chain((c) => c.selectAll()), false, "Ctrl+A")}
+      {inTable && editable && (
+        <>
+          <div className="xmd-table-ctx-sep" />
+          {item("Insérer une ligne au-dessus", chain((c) => c.addRowBefore()))}
+          {item("Insérer une ligne en dessous", chain((c) => c.addRowAfter()))}
+          {item("Supprimer la ligne", chain((c) => c.deleteRow()), true)}
+          <div className="xmd-table-ctx-sep" />
+          {item("Insérer une colonne à gauche", chain((c) => c.addColumnBefore()))}
+          {item("Insérer une colonne à droite", chain((c) => c.addColumnAfter()))}
+          {item("Supprimer la colonne", chain((c) => c.deleteColumn()), true)}
+          <div className="xmd-table-ctx-sep" />
+          {item("Fusionner les cellules", chain((c) => c.mergeCells()))}
+          {item("Scinder la cellule", chain((c) => c.splitCell()))}
+          <div className="xmd-table-ctx-sep" />
+          {item("Supprimer le tableau", chain((c) => c.deleteTable()), true)}
+        </>
+      )}
     </div>
   );
 }

@@ -380,6 +380,15 @@ export function IconEmoji({ size, className }: IconProps) {
   );
 }
 
+/** Oméga (caractères spéciaux). */
+export function IconSpecialChar({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M5 19h4v-1.6C6.6 16.2 5 14 5 11.5a7 7 0 0 1 14 0c0 2.5-1.6 4.7-4 5.9V19h4" />
+    </Svg24>
+  );
+}
+
 // --- Panneau contextuel « Tableau » (tracés de la maquette 2026-10-17) ---
 
 export function IconRowAbove({ size, className }: IconProps) {
