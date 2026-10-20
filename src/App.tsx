@@ -15,6 +15,7 @@ import { HeadingStyleDialog } from "./ui/HeadingStyles/HeadingStyleDialog";
 import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel";
 import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
 import { TocPanel } from "./ui/Toc/TocPanel";
+import { EquationPanel } from "./ui/Math/EquationPanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
@@ -33,11 +34,13 @@ const EMPTY_STATS: EditorStats = {
   activeAlign: null,
   activeList: null,
   activeFontFamily: null,
+  activeColor: null,
   activeFontSizePt: 12,
   insideTable: false,
   tableSelectionShape: null,
   headerFooterEditMode: null,
   insideToc: false,
+  math: null,
 };
 
 function App() {
@@ -79,12 +82,16 @@ function App() {
   // principe de front montant que `tablePanelOpen`, piloté par
   // `stats.insideToc` (voir `isTocList` dans TocMarker.ts).
   const [tocPanelOpen, setTocPanelOpen] = useState(false);
+  // Panneau « Équation » (2026-10-17, éditeur MathLive) : même front montant
+  // que tablePanelOpen, piloté par stats.math (NodeSelection sur une formule).
+  const [mathPanelOpen, setMathPanelOpen] = useState(false);
+  const wasMathSelRef = useRef(false);
   const wasInsideTocRef = useRef(false);
   // Onglet actif de l'hôte de panneaux contextuels (« tableau » | « hf » |
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -116,6 +123,19 @@ function App() {
       setTocPanelOpen(false);
     }
   }, [stats.insideToc]);
+
+  // Formule sélectionnée → panneau « Équation » (front montant), fermeture
+  // quand la sélection quitte la formule (clic ailleurs dans le document).
+  useEffect(() => {
+    const was = wasMathSelRef.current;
+    wasMathSelRef.current = !!stats.math;
+    if (stats.math && !was) {
+      setMathPanelOpen(true);
+      setCtxTab("equation");
+    } else if (!stats.math && was) {
+      setMathPanelOpen(false);
+    }
+  }, [stats.math]);
 
   // Sélection automatique de l'onglet : une édition d'en-tête/pied qui
   // DÉMARRE prend la main (l'utilisateur vient de cliquer dessus), sa fin
@@ -438,6 +458,7 @@ function App() {
         activeAlign={stats.activeAlign}
         activeList={stats.activeList}
         activeFontFamily={stats.activeFontFamily}
+        activeColor={stats.activeColor}
         activeFontSizePt={stats.activeFontSizePt}
       />
       <div className="app-body">
@@ -507,7 +528,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -516,11 +537,12 @@ function App() {
                   ? [{ id: "hf", label: stats.headerFooterEditMode === "header" ? "En-tête" : "Pied de page" }]
                   : []),
                 ...(tocPanelOpen ? [{ id: "toc", label: "Sommaire" }] : []),
+                ...(mathPanelOpen && stats.math ? [{ id: "equation", label: stats.math.kind === "block" ? "Équation (bloc)" : "Équation" }] : []),
                 ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation")}
           >
             {ctxTab === "tableau" &&
               tablePanelOpen &&
@@ -560,6 +582,22 @@ function App() {
                   onUpdate={() => actions?.updateTocAtCursor()}
                   onDelete={() => actions?.deleteTocAtCursor()}
                   onClose={() => setTocPanelOpen(false)}
+                />
+              )}
+            {/* key = position du nœud formule : le panneau se remonte (et le
+             * champ MathLive se réinitialise) au CHANGEMENT de formule,
+             * jamais à la frappe (le curseur du champ ne doit pas sauter). */}
+            {ctxTab === "equation" &&
+              mathPanelOpen &&
+              stats.math &&
+              editorRef.current && (
+                <EquationPanel
+                  key={stats.math.pos}
+                  kind={stats.math.kind}
+                  source={stats.math.source}
+                  onChange={(source) => editorRef.current?.updateMathSource(source)}
+                  onDelete={() => editorRef.current?.deleteMath()}
+                  onClose={() => setMathPanelOpen(false)}
                 />
               )}
           </ContextualPanelHost>

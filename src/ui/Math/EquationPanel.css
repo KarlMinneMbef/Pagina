@@ -1,0 +1,123 @@
+/*
+ * Panneau « Équation » — contenu monté dans ContextualPanelHost (l'hôte
+ * fournit le châssis : fond, bordure, largeur, onglets). Même palette
+ * sobre que TablePropertiesPanel/HeaderFooterPanel (charte MBEF).
+ */
+.eq-panel {
+  --eq-bg: #eeefef;
+  --eq-line: #d0d3d4;
+  --eq-text: #2a2a24;
+  --eq-label: #75766f;
+  --eq-btn: #e0e2e3;
+  --eq-btn-hover: #d0d3d4;
+  --eq-btn-active: #c5c9ca;
+  --eq-danger: #b3261e;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  color: var(--eq-text);
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.eq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px 8px 12px;
+  border-bottom: 1px solid var(--eq-line);
+  flex-shrink: 0;
+}
+
+.eq-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.eq-close {
+  background: transparent;
+  border: none;
+  color: var(--eq-text);
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.eq-close:hover {
+  background: var(--eq-btn-hover);
+}
+
+.eq-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Le champ MathLive : plein port du panneau, hauteur confortable pour
+ * écrire, fond blanc. Le bouton de clavier virtuel est fourni par
+ * MathLive (coin du champ). */
+.eq-field-host {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eq-field-host math-field {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid var(--eq-line);
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 6px 8px;
+  font-size: 20px;
+  outline: none;
+}
+
+.eq-field-host math-field:focus {
+  border-color: #24ac6e; /* prairie */
+  box-shadow: 0 0 0 1px #24ac6e;
+}
+
+.eq-hint {
+  margin: 0;
+  font-size: 10px;
+  color: var(--eq-label);
+  line-height: 1.4;
+}
+
+.eq-footer {
+  padding: 8px 10px;
+  border-top: 1px solid var(--eq-line);
+  flex-shrink: 0;
+}
+
+.eq-btn {
+  background: var(--eq-btn);
+  border: none;
+  border-radius: 5px;
+  color: var(--eq-text);
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.eq-btn:hover {
+  background: var(--eq-btn-hover);
+}
+
+.eq-btn-danger {
+  color: var(--eq-danger);
+  background: transparent;
+  border: 1px solid var(--eq-line);
+  width: 100%;
+}
