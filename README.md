@@ -4,9 +4,15 @@
 
 **L'éditeur Markdown qui se met en page comme Word — et qui reste du Markdown.**
 
-![Capture d'écran de Pagina](docs/screenshot.png)
+![Vue principale — ruban Accueil, explorateur, pages A4](docs/images/capture-accueil.png)
+
+![Ruban Insertion](docs/images/capture-insertion.png)
+
+![Mini-barre de sélection](docs/images/capture-minibar.png)
 
 Pagina est un éditeur de documents WYSIWYG (« ce que vous voyez est ce que vous obtenez ») bâti autour du Markdown : vous rédigez et mettez en page à l'écran, avec de vraies pages A4, des titres numérotés automatiquement, un en-tête et un pied de page, un sommaire cliquable — et le fichier que vous enregistrez reste un `.md` tout à fait standard, lisible et correctement affiché dans n'importe quel autre outil (GitHub, VS Code, Obsidian, Typora...).
+
+> **Documentation complète** : le [guide d'utilisation](docs/guide-utilisation.md) décrit chaque commande de l'application ; la [référence technique](docs/reference-technique.md) documente l'architecture et l'implémentation pour les développeurs.
 
 ## L'histoire
 
@@ -59,6 +65,11 @@ Les installeurs prêts à l'emploi se trouvent dans [`releases/`](releases/) :
 - [`Pagina_0.4.9_x64_en-US.msi`](releases/Pagina_0.4.9_x64_en-US.msi) — pour un déploiement centralisé (GPO/Intune).
 
 Aucun certificat de signature de code n'est configuré : Windows SmartScreen affichera un avertissement « éditeur non reconnu » au premier lancement — cliquer sur « Informations complémentaires → Exécuter quand même ».
+
+## Documentation
+
+- [Guide d'utilisation](docs/guide-utilisation.md) — chaque commande de l'application, fonction par fonction (ruban, panneaux contextuels, explorateur, mise en page, équations, en-têtes/pieds, impression, raccourcis).
+- [Référence technique](docs/reference-technique.md) — architecture (éditeur invisible + couche peinte, index des clones), sérialisation Markdown, extensions, panneaux, charte MBEF, tests, version légère.
 
 ## Version légère intégrable
 
