@@ -66,7 +66,9 @@ function computeCellSelectionRects(
   // redescendre jusqu'au vrai `<table>` à l'intérieur si besoin.
   const cloneWrapper = canvas.querySelector<HTMLElement>(`[${SRC_POS_ATTR}="${tablePos}"]`);
   const cloneTable = cloneWrapper?.tagName === "TABLE" ? cloneWrapper : cloneWrapper?.querySelector<HTMLElement>("table");
-  if (!cloneTable) return [];
+  // Pas de clone du tableau entier : tableau réparti ligne par ligne (voir
+  // `planTableSplit`), chaque `<tr>` porte alors son propre `SRC_POS_ATTR`.
+  const splitByRows = !cloneTable;
 
   const frameRect = (canvas.parentElement as HTMLElement).getBoundingClientRect();
   const rects: SelectionRect[] = [];
@@ -77,7 +79,13 @@ function computeCellSelectionRects(
     const path = cellIndexPath(originalCell);
     if (!path) return;
     const [rowIndex, colIndex] = path;
-    const cloneRow = cloneTable.querySelectorAll("tr")[rowIndex];
+    let cloneRow: Element | undefined;
+    if (splitByRows) {
+      const $cell = view.state.doc.resolve(cellPos);
+      cloneRow = canvas.querySelector(`[${SRC_POS_ATTR}="${$cell.before($cell.depth)}"]`) ?? undefined;
+    } else {
+      cloneRow = cloneTable!.querySelectorAll("tr")[rowIndex];
+    }
     const cloneCell = cloneRow?.children[colIndex] as HTMLElement | undefined;
     if (!cloneCell) return;
     const r = cloneCell.getBoundingClientRect();
@@ -168,16 +176,32 @@ export function computeSelectionRects(
     }
   };
 
-  view.state.doc.forEach((node, offset) => {
-    // Une liste (voir `LIST_NODE_NAMES`/`paintPages.ts`) est peinte item par
-    // item — SRC_POS_ATTR est porté par chaque `<li>` cloné, pas par la
-    // liste entière, qui peut être coupée entre deux pages. Il faut donc
-    // chercher le clone au niveau de chaque ITEM, jamais au niveau de la
-    // liste elle-même.
-    if (LIST_NODE_NAMES.has(node.type.name)) {
-      node.forEach((child: any, relOffset: number) => {
-        collectForNode(child, offset + 1 + relOffset);
+  // Une liste (voir `LIST_NODE_NAMES`/`flattenListEntries` dans
+  // `paintPages.ts`) est peinte item par item, à N'IMPORTE QUEL niveau
+  // d'imbrication — `SRC_POS_ATTR` est porté par chaque `listItem`, pas par
+  // la liste elle-même ni seulement ses enfants directs (un sommaire
+  // généré imbrique presque toujours plusieurs niveaux de titres). Il faut
+  // donc descendre RÉCURSIVEMENT dans les sous-listes, pas une seule fois.
+  const collectListRecursive = (listNode: any, listOffset: number) => {
+    listNode.forEach((itemNode: any, relOffset: number) => {
+      const itemPos = listOffset + 1 + relOffset;
+      collectForNode(itemNode, itemPos);
+      itemNode.forEach((child: any, childRelOffset: number) => {
+        if (LIST_NODE_NAMES.has(child.type.name)) {
+          collectListRecursive(child, itemPos + 1 + childRelOffset);
+        }
       });
+    });
+  };
+
+  view.state.doc.forEach((node, offset) => {
+    if (LIST_NODE_NAMES.has(node.type.name)) {
+      collectListRecursive(node, offset);
+      return;
+    }
+    // Tableau réparti ligne par ligne : chaque ligne est un clone à part.
+    if (node.type.name === "table" && !canvas.querySelector(`[${SRC_POS_ATTR}="${offset}"]`)) {
+      node.forEach((rowNode: any, rel: number) => collectForNode(rowNode, offset + 1 + rel));
       return;
     }
     collectForNode(node, offset);

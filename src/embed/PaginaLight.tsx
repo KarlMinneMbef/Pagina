@@ -50,6 +50,7 @@ const STATS_INITIALES: EditorStats = {
   insideTable: false,
   tableSelectionShape: null,
   headerFooterEditMode: null,
+  insideToc: false,
 };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
@@ -157,6 +158,8 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       insertHeaderFooterVariable: (token) => handle.insertHeaderFooterVariable(token),
       insertTocMarker: () => handle.insertTocMarker(),
       generateToc: () => handle.generateToc(),
+      updateTocAtCursor: () => handle.updateTocAtCursor(),
+      deleteTocAtCursor: () => handle.deleteTocAtCursor(),
       insertFootnote: () => handle.insertFootnote(),
       insertMermaidDiagram: () => {}, // absents de la version légère
       insertInlineMath: () => {},

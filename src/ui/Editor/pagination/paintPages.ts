@@ -21,6 +21,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { createPaginator } from "./paginator";
 import { resolveHeaderFooterText, type HeaderFooterSettings, type HeaderFooterContext } from "../../../core/pageLayout";
 import { uniqueHeadingSlug } from "./slug";
+import { createCloneIndex, indexCloneBlock, type CloneIndex } from "./cloneIndex";
 
 const HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6";
 
@@ -173,37 +174,201 @@ export interface PaintPagesOptions {
 
 export interface PaintResult {
   pageCount: number;
+  /** Index des clones peints (voir cloneIndex.ts) : nœuds texte du clone
+   * → position PM, cellules → plage. Représente l'INTÉGRALITÉ des clones
+   * de cette passe de peinture — à transmettre à resolveClickPosition
+   * pour la résolution exacte au caractère (recréé à chaque repaint). */
+  cloneIndex: CloneIndex;
 }
 
-/** Un item (listItem/taskItem) d'une liste de premier niveau, avec sa
- * position ProseMirror et son DOM réel (dans l'éditeur invisible) — voir
- * `LIST_NODE_NAMES`. */
-interface ListItemUnit {
+/** Un item de liste APLATI — sa propre "ligne" (sans ses éventuels
+ * descendants imbriqués, comptés comme des entrées séparées), sa position
+ * ProseMirror, sa profondeur d'imbrication (0 = liste de premier niveau), et
+ * la liste DOM d'origine qui le contient directement (pour en cloner les
+ * attributs — classe, `data-tight`, `data-type="taskList"`… — lors de la
+ * reconstruction, voir `buildNestedFragment`). Voir `LIST_NODE_NAMES`. */
+interface TocFlatEntry {
   pos: number;
-  dom: HTMLElement;
+  ownDom: HTMLElement;
+  depth: number;
+  parentListDom: HTMLElement;
 }
 
-/** Associe chaque enfant PM d'une liste à son élément DOM réel (même ordre,
- * correspondance garantie 1:1 — c'est ainsi que ProseMirror rend un nœud).
- * `listPos` est la position ABSOLUE du nœud liste lui-même (pas de son
- * contenu) — les positions des enfants s'obtiennent en ajoutant
- * `listPos + 1` (après le délimiteur d'ouverture de la liste) au décalage
- * RELATIF que `node.forEach` fournit. */
-function collectListItemUnits(listNode: any, listPos: number, listDom: HTMLElement): ListItemUnit[] {
+/** Aplatit RÉCURSIVEMENT une liste (potentiellement imbriquée sur plusieurs
+ * niveaux — un sommaire généré avec plusieurs niveaux de titres l'est
+ * presque toujours, voir TocMarker.ts) en une séquence plate d'entrées dans
+ * l'ordre du document, chacune ne portant que SA PROPRE ligne (le premier
+ * enfant de son `listItem` — un paragraphe ou un titre — jamais sa
+ * sous-liste imbriquée, comptée séparément). C'est cette granularité fine
+ * qui permet de couper la pagination ENTRE deux entrées À N'IMPORTE QUEL
+ * NIVEAU d'imbrication, pas seulement entre deux items de premier niveau —
+ * correctif du 2026-10-20 : un sommaire avec un seul titre de niveau 1 (donc
+ * un seul item de PREMIER niveau, contenant tout le reste imbriqué dedans)
+ * ne pouvait auparavant jamais être coupé entre deux pages (rien à couper
+ * ENTRE un item unique), débordant comme un bloc non divisible — remonté
+ * par l'utilisateur ("la suite se retrouve en fin de document"). */
+function flattenListEntries(listNode: any, listPos: number, listDom: HTMLElement, depth: number, out: TocFlatEntry[]): void {
   const domChildren = Array.from(listDom.children) as HTMLElement[];
-  const units: ListItemUnit[] = [];
   let i = 0;
-  listNode.forEach((_child: any, relOffset: number) => {
-    const dom = domChildren[i];
+  listNode.forEach((itemNode: any, relOffset: number) => {
+    const liDom = domChildren[i];
     i++;
-    if (dom instanceof HTMLElement) units.push({ pos: listPos + 1 + relOffset, dom });
+    if (!(liDom instanceof HTMLElement)) return;
+    const itemPos = listPos + 1 + relOffset;
+    const ownDom =
+      (liDom.querySelector(":scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6") as HTMLElement | null) ??
+      liDom;
+    out.push({ pos: itemPos, ownDom, depth, parentListDom: listDom });
+
+    // Sous-liste imbriquée éventuelle (titres de niveau suivant) : un
+    // `listItem` de sommaire n'a jamais qu'UNE sous-liste directe (pas
+    // plusieurs), donc on garde la dernière trouvée sans boucle compliquée.
+    let nestedListNode: any = null;
+    let nestedRelOffset = 0;
+    itemNode.forEach((child: any, childOffset: number) => {
+      if (LIST_NODE_NAMES.has(child.type.name)) {
+        nestedListNode = child;
+        nestedRelOffset = childOffset;
+      }
+    });
+    if (nestedListNode) {
+      const nestedDom = liDom.querySelector(":scope > ul, :scope > ol") as HTMLElement | null;
+      if (nestedDom) {
+        flattenListEntries(nestedListNode, itemPos + 1 + nestedRelOffset, nestedDom, depth + 1, out);
+      }
+    }
   });
-  return units;
+}
+
+/** Reconstruit une structure `<ul>`/`<ol>` imbriquée à partir d'une
+ * séquence plate d'entrées (voir `flattenListEntries`) — l'inverse de
+ * l'aplatissement, appliqué aux SEULES entrées qui reviennent à UNE page.
+ * Fonctionne même si le fragment commence à une profondeur > 0 (la coupure
+ * tombe en plein milieu d'une sous-liste imbriquée) : les niveaux
+ * intermédiaires manquants sont recréés comme de simples `<ul>` sans `<li>`
+ * propre sur cette page (juste des conteneurs d'indentation), pour que le
+ * niveau visuel reste correct même sans l'item parent visible ici. */
+function buildNestedFragment(entries: TocFlatEntry[]): HTMLElement {
+  const root = entries[0].parentListDom.cloneNode(false) as HTMLElement;
+  const uls: HTMLElement[] = [root];
+  const lastLi: (HTMLElement | null)[] = [null];
+  for (const entry of entries) {
+    const d = entry.depth;
+    while (uls.length <= d) {
+      const newDepth = uls.length;
+      const parentLi = lastLi[newDepth - 1];
+      const templateDom = newDepth === d ? entry.parentListDom : uls[uls.length - 1];
+      const nestedWrapper = templateDom.cloneNode(false) as HTMLElement;
+      if (parentLi) parentLi.appendChild(nestedWrapper);
+      else uls[newDepth - 1].appendChild(nestedWrapper);
+      uls.push(nestedWrapper);
+      lastLi.push(null);
+    }
+    // Remonte à une profondeur moins profonde : referme les niveaux plus
+    // profonds ouverts précédemment (deviennent invalides pour la suite).
+    uls.length = d + 1;
+    lastLi.length = d + 1;
+
+    const li = document.createElement("li");
+    li.appendChild(entry.ownDom.cloneNode(true) as HTMLElement);
+    li.setAttribute(SRC_POS_ATTR, String(entry.pos));
+    uls[d].appendChild(li);
+    lastLi[d] = li;
+  }
+  return root;
 }
 
 type PageBlockEntry =
   | { kind: "node"; pos: number; dom: HTMLElement }
-  | { kind: "listItems"; listDom: HTMLElement; items: ListItemUnit[] };
+  | { kind: "listItems"; items: TocFlatEntry[] }
+  | { kind: "tableRows"; tableDom: HTMLElement; rows: TableRowRef[] };
+
+/** Une ligne de tableau ORIGINALE (dans l'éditeur invisible) : sa position
+ * ProseMirror, son `<tr>` et sa hauteur mesurée. */
+interface TableRowRef {
+  pos: number;
+  dom: HTMLElement;
+  height: number;
+}
+
+/** Découpe un tableau PLUS HAUT QU'UNE PAGE ENTIÈRE en "unités" de lignes
+ * (une unité = une ligne, ou plusieurs lignes liées par un `rowspan` — on ne
+ * coupe jamais à l'intérieur d'une cellule fusionnée verticalement).
+ * Retourne `null` pour tout tableau qui tient sur une page : il reste alors
+ * un bloc atomique, peint et déplacé en entier comme avant (comportement
+ * historique, évite de couper un tableau qui n'en a pas besoin).
+ * Correctif du 2026-10-20 : un tableau plus haut qu'une page débordait de sa
+ * page (recouvrait le pied de page, lignes rognées) faute de pouvoir être
+ * réparti — même technique que les listes (`flattenListEntries`), à
+ * l'échelle de la ligne `<tr>`. */
+function planTableSplit(node: any, offset: number, nodeDom: HTMLElement, contentHeightPx: number): TableRowRef[][] | null {
+  const table = nodeDom.matches("table") ? nodeDom : nodeDom.querySelector("table");
+  if (!table) return null;
+  const rowDoms = Array.from(table.querySelectorAll(":scope > tbody > tr, :scope > tr")) as HTMLElement[];
+  if (rowDoms.length < 2 || rowDoms.length !== node.childCount) return null;
+  if (nodeDom.getBoundingClientRect().height <= contentHeightPx) return null;
+
+  const rows: TableRowRef[] = [];
+  const reach: number[] = [];
+  node.forEach((rowNode: any, rel: number, i: number) => {
+    let r = i + 1;
+    rowNode.forEach((cell: any) => {
+      r = Math.max(r, i + (cell.attrs?.rowspan || 1));
+    });
+    reach.push(r);
+    rows.push({ pos: offset + 1 + rel, dom: rowDoms[i], height: rowDoms[i].getBoundingClientRect().height });
+  });
+
+  const units: TableRowRef[][] = [];
+  let i = 0;
+  while (i < rows.length) {
+    let end = reach[i];
+    for (let j = i + 1; j < end && j < rows.length; j++) end = Math.max(end, reach[j]);
+    end = Math.min(end, rows.length);
+    units.push(rows.slice(i, end));
+    i = end;
+  }
+  return units;
+}
+
+/** Reconstruit un fragment de tableau (wrapper Tiptap + `<table>` +
+ * `<colgroup>` + `<tbody>`) ne contenant que `rows`. Les largeurs de colonnes
+ * sont FIGÉES (`table-layout: fixed`, largeurs mesurées sur l'original) :
+ * en layout automatique, la largeur des colonnes dépendrait des SEULES
+ * lignes présentes dans le fragment, donc différerait d'une page à l'autre
+ * et des hauteurs mesurées. Chaque `<tr>` cloné porte SON PROPRE
+ * `SRC_POS_ATTR` (comme les `<li>` des listes) : la résolution de clic, le
+ * curseur et la sélection fonctionnent ligne par ligne. */
+function buildTableFragment(tableDom: HTMLElement, rows: TableRowRef[]): HTMLElement {
+  const originalTable = (tableDom.matches("table") ? tableDom : tableDom.querySelector("table")) as HTMLElement;
+  const table = originalTable.cloneNode(false) as HTMLElement;
+  const cols = Array.from(originalTable.querySelectorAll(":scope > colgroup > col")) as HTMLElement[];
+  if (cols.length > 0) {
+    const colgroup = document.createElement("colgroup");
+    for (const c of cols) {
+      const col = c.cloneNode(false) as HTMLElement;
+      col.style.width = `${c.getBoundingClientRect().width}px`;
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+    const w = `${originalTable.getBoundingClientRect().width}px`;
+    table.style.tableLayout = "fixed";
+    table.style.width = w;
+    table.style.minWidth = w;
+  }
+  const originalBody = originalTable.querySelector(":scope > tbody");
+  const body = originalBody ? (originalBody.cloneNode(false) as HTMLElement) : document.createElement("tbody");
+  for (const row of rows) {
+    const tr = row.dom.cloneNode(true) as HTMLElement;
+    tr.setAttribute(SRC_POS_ATTR, String(row.pos));
+    body.appendChild(tr);
+  }
+  table.appendChild(body);
+  if (tableDom.matches("table")) return table;
+  const wrapper = tableDom.cloneNode(false) as HTMLElement;
+  wrapper.appendChild(table);
+  return wrapper;
+}
 
 /**
  * Mesure chaque bloc de premier niveau du document (dans `view`, l'éditeur
@@ -215,6 +380,9 @@ type PageBlockEntry =
  */
 export function paintPages(view: EditorView, canvas: HTMLElement, options: PaintPagesOptions): PaintResult {
   const { pageHeightPx, marginTopPx, marginBottomPx, header, footer, context } = options;
+  // Reconstruit à CHAQUE peinture (les clones sont recréés de zéro) —
+  // voir cloneIndex.ts.
+  const cloneIndex = createCloneIndex();
   const paginator = createPaginator({
     pageHeight: pageHeightPx,
     margins: { top: marginTopPx, bottom: marginBottomPx },
@@ -228,14 +396,16 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
     if (!nodeDom || !(nodeDom instanceof HTMLElement)) return;
 
     if (LIST_NODE_NAMES.has(node.type.name)) {
-      const items = collectListItemUnits(node, offset, nodeDom);
-      if (items.length === 0) return;
+      const flatEntries: TocFlatEntry[] = [];
+      flattenListEntries(node, offset, nodeDom, 0, flatEntries);
+      if (flatEntries.length === 0) return;
       // L'espacement "avant"/"après" de la liste ENTIÈRE (ex. l'espacement
       // façon Word après un paragraphe, voir MarkdownEditor.css) ne porte
-      // que sur son PREMIER/DERNIER item désormais — les items du milieu
-      // n'ont aucun espacement entre eux (c'est la liste elle-même qui
-      // gérait déjà tout l'espacement visuel interne via son padding/
-      // line-height, pas un margin par item).
+      // que sur la PREMIÈRE/DERNIÈRE entrée de TOUTE la séquence aplatie
+      // (tous niveaux confondus) — les entrées du milieu n'ont aucun
+      // espacement entre elles (c'est la liste elle-même qui gérait déjà
+      // tout l'espacement visuel interne via son padding/line-height, pas
+      // un margin par item).
       const listStyle = getComputedStyle(nodeDom);
       const listSpaceBefore = parseFloat(listStyle.marginTop) || 0;
       const listSpaceAfter = parseFloat(listStyle.marginBottom) || 0;
@@ -243,29 +413,63 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       let pendingEntry: Extract<PageBlockEntry, { kind: "listItems" }> | null = null;
       let pendingPageIndex = -1;
 
-      items.forEach((item, idx) => {
-        const height = item.dom.getBoundingClientRect().height;
-        const isFirstItem = idx === 0;
-        const isLastItem = idx === items.length - 1;
-        const spaceBefore = isFirstItem ? listSpaceBefore : 0;
-        const spaceAfter = isLastItem ? listSpaceAfter : 0;
+      flatEntries.forEach((flatEntry, idx) => {
+        const height = flatEntry.ownDom.getBoundingClientRect().height;
+        const isFirstEntry = idx === 0;
+        const isLastEntry = idx === flatEntries.length - 1;
+        const spaceBefore = isFirstEntry ? listSpaceBefore : 0;
+        const spaceAfter = isLastEntry ? listSpaceAfter : 0;
         // Un saut de page manuel juste avant la liste ne peut s'appliquer
-        // qu'à son tout premier item (les suivants ne font jamais démarrer
-        // une nouvelle page de force).
-        const placement = paginator.placeBlock(height, spaceBefore, spaceAfter, isFirstItem && forceNextBreak);
+        // qu'à sa toute première entrée (les suivantes ne font jamais
+        // démarrer une nouvelle page de force).
+        const placement = paginator.placeBlock(height, spaceBefore, spaceAfter, isFirstEntry && forceNextBreak);
 
         while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
         const pageIndex = placement.pageNumber - 1;
         if (!pendingEntry || pendingPageIndex !== pageIndex) {
-          pendingEntry = { kind: "listItems", listDom: nodeDom, items: [] };
+          pendingEntry = { kind: "listItems", items: [] };
           pendingPageIndex = pageIndex;
           pageBlocks[pageIndex].push(pendingEntry);
         }
-        pendingEntry.items.push(item);
+        pendingEntry.items.push(flatEntry);
       });
 
       forceNextBreak = false;
       return;
+    }
+
+    // Tableau plus haut qu'une page : réparti ligne par ligne (voir
+    // `planTableSplit`). Un tableau qui tient sur une page n'est pas concerné.
+    if (node.type.name === "table") {
+      const units = planTableSplit(node, offset, nodeDom, pageHeightPx - marginTopPx - marginBottomPx);
+      if (units) {
+        const tableStyle = getComputedStyle(nodeDom);
+        const tableSpaceBefore = parseFloat(tableStyle.marginTop) || 0;
+        const tableSpaceAfter = parseFloat(tableStyle.marginBottom) || 0;
+        let pending: Extract<PageBlockEntry, { kind: "tableRows" }> | null = null;
+        let pendingPageIndex = -1;
+        units.forEach((unit, idx) => {
+          const unitHeight = unit.reduce((sum, r) => sum + r.height, 0);
+          const isFirst = idx === 0;
+          const isLast = idx === units.length - 1;
+          const placement = paginator.placeBlock(
+            unitHeight,
+            isFirst ? tableSpaceBefore : 0,
+            isLast ? tableSpaceAfter : 0,
+            isFirst && forceNextBreak,
+          );
+          while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
+          const pageIndex = placement.pageNumber - 1;
+          if (!pending || pendingPageIndex !== pageIndex) {
+            pending = { kind: "tableRows", tableDom: nodeDom, rows: [] };
+            pendingPageIndex = pageIndex;
+            pageBlocks[pageIndex].push(pending);
+          }
+          pending.rows.push(...unit);
+        });
+        forceNextBreak = false;
+        return;
+      }
     }
 
     // Précision sub-pixel (voir CLAUDE.md : `.offsetHeight` arrondit à
@@ -330,6 +534,10 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
           const { pos, dom } = entry;
           const clone = dom.cloneNode(true) as HTMLElement;
           clone.setAttribute(SRC_POS_ATTR, String(pos));
+          // Index texte/cellule du clone (résolution clic exacte au
+          // caractère — voir cloneIndex.ts) : original et clone ont une
+          // structure identique, on les parcourt en parallèle.
+          indexCloneBlock(view, dom, clone, cloneIndex);
           // Poignées de redimensionnement colonne/ligne — uniquement si ce
           // bloc EST un tableau ; sans effet silencieusement sur tout autre
           // type de bloc.
@@ -343,24 +551,19 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
             headingEl.id = uniqueHeadingSlug(headingEl.textContent ?? "", usedSlugs);
           }
           content.appendChild(clone);
+        } else if (entry.kind === "tableRows") {
+          content.appendChild(buildTableFragment(entry.tableDom, entry.rows));
         } else {
-          // Fragment de liste (voir `LIST_NODE_NAMES`) : un wrapper neuf,
-          // même balise/attributs que la liste originale (préserve puces/
-          // numérotation/classe `tight`/`data-type="taskList"`…), contenant
-          // les clones des SEULS items qui reviennent à CETTE page. Chaque
-          // `<li>` cloné porte SON PROPRE `SRC_POS_ATTR` (pas le wrapper) —
+          // Fragment de liste (voir `LIST_NODE_NAMES`/`flattenListEntries`) :
+          // reconstruit une structure imbriquée pour CETTE page à partir des
+          // SEULES entrées qui lui reviennent (`buildNestedFragment`),
+          // préservant le niveau d'indentation même si la coupure tombe en
+          // plein milieu d'une sous-liste imbriquée. Chaque `<li>` reconstruit
+          // porte SON PROPRE `SRC_POS_ATTR` (pas les wrappers englobants) —
           // le reste du module (résolution de clic, curseur dessiné,
           // surbrillance de sélection) continue de fonctionner SANS
-          // adaptation particulière ici, puisqu'un item cloné correspond
-          // toujours à UN SEUL nœud, exactement comme n'importe quel autre
-          // bloc de premier niveau avant cette fonctionnalité.
-          const wrapper = entry.listDom.cloneNode(false) as HTMLElement;
-          for (const item of entry.items) {
-            const liClone = item.dom.cloneNode(true) as HTMLElement;
-            liClone.setAttribute(SRC_POS_ATTR, String(item.pos));
-            wrapper.appendChild(liClone);
-          }
-          content.appendChild(wrapper);
+          // adaptation particulière ici.
+          content.appendChild(buildNestedFragment(entry.items));
         }
       }
       page.appendChild(content);
@@ -378,5 +581,5 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
     }),
   );
 
-  return { pageCount };
+  return { pageCount, cloneIndex };
 }

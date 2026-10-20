@@ -61,7 +61,6 @@ import {
   IconPaste,
   IconTaskList,
   IconTocMarker,
-  IconTocRefresh,
 } from "./icons";
 import "./Toolbar.css";
 
@@ -168,6 +167,9 @@ export interface ToolbarActions {
   insertHeaderFooterVariable: (token: string) => void;
   insertTocMarker: () => void;
   generateToc: () => void;
+  // --- Sommaire (panneau contextuel) ---
+  updateTocAtCursor: () => void;
+  deleteTocAtCursor: () => void;
   insertMermaidDiagram: () => void;
   insertInlineMath: () => void;
   insertBlockMath: () => void;
@@ -232,6 +234,8 @@ export function Toolbar({
   sidebarOpen,
   onOpenPageSetup,
   onOpenHeadingStyles,
+  onToggleHeadingPanel,
+  headingPanelOpen = false,
   activeBlockStyle = "paragraph",
   activeMarks = EMPTY_ACTIVE_MARKS,
   activeAlign = null,
@@ -245,6 +249,10 @@ export function Toolbar({
   sidebarOpen: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
+  /** Ouvre/ferme le panneau latéral « Styles de titres » (chevron de la
+   * galerie de styles). Absent → le chevron garde l'ancien menu déroulant. */
+  onToggleHeadingPanel?: () => void;
+  headingPanelOpen?: boolean;
   /** Version LÉGÈRE (intégration dans une autre application, ex. MBEF Platform) : uniquement l'onglet
    * « Accueil », sans bouton Explorateur, sans lanceurs de dialogues (mise en page,
    * styles de titres), sans panneau contextuel. Sans effet (false) dans Pagina elle-même. */
@@ -514,6 +522,8 @@ export function Toolbar({
               active={activeBlockStyle}
               onPick={(level) => actions?.toggleHeading(level)}
               onPickParagraph={() => actions?.setParagraph()}
+              onTogglePanel={onToggleHeadingPanel}
+              panelOpen={headingPanelOpen}
             />
           </RibbonGroup>
 
@@ -632,19 +642,10 @@ export function Toolbar({
             <BigButton
               disabled={disabled}
               onClick={() => actions?.insertTocMarker()}
-              title="Insérer un marqueur de sommaire (commentaire HTML invisible, compatible partout)"
+              title="Insérer un marqueur de sommaire (cliquer dessus ensuite pour le remplir — voir aussi le panneau « Sommaire » une fois rempli)"
               icon={<IconTocMarker size={28} />}
-              label="Marqueur"
+              label="Sommaire"
             />
-            <div className="tb-stack">
-              <StackButton
-                disabled={disabled}
-                onClick={() => actions?.generateToc()}
-                title="Générer/mettre à jour le sommaire (remplace le marqueur par la liste réelle des titres)"
-                icon={<IconTocRefresh size={15} />}
-                label="Mettre à jour"
-              />
-            </div>
           </RibbonGroup>
 
           <RibbonGroup label="Diagrammes et formules" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
@@ -787,17 +788,22 @@ function StyleGallery({
   active,
   onPick,
   onPickParagraph,
+  onTogglePanel,
+  panelOpen = false,
 }: {
   disabled: boolean;
   active: "paragraph" | 1 | 2 | 3 | 4 | 5 | 6;
   onPick: (level: 1 | 2 | 3 | 4 | 5 | 6) => void;
   onPickParagraph: () => void;
+  onTogglePanel?: () => void;
+  panelOpen?: boolean;
 }) {
   return (
     <div className="tb-style-gallery">
       <button
         className={`tb-style-btn${active === "paragraph" ? " tb-style-btn-active" : ""}`}
         disabled={disabled}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onPickParagraph}
         title="Normal"
       >
@@ -808,13 +814,26 @@ function StyleGallery({
           key={level}
           className={`tb-style-btn${active === level ? " tb-style-btn-active" : ""}`}
           disabled={disabled}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => onPick(level)}
           title={`Titre ${level}`}
         >
           Titre {level}
         </button>
       ))}
-      <HeadingPicker disabled={disabled} onPick={onPick} />
+      {onTogglePanel ? (
+        <button
+          className={`tb-btn-icon tb-heading-picker-trigger${panelOpen ? " tb-btn-icon-active" : ""}`}
+          disabled={disabled}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onTogglePanel}
+          title="Panneau des styles de titres (Titre 1 à 6, avec aperçu et niveau actif)"
+        >
+          ⌄
+        </button>
+      ) : (
+        <HeadingPicker disabled={disabled} onPick={onPick} />
+      )}
     </div>
   );
 }
