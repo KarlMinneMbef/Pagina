@@ -176,6 +176,42 @@ export function IconAlignJustify({ size, className }: IconProps) {
   );
 }
 
+// --- Tabulation ± (roadmap 2.1, 2026-10-21) : flèche entrante/sortante
+// à gauche, trois barres de texte à droite — même modèle à barres pleines
+// que les alignements ci-dessus. ---
+function indentBars(): ReactNode {
+  const bar = (y: number) => (
+    <rect key={y} x={14} y={y} width={7} height={1.8} rx="0.9" fill="currentColor" stroke="none" />
+  );
+  return (
+    <>
+      {bar(6)}
+      {bar(11.1)}
+      {bar(16.2)}
+    </>
+  );
+}
+
+export function IconIndentIncrease({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M4 12h7" />
+      <path d="M8 9l3 3-3 3" />
+      {indentBars()}
+    </Svg24>
+  );
+}
+
+export function IconIndentDecrease({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M12 12H5" />
+      <path d="M8 9l-3 3 3 3" />
+      {indentBars()}
+    </Svg24>
+  );
+}
+
 // --- Explorateur ---
 
 export function IconExplorer({ size, className }: IconProps) {

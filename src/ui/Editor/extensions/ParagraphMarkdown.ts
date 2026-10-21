@@ -17,13 +17,99 @@
  *
  * Ne change RIEN pour un paragraphe non vide (repli sur le comportement de
  * base) — seuls les paragraphes strictement vides sont concernés.
+ *
+ * ---
+ * RETRAIT DE PARAGRAPHE (roadmap 2.1, 2026-10-21 — boutons « Tabulation
+ * + / − » comme Word/Casual) : attribut `indent` (nombre de pas de 1,25 cm,
+ * le retrait par défaut de Word ; 0 = aucun). PAS d'équivalent en Markdown
+ * standard — et surtout PAS d'espaces en tête de ligne : 4 espaces ou une
+ * tabulation en début de paragraphe = BLOC DE CODE en Markdown, qui
+ * détruirait le paragraphe à la réouverture. Même repli assumé que
+ * l'alignement : `<p style="margin-left:1.25cm">`, lisible partout
+ * (`html: true` de tiptap-markdown), réversible. Raccourcis Word :
+ * Ctrl+M / Ctrl+Shift+M.
  */
 import { Paragraph as ParagraphBase } from "@tiptap/extension-paragraph";
 import { DOMSerializer } from "@tiptap/pm/model";
 
 const EMPTY_LINE_COMMENT = /^<!--\s*empty-line\s*-->$/i;
 
+/** Un pas de retrait = 1,25 cm (0,5"), comme le retrait par défaut de Word. */
+export const INDENT_STEP_CM = 1.25;
+/** Plafond : 10 pas (12,5 cm) — au-delà le texte sortirait de la page A4. */
+export const INDENT_MAX = 10;
+
+const INDENT_STYLE_RE = /margin-left:\s*([\d.]+)cm/;
+
+/** Niveau de retrait stocké sur le nœud (0 = aucun). */
+function indentFromStyle(style: string | null): number {
+  const m = style ? INDENT_STYLE_RE.exec(style) : null;
+  if (!m) return 0;
+  const cm = parseFloat(m[1]);
+  if (!Number.isFinite(cm) || cm <= 0) return 0;
+  return Math.max(1, Math.min(INDENT_MAX, Math.round(cm / INDENT_STEP_CM)));
+}
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    /** Retrait de paragraphe (roadmap 2.1) — les commandes sont NÉSTÉES
+     * sous une clé objet : Tiptap v3 n'aplatit dans RawCommands que les
+     * valeurs OBJET de Commands (UnionCommands, voir types @tiptap/core)
+     * — au premier niveau elles seraient ignorées. */
+    paragraphIndent: {
+      /** Augmente le retrait du paragraphe courant d'un pas (bouton
+       * « Tabulation + », Ctrl+M). */
+      increaseParagraphIndent: () => ReturnType;
+      /** Diminue le retrait du paragraphe courant d'un pas (bouton
+       * « Tabulation − », Ctrl+Shift+M) ; sans effet à 0. */
+      decreaseParagraphIndent: () => ReturnType;
+    };
+  }
+}
+
 export const ParagraphMarkdown = ParagraphBase.extend({
+  addAttributes() {
+    return {
+      indent: {
+        default: 0,
+        parseHTML: (element) => indentFromStyle(element.getAttribute("style")),
+        // Rendu en style inline — relu par `parseHTML` à l'ouverture et
+        // par le repli HTML du sérialiseur ci-dessous.
+        renderHTML: (attributes) =>
+          attributes.indent
+            ? { style: `margin-left: ${attributes.indent * INDENT_STEP_CM}cm` }
+            : {},
+      },
+    };
+  },
+
+  addCommands() {
+    const levelAfter = (editor: { getAttributes: (t: string) => Record<string, unknown> }, delta: number) => {
+      const attrs = editor.getAttributes("paragraph");
+      const current = typeof attrs.indent === "number" ? (attrs.indent as number) : 0;
+      return Math.max(0, Math.min(INDENT_MAX, current + delta));
+    };
+    return {
+      increaseParagraphIndent:
+        () =>
+        ({ commands, editor }: { commands: any; editor: any }) =>
+          commands.updateAttributes("paragraph", { indent: levelAfter(editor, 1) }),
+      decreaseParagraphIndent:
+        () =>
+        ({ commands, editor }: { commands: any; editor: any }) =>
+          commands.updateAttributes("paragraph", { indent: levelAfter(editor, -1) }),
+    };
+  },
+
+  addKeyboardShortcuts() {
+    // Raccourcis de Word : Ctrl+M augmente le retrait, Ctrl+Shift+M le
+    // diminue (Cmd/Ctrl selon la plateforme via « Mod »).
+    return {
+      "Mod-Shift-m": () => this.editor.commands.decreaseParagraphIndent(),
+      "Mod-m": () => this.editor.commands.increaseParagraphIndent(),
+    };
+  },
+
   addStorage() {
     return {
       markdown: {
@@ -36,14 +122,15 @@ export const ParagraphMarkdown = ParagraphBase.extend({
             state.closeBlock(node);
             return;
           }
-          // Paragraphe ALIGNÉ (text-align, via le ruban) : pas d'équivalent
-          // en Markdown standard — repli HTML <p style="…"> comme tous les
-          // réglages avancés (voir Markdown.configure({ html: true })).
-          // SANS ce repli, le sérialiseur ci-dessous écrivait le texte
-          // inline sans les attributs : l'alignement était silencieusement
-          // PERDU à la sauvegarde (bug préexistant, révélé par la
+          // Paragraphe ALIGNÉ ou RETRAIT (text-align via le ruban, indent
+          // via Tabulation ±) : pas d'équivalent en Markdown standard —
+          // repli HTML <p style="…"> comme tous les réglages avancés (voir
+          // Markdown.configure({ html: true })). SANS ce repli, le
+          // sérialiseur ci-dessous écrivait le texte inline sans les
+          // attributs : le réglage était silencieusement PERDU à la
+          // sauvegarde (bug préexistant sur l'alignement, révélé par la
           // vérification systématique du ruban refait).
-          if (node.attrs.textAlign) {
+          if (node.attrs.textAlign || node.attrs.indent) {
             const div = document.createElement("div");
             div.appendChild(DOMSerializer.fromSchema(this.editor.schema).serializeNode(node));
             state.write(div.innerHTML);
