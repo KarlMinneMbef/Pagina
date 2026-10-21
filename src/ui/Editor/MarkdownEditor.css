@@ -13,7 +13,14 @@
    * center` sur .xmd-page-canvas juste en dessous. */
   overflow-x: auto;
   background: #e6e6e6;
-  padding: 32px 16px;
+  /* PAS de padding-top : la règle horizontale doit être COLLÉE en haut
+   * du viewport des pages, comme Word (retour utilisateur 2026-10-21 :
+   * « la règle n'est pas en haut, il y a un décalage »). Les 32px
+   * d'espacement au-dessus des pages sont rendus par le margin-bottom
+   * de .xmd-ruler-h (Ruler.css) — un padding-top ici décalait la règle
+   * vers le bas, le sticky ne « tirant » jamais un élément vers le haut.
+   * L'impression force déjà padding: 0 sur ce conteneur (App.css). */
+  padding: 0 16px 32px;
   position: relative;
   /* `paintPages.ts` fait un `canvas.replaceChildren(...)` à CHAQUE frappe —
    * tout l'arbre des pages (y compris celles visibles à l'écran) est détruit
