@@ -584,9 +584,10 @@ function App() {
                   onClose={() => setTocPanelOpen(false)}
                 />
               )}
-            {/* key = position du nœud formule : le panneau se remonte (et le
-             * champ MathLive se réinitialise) au CHANGEMENT de formule,
-             * jamais à la frappe (le curseur du champ ne doit pas sauter). */}
+            {/* key = position du nœud formule : le panneau se remonte au
+             * CHANGEMENT de formule, jamais à la frappe. Le CHAMP vit
+             * désormais sur la page (startMathEdit, MarkdownEditor) — le
+             * panneau ne porte que la palette de symboles. */}
             {ctxTab === "equation" &&
               mathPanelOpen &&
               stats.math &&
@@ -594,8 +595,7 @@ function App() {
                 <EquationPanel
                   key={stats.math.pos}
                   kind={stats.math.kind}
-                  source={stats.math.source}
-                  onChange={(source) => editorRef.current?.updateMathSource(source)}
+                  onInsertLatex={(latex) => editorRef.current?.insertMathLatex(latex)}
                   onDelete={() => editorRef.current?.deleteMath()}
                   onClose={() => setMathPanelOpen(false)}
                 />
