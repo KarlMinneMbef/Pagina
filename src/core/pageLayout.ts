@@ -329,7 +329,13 @@ export function loadDefaultPageLayout(): PageLayoutSettings {
 }
 
 /** Contexte de substitution des variables d'en-tête/pied de page (voir
- * `resolveHeaderFooterText`) — une valeur par variable disponible. */
+ * `resolveHeaderFooterText`) — une valeur par variable disponible.
+ *
+ * Depuis la roadmap 1.6 (2026-10-21) : les PROPRIÉTÉS DU DOCUMENT
+ * (fenêtre « Propriétés du document ») sont disponibles comme variables
+ * — {{title}}, {{subject}}, {{keywords}}, {{created}}, {{modified}} —
+ * ainsi que CHAQUE CHAMP PERSONNALISÉ par son propre nom ({{Chantier}},
+ * {{Affaire}}… : le nom saisi dans la fenêtre est le nom de la variable). */
 export interface HeaderFooterContext {
   page: number;
   pages: number;
@@ -337,26 +343,52 @@ export interface HeaderFooterContext {
   filename: string;
   version: string;
   author: string;
+  /** Propriétés du document (roadmap 1.6) — voir DocumentProperties. */
+  title: string;
+  subject: string;
+  keywords: string;
+  created: string;
+  modified: string;
+  /** Champs personnalisés (roadmap 1.6) : chaque {name} devient la
+   * variable {{name}} dans les en-têtes/pieds. */
+  custom: DocumentCustomProperty[];
 }
 
-const HEADER_FOOTER_TOKENS: Record<keyof HeaderFooterContext, string> = {
+const HEADER_FOOTER_TOKENS: Record<keyof Omit<HeaderFooterContext, "custom">, string> = {
   page: "{{page}}",
   pages: "{{pages}}",
   date: "{{date}}",
   filename: "{{filename}}",
   version: "{{version}}",
   author: "{{author}}",
+  title: "{{title}}",
+  subject: "{{subject}}",
+  keywords: "{{keywords}}",
+  created: "{{created}}",
+  modified: "{{modified}}",
 };
 
 /** Remplace les variables `{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`,
- * `{{version}}`, `{{author}}` dans un modèle d'en-tête/pied de page par leur
- * valeur réelle pour UNE page donnée. Une variable inconnue/mal orthographiée
- * (`{{pgae}}`) est laissée telle quelle plutôt que silencieusement effacée —
- * plus facile à repérer et corriger pour l'utilisateur. */
+ * `{{version}}`, `{{author}}`, les propriétés du document (`{{title}}`,
+ * `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}`) et chaque
+ * champ personnalisé (`{{NomDuChamp}}`) dans un modèle d'en-tête/pied de
+ * page par leur valeur réelle pour UNE page donnée. Une variable inconnue/
+ * mal orthographiée (`{{pgae}}`) est laissée telle quelle plutôt que
+ * silencieusement effacée — plus facile à repérer et corriger.
+ */
 export function resolveHeaderFooterText(template: string, ctx: HeaderFooterContext): string {
   let result = template;
-  for (const key of Object.keys(HEADER_FOOTER_TOKENS) as (keyof HeaderFooterContext)[]) {
+  for (const key of Object.keys(HEADER_FOOTER_TOKENS) as (keyof typeof HEADER_FOOTER_TOKENS)[]) {
     result = result.split(HEADER_FOOTER_TOKENS[key]).join(String(ctx[key]));
+  }
+  // Champs personnalisés : le NOM du champ est le nom de la variable.
+  // Substitués APRÈS les variables fixes — un champ nommé « date »
+  // n'écrasera donc pas {{date}} (numérotation) mais resterait
+  // {{...}} non résolu s'il porte exactement un nom réservé.
+  for (const c of ctx.custom ?? []) {
+    const name = (c.name ?? "").trim();
+    if (!name) continue;
+    result = result.split(`{{${name}}}`).join(c.value ?? "");
   }
   return result;
 }

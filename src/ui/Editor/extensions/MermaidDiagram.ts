@@ -18,12 +18,17 @@
  * d'extension prévu pour exactement ce genre de post-traitement.
  *
  * Rendu : NodeView Tiptap manuel (pas de contenu ProseMirror éditable
- * classique) — un `<textarea>` pour la source, un `<div>` pour le SVG
- * rendu par `mermaid.render()` (asynchrone, ré-appelé à chaque frappe dans
- * le textarea). La source est stockée comme ATTRIBUT du nœud
- * (`node.attrs.source`), pas comme contenu ProseMirror : plus simple à
- * synchroniser avec un `<textarea>` HTML natif qu'un vrai schéma de texte
- * édité au clavier caractère par caractère.
+ * classique) — un `<div>` pour le SVG rendu par `mermaid.render()`
+ * (asynchrone, re-rendu à chaque changement d'attribut `source`).
+ *
+ * ÉDITION (refonte 2026-10-21, demande utilisateur « trouver une
+ * solution pour l'éditeur de diagramme Mermaid ») : le nœud n'affiche
+ * PLUS DE TEXTAREA — la page ne montre QUE le diagramme rendu, comme
+ * une image Word. L'édition passe par le PANNEAU LATÉRAL « Diagramme »
+ * (ui/Mermaid/DiagramPanel.tsx) : clic sur le diagramme peint →
+ * NodeSelection → panneau avec source + aperçu en direct + modèles.
+ * La source reste stockée comme ATTRIBUT du nœud (`node.attrs.source`),
+ * sérialisée en bloc ```mermaid standard.
  */
 import { Node, mergeAttributes } from "@tiptap/core";
 import mermaid from "mermaid";
@@ -67,21 +72,18 @@ export const MermaidDiagram = Node.create({
   },
 
   addNodeView() {
-    return ({ node, getPos, editor }) => {
+    return ({ node }) => {
       ensureMermaidInitialized();
 
       const container = document.createElement("div");
       container.className = "xmd-mermaid";
 
-      const textarea = document.createElement("textarea");
-      textarea.className = "xmd-mermaid-source";
-      textarea.spellcheck = false;
-      textarea.value = node.attrs.source;
-
+      // SEUL le rendu apparaît (dans l'éditeur invisible ET dans les
+      // clones peints) — plus jamais la source brute sur la page.
       const preview = document.createElement("div");
       preview.className = "xmd-mermaid-preview";
 
-      container.append(textarea, preview);
+      container.append(preview);
 
       const renderPreview = async (source: string) => {
         renderCounter += 1;
@@ -98,25 +100,11 @@ export const MermaidDiagram = Node.create({
       };
       renderPreview(node.attrs.source);
 
-      textarea.addEventListener("input", () => {
-        const pos = getPos();
-        if (typeof pos !== "number") return;
-        editor.view.dispatch(editor.view.state.tr.setNodeAttribute(pos, "source", textarea.value));
-        renderPreview(textarea.value);
-      });
-      // Empêche le clic dans le textarea de remonter jusqu'au gestionnaire
-      // de clic de la couche peinte (résolution de position ailleurs dans
-      // le document) — ce nœud gère lui-même sa propre édition.
-      textarea.addEventListener("mousedown", (e) => e.stopPropagation());
-
       return {
         dom: container,
         update: (updatedNode) => {
           if (updatedNode.type.name !== "mermaidDiagram") return false;
-          if (updatedNode.attrs.source !== textarea.value) {
-            textarea.value = updatedNode.attrs.source;
-            renderPreview(updatedNode.attrs.source);
-          }
+          renderPreview(updatedNode.attrs.source);
           return true;
         },
       };
