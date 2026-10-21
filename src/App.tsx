@@ -18,6 +18,7 @@ import { TocPanel } from "./ui/Toc/TocPanel";
 import { EquationPanel } from "./ui/Math/EquationPanel";
 import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
 import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialog";
+import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
@@ -61,6 +62,7 @@ function App() {
     setActive,
     updateContent,
     updateLayout,
+    patchLayout,
     saveTab,
     saveTabAs,
     restoreSession,
@@ -77,6 +79,8 @@ function App() {
   const [headingStylesOpen, setHeadingStylesOpen] = useState(false);
   // Fenêtre « Propriétés du document » (roadmap 1.3).
   const [documentPropertiesOpen, setDocumentPropertiesOpen] = useState(false);
+  // Fenêtre « Paragraphe — Retrait et espacement » (comme Word).
+  const [paragraphDialogOpen, setParagraphDialogOpen] = useState(false);
   // Panneau latéral contextuel de mise en forme de tableau (voir
   // TablePropertiesPanel.tsx). S'ouvre automatiquement au FRONT MONTANT de
   // `stats.insideTable` (même principe que la bascule d'onglet ruban
@@ -460,14 +464,17 @@ function App() {
       setTextAlign: (align) => handle.setTextAlign(align),
       increaseIndent: () => handle.increaseIndent(),
       decreaseIndent: () => handle.decreaseIndent(),
+      // patchLayout : lit le layout COURANT du store — l'ancienne forme
+      // capturait activeTab.layout (effet d'app construit au changement
+      // d'onglet seulement) et chaque réglage écrasait les précédents.
       setLineSpacing: (value) => {
-        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, lineHeight: value });
+        if (activeTab) patchLayout(activeTab.path, { lineHeight: value });
       },
       setParagraphSpacingBefore: (pt) => {
-        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, spacingBeforePt: pt });
+        if (activeTab) patchLayout(activeTab.path, { spacingBeforePt: pt });
       },
       setParagraphSpacingAfter: (pt) => {
-        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, paragraphSpacingPt: pt });
+        if (activeTab) patchLayout(activeTab.path, { paragraphSpacingPt: pt });
       },
       toggleSubscript: () => handle.toggleSubscript(),
       toggleSuperscript: () => handle.toggleSuperscript(),
@@ -523,6 +530,7 @@ function App() {
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
         onOpenDocumentProperties={() => setDocumentPropertiesOpen(true)}
+        onOpenParagraphDialog={() => setParagraphDialogOpen(true)}
         onToggleHeadingPanel={() => {
           setHeadingPanelOpen((o) => !o);
           setCtxTab("styles");
@@ -537,7 +545,6 @@ function App() {
         activeFontSizePt={stats.activeFontSizePt}
         lineSpacing={activeTab?.layout.lineHeight}
         spacingBeforePt={activeTab?.layout.spacingBeforePt}
-        spacingAfterPt={activeTab?.layout.paragraphSpacingPt}
       />
       <div className="app-body">
         {sidebarOpen && (
@@ -724,6 +731,23 @@ function App() {
           layout={activeTab.layout}
           onApply={(layout) => updateLayout(activeTab.path, layout)}
           onClose={() => setPageSetupOpen(false)}
+        />
+      )}
+      {paragraphDialogOpen && activeTab && (
+        <ParagraphDialog
+          layout={activeTab.layout}
+          /* Snapshot du paragraphe sous le curseur au moment de l'ouverture —
+           * la fenêtre est modale, ce format ne bouge pas pendant qu'elle est
+           * ouverte ; il n'est lu qu'une fois (états initiaux du dialogue). */
+          paragraphFormat={
+            editorRef.current?.getActiveParagraphFormat() ?? { align: null, indentLeftCm: 0, indentRightCm: 0 }
+          }
+          onApply={({ align, indentLeftCm, indentRightCm, layout }) => {
+            editorRef.current?.setTextAlign(align);
+            editorRef.current?.setParagraphIndent(indentLeftCm, indentRightCm);
+            updateLayout(activeTab.path, layout);
+          }}
+          onClose={() => setParagraphDialogOpen(false)}
         />
       )}
       {documentPropertiesOpen && activeTab && (

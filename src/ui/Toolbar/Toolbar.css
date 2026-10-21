@@ -635,8 +635,97 @@
   background: #ffffff;
 }
 
-/* Champ numérique compact du ruban (roadmap 2.2 : espacement avant/après
- * en points, groupe Paragraphe) — même langage que .tb-select. */
+/* Menu Interligne façon Word (2026-10-21) — déclencheur sobre qui montre
+ * la valeur courante + chevron, panneau déroulant au-dessus du ruban. */
+.tb-linespacing {
+  position: relative;
+  display: inline-flex;
+}
+
+.tb-linespacing-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tb-linespacing-trigger:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tb-linespacing-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tb-linespacing-caret {
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+.tb-linespacing-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 80;
+  min-width: 230px;
+  background: #ffffff;
+  border: 1px solid #d0d3d4;
+  border-radius: 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-linespacing-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #343334;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tb-linespacing-item:hover {
+  background: #f0f6f3;
+}
+
+.tb-linespacing-item-active {
+  font-weight: 700;
+  color: #003f2b;
+}
+
+.tb-linespacing-check {
+  width: 14px;
+  font-size: 11px;
+  color: #24ac6e;
+}
+
+.tb-linespacing-sep {
+  height: 1px;
+  background: #e4e4e2;
+  margin: 4px 6px;
+}
+
+/* (les deux champs numériques d'espacement ont déménagé dans la fenêtre
+ * « Paragraphe » — le ruban garde le menu, comme Word) */
+
+/* Champ numérique compact du ruban (ancienne règle conservée si
+ * d'autres usages apparaissent). */
 .tb-num-input {
   width: 52px;
   background: transparent;

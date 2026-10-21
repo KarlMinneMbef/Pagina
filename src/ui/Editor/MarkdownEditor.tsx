@@ -206,6 +206,16 @@ export interface MarkdownEditorHandle {
   /** Diminue le retrait du paragraphe courant d'un pas (bouton
    * « Tabulation − », raccourci Ctrl+Shift+M comme Word). */
   decreaseIndent: () => void;
+  /** Format du paragraphe SOUS LE CURSEUR (fenêtre « Paragraphe ») :
+   * alignement + retraits gauche/droite en cm. */
+  getActiveParagraphFormat: () => {
+    align: "left" | "center" | "right" | "justify" | null;
+    indentLeftCm: number;
+    indentRightCm: number;
+  };
+  /** Pose les retraits gauche/droite EXACTS du paragraphe courant, en cm
+   * (fenêtre « Paragraphe », comme Word). */
+  setParagraphIndent: (leftCm: number, rightCm: number) => void;
   toggleSubscript: () => void;
   toggleSuperscript: () => void;
   toggleTaskList: () => void;
@@ -1424,6 +1434,22 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // d'espaces en tête de ligne (= bloc de code en Markdown !).
       increaseIndent: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).increaseParagraphIndent().run(),
       decreaseIndent: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).decreaseParagraphIndent().run(),
+      getActiveParagraphFormat: () => {
+        if (!editor) return { align: null, indentLeftCm: 0, indentRightCm: 0 };
+        const attrs = editor.getAttributes("paragraph");
+        const align =
+          typeof attrs.textAlign === "string" &&
+          ["left", "center", "right", "justify"].includes(attrs.textAlign)
+            ? (attrs.textAlign as "left" | "center" | "right" | "justify")
+            : null;
+        return {
+          align,
+          indentLeftCm: typeof attrs.indentCm === "number" ? attrs.indentCm : 0,
+          indentRightCm: typeof attrs.indentRightCm === "number" ? attrs.indentRightCm : 0,
+        };
+      },
+      setParagraphIndent: (leftCm, rightCm) =>
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).setParagraphIndent(leftCm, rightCm).run(),
       toggleSubscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSubscript().run(),
       toggleSuperscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSuperscript().run(),
       toggleTaskList: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run(),

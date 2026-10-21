@@ -216,6 +216,7 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           onOpenPageSetup={AUCUNE_ACTION_DIALOGUE}
           onOpenHeadingStyles={AUCUNE_ACTION_DIALOGUE}
           onOpenDocumentProperties={AUCUNE_ACTION_DIALOGUE}
+          onOpenParagraphDialog={AUCUNE_ACTION_DIALOGUE}
           activeBlockStyle={stats.activeBlockStyle}
           activeMarks={stats.activeMarks}
           activeAlign={stats.activeAlign}
@@ -225,7 +226,6 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           activeFontSizePt={stats.activeFontSizePt}
           lineSpacing={layout.lineHeight}
           spacingBeforePt={layout.spacingBeforePt}
-          spacingAfterPt={layout.paragraphSpacingPt}
         />
       </div>
       <div className="xmd-embed-editor-area">
