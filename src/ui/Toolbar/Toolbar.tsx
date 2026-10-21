@@ -280,11 +280,15 @@ const FONT_FAMILIES = [
  * MarkdownEditor.tsx — les boutons Agrandir/Réduire y font référence). */
 const FONT_SIZES = FONT_SIZE_STEPS.map((pt) => `${pt}pt`);
 
-/** Interlignes proposés (roadmap 2.2) — l'échelle de Word : 1,0 / 1,15
- * (défaut Word « Multiple 1,15 ») / 1,5 / 2,0 / 3,0. Une valeur
+/** Interlignes proposés — l'échelle EXACTE du menu Word : 1,0 / 1,15
+ * (défaut Word « Multiple 1,15 ») / 1,5 / 2,0 / 2,5 / 3,0. Une valeur
  * personnalisée du document hors échelle apparaît comme option
  * supplémentaire plutôt que de « sauter » au plus proche. */
-const LINE_SPACINGS = [1, 1.15, 1.5, 2, 3];
+const LINE_SPACINGS = [1, 1.15, 1.5, 2, 2.5, 3];
+
+/** Libellé façon Word : au moins une décimale (1 → « 1,0 », 1,5 → « 1,5 »). */
+const fmtLineSpacing = (v: number) =>
+  v % 1 === 0 ? `${v.toFixed(1).replace(".", ",")}` : String(v).replace(".", ",");
 
 type RibbonTab = "accueil" | "insertion";
 
@@ -306,6 +310,7 @@ export function Toolbar({
   onOpenPageSetup,
   onOpenHeadingStyles,
   onOpenDocumentProperties,
+  onOpenParagraphDialog,
   onToggleHeadingPanel,
   headingPanelOpen = false,
   activeBlockStyle = "paragraph",
@@ -317,7 +322,6 @@ export function Toolbar({
   activeFontSizePt = 12,
   lineSpacing = 1.15,
   spacingBeforePt = 0,
-  spacingAfterPt = 8,
   leger = false,
 }: {
   actions: ToolbarActions | null;
@@ -327,6 +331,9 @@ export function Toolbar({
   onOpenHeadingStyles: () => void;
   /** Ouvre la fenêtre « Propriétés du document » (roadmap 1.3). */
   onOpenDocumentProperties: () => void;
+  /** Ouvre la fenêtre « Paragraphe — Retrait et espacement » (comme le
+   * lanceur du groupe Paragraphe de Word + « Options d'interligne… »). */
+  onOpenParagraphDialog: () => void;
   /** Ouvre/ferme le panneau latéral « Styles de titres » (chevron de la
    * galerie de styles). Absent → le chevron garde l'ancien menu déroulant. */
   onToggleHeadingPanel?: () => void;
@@ -362,10 +369,9 @@ export function Toolbar({
   /** Interligne du document (layout.lineHeight) — affiché dans le sélecteur
    * "Interligne" du groupe Paragraphe (roadmap 2.2). */
   lineSpacing?: number;
-  /** Espace avant chaque paragraphe, en points (layout.spacingBeforePt). */
+  /** Espace avant chaque paragraphe, en points (layout.spacingBeforePt) —
+   * sert au menu Interligne (« Ajouter de l'espace avant »). */
   spacingBeforePt?: number;
-  /** Espace après chaque paragraphe, en points (layout.paragraphSpacingPt). */
-  spacingAfterPt?: number;
 }) {
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
@@ -387,6 +393,22 @@ export function Toolbar({
       return "#FFFF00";
     }
   });
+  // Menu Interligne façon Word (2026-10-21) : préréglages + Options
+  // d'interligne… + ajout/suppression d'espace — rempli à la demande,
+  // refermé au clic extérieur (même comportement que le ColorPicker).
+  const [lineSpacingMenuOpen, setLineSpacingMenuOpen] = useState(false);
+  const lineSpacingMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!lineSpacingMenuOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (lineSpacingMenuRef.current && !lineSpacingMenuRef.current.contains(e.target as Node)) {
+        setLineSpacingMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [lineSpacingMenuOpen]);
+
   const memoriserCouleur = (cle: string, setter: (v: string) => void, couleur: string) => {
     setter(couleur);
     try {
@@ -618,7 +640,10 @@ export function Toolbar({
 
           <RibbonGroup
             label="Paragraphe"
-            launcher={leger ? undefined : { onClick: onOpenPageSetup, title: "Mise en page (format, marges, en-tête/pied de page)" }}
+            /* Comme Word : le lanceur du groupe Paragraphe ouvre la
+             * fenêtre « Paragraphe » (Retrait et espacement), PAS la mise
+             * en page — celle-ci reste au grand bouton Mise en page. */
+            launcher={leger ? undefined : { onClick: onOpenParagraphDialog, title: "Paragraphe (alignement, retrait, espacement, interligne)" }}
           >
             <button className={activeBtnClass(activeList === "bullet")} disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
               <IconBulletList size={16} />
@@ -655,44 +680,76 @@ export function Toolbar({
             <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
               <IconIndentIncrease size={16} />
             </button>
-            {/* Interligne + espacement du document (roadmap 2.2, comme Word) :
-             * sélecteur d'interligne et espacement avant/après en points. */}
-            <select
-              className="tb-select tb-select-narrow"
-              disabled={disabled}
-              value={lineSpacing}
-              title="Interligne du document"
-              onChange={(e) => actions?.setLineSpacing(Number(e.target.value))}
-            >
-              {(LINE_SPACINGS.includes(lineSpacing) ? LINE_SPACINGS : [...LINE_SPACINGS, lineSpacing])
-                .slice()
-                .sort((a, b) => a - b)
-                .map((v) => (
-                  <option key={v} value={v}>
-                    {String(v).replace(".", ",")}
-                  </option>
-                ))}
-            </select>
-            <input
-              className="tb-num-input"
-              type="number"
-              min={0}
-              step={2}
-              disabled={disabled}
-              value={spacingBeforePt}
-              title="Espace avant chaque paragraphe (points)"
-              onChange={(e) => actions?.setParagraphSpacingBefore(Math.max(0, Number(e.target.value) || 0))}
-            />
-            <input
-              className="tb-num-input"
-              type="number"
-              min={0}
-              step={2}
-              disabled={disabled}
-              value={spacingAfterPt}
-              title="Espace après chaque paragraphe (points)"
-              onChange={(e) => actions?.setParagraphSpacingAfter(Math.max(0, Number(e.target.value) || 0))}
-            />
+            {/* Menu Interligne façon Word (2026-10-21) : préréglages,
+             * « Options d'interligne… » (fenêtre Paragraphe), ajout/
+             * suppression d'espace — comme le menu du même nom de Word. */}
+            <div className="tb-linespacing" ref={lineSpacingMenuRef}>
+              <button
+                type="button"
+                className="tb-linespacing-trigger"
+                disabled={disabled}
+                title="Interligne et espacement du paragraphe"
+                onClick={() => setLineSpacingMenuOpen((o) => !o)}
+              >
+                <span className="tb-linespacing-value">{fmtLineSpacing(lineSpacing)}</span>
+                <span className="tb-linespacing-caret">▾</span>
+              </button>
+              {lineSpacingMenuOpen && (
+                <div className="tb-linespacing-menu">
+                  {(LINE_SPACINGS.includes(lineSpacing) ? LINE_SPACINGS : [...LINE_SPACINGS, lineSpacing])
+                    .slice()
+                    .sort((a, b) => a - b)
+                    .map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`tb-linespacing-item${v === lineSpacing ? " tb-linespacing-item-active" : ""}`}
+                        onClick={() => {
+                          actions?.setLineSpacing(v);
+                          setLineSpacingMenuOpen(false);
+                        }}
+                      >
+                        <span className="tb-linespacing-check">{v === lineSpacing ? "✓" : ""}</span>
+                        {fmtLineSpacing(v)}
+                      </button>
+                    ))}
+                  <div className="tb-linespacing-sep" />
+                  <button
+                    type="button"
+                    className="tb-linespacing-item"
+                    onClick={() => {
+                      setLineSpacingMenuOpen(false);
+                      onOpenParagraphDialog();
+                    }}
+                  >
+                    <span className="tb-linespacing-check" />
+                    Options d'interligne…
+                  </button>
+                  <button
+                    type="button"
+                    className="tb-linespacing-item"
+                    onClick={() => {
+                      actions?.setParagraphSpacingBefore(spacingBeforePt + 6);
+                      setLineSpacingMenuOpen(false);
+                    }}
+                  >
+                    <span className="tb-linespacing-check" />
+                    Ajouter de l'espace avant le paragraphe
+                  </button>
+                  <button
+                    type="button"
+                    className="tb-linespacing-item"
+                    onClick={() => {
+                      actions?.setParagraphSpacingAfter(0);
+                      setLineSpacingMenuOpen(false);
+                    }}
+                  >
+                    <span className="tb-linespacing-check" />
+                    Supprimer l'espace après le paragraphe
+                  </button>
+                </div>
+              )}
+            </div>
           </RibbonGroup>
 
           <RibbonGroup

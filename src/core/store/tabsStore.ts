@@ -41,6 +41,7 @@ interface TabsState {
   closeTab: (path: string) => void;
   setActive: (path: string) => void;
   updateContent: (path: string, content: string) => void;
+  patchLayout: (path: string, patch: Partial<PageLayoutSettings>) => void;
   updateLayout: (path: string, layout: PageLayoutSettings) => void;
   saveTab: (path: string) => Promise<void>;
   /** "Enregistrer sous" : écrit le contenu actuel de `path` à `newPath`, puis
@@ -136,6 +137,19 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     }));
   },
 
+  /** Applique un PATCH à la mise en page d'un onglet — à privilégier pour
+   * les réglages unitaires (interligne, espacement…) : lit TOUJOURS le
+   * layout courant du store, jamais une capture passée par l'appelant
+   * (piège rencontré le 2026-10-21 : les actions du ruban capturaient un
+   * `activeTab.layout` périmé — régler l'interligne PUIS l'espacement
+   * réécrasait l'interligne avec l'ancienne valeur). */
+  patchLayout: (path: string, patch: Partial<PageLayoutSettings>) => {
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.path === path ? { ...t, layout: { ...t.layout, ...patch }, dirty: true } : t
+      ),
+    }));
+  },
   updateLayout: (path: string, layout: PageLayoutSettings) => {
     set((s) => ({
       tabs: s.tabs.map((t) => (t.path === path ? { ...t, layout, dirty: true } : t)),

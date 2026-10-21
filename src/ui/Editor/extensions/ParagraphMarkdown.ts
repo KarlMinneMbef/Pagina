@@ -34,20 +34,28 @@ import { DOMSerializer } from "@tiptap/pm/model";
 
 const EMPTY_LINE_COMMENT = /^<!--\s*empty-line\s*-->$/i;
 
-/** Un pas de retrait = 1,25 cm (0,5"), comme le retrait par défaut de Word. */
+/**
+ * Retrait de paragraphe : stocké en CENTIMÈTRES (gauche et droite).
+ * Le pas des boutons Tabulation ± du ruban reste 1,25 cm (0,5"), comme
+ * le retrait par défaut de Word — mais le modèle est libre (la fenêtre
+ * « Paragraphe » saisit des cm arbitraires). Les anciens fichiers écrits
+ * avec le modèle « nombre de pas » restent lisibles : leur HTML de repli
+ * contenait déjà des cm (margin-left: 1.25cm), relus ici tels quels.
+ */
 export const INDENT_STEP_CM = 1.25;
-/** Plafond : 10 pas (12,5 cm) — au-delà le texte sortirait de la page A4. */
-export const INDENT_MAX = 10;
+/** Plafond : 12,5 cm — au-delà le texte sortirait de la page A4. */
+export const INDENT_MAX_CM = 12.5;
 
-const INDENT_STYLE_RE = /margin-left:\s*([\d.]+)cm/;
+const INDENT_LEFT_RE = /margin-left:\s*([\d.]+)cm/;
+const INDENT_RIGHT_RE = /margin-right:\s*([\d.]+)cm/;
 
-/** Niveau de retrait stocké sur le nœud (0 = aucun). */
-function indentFromStyle(style: string | null): number {
-  const m = style ? INDENT_STYLE_RE.exec(style) : null;
+/** Retrait lu depuis le style inline du repli HTML (<p style=…>). */
+function cmFromStyle(style: string | null, re: RegExp): number {
+  const m = style ? re.exec(style) : null;
   if (!m) return 0;
   const cm = parseFloat(m[1]);
   if (!Number.isFinite(cm) || cm <= 0) return 0;
-  return Math.max(1, Math.min(INDENT_MAX, Math.round(cm / INDENT_STEP_CM)));
+  return Math.min(INDENT_MAX_CM, Math.round(cm * 100) / 100);
 }
 
 declare module "@tiptap/core" {
@@ -60,9 +68,12 @@ declare module "@tiptap/core" {
       /** Augmente le retrait du paragraphe courant d'un pas (bouton
        * « Tabulation + », Ctrl+M). */
       increaseParagraphIndent: () => ReturnType;
-      /** Diminue le retrait du paragraphe courant d'un pas (bouton
-       * « Tabulation − », Ctrl+Shift+M) ; sans effet à 0. */
+      /** Diminue le retrait du paragraphe courant d'un pas de 1,25 cm
+       * (bouton « Tabulation − », Ctrl+Shift+M) ; sans effet à 0. */
       decreaseParagraphIndent: () => ReturnType;
+      /** Pose les retraits gauche/droite EXACTS du paragraphe courant,
+       * en cm (fenêtre « Paragraphe »). */
+      setParagraphIndent: (leftCm: number, rightCm: number) => ReturnType;
     };
   }
 }
@@ -70,34 +81,46 @@ declare module "@tiptap/core" {
 export const ParagraphMarkdown = ParagraphBase.extend({
   addAttributes() {
     return {
-      indent: {
+      /** Retrait GAUCHE en cm (boutons Tabulation ±, fenêtre Paragraphe). */
+      indentCm: {
         default: 0,
-        parseHTML: (element) => indentFromStyle(element.getAttribute("style")),
-        // Rendu en style inline — relu par `parseHTML` à l'ouverture et
-        // par le repli HTML du sérialiseur ci-dessous.
+        parseHTML: (element) => cmFromStyle(element.getAttribute("style"), INDENT_LEFT_RE),
         renderHTML: (attributes) =>
-          attributes.indent
-            ? { style: `margin-left: ${attributes.indent * INDENT_STEP_CM}cm` }
-            : {},
+          attributes.indentCm > 0 ? { style: `margin-left: ${attributes.indentCm}cm` } : {},
+      },
+      /** Retrait DROIT en cm (fenêtre Paragraphe, comme Word). */
+      indentRightCm: {
+        default: 0,
+        parseHTML: (element) => cmFromStyle(element.getAttribute("style"), INDENT_RIGHT_RE),
+        renderHTML: (attributes) =>
+          attributes.indentRightCm > 0 ? { style: `margin-right: ${attributes.indentRightCm}cm` } : {},
       },
     };
   },
 
   addCommands() {
-    const levelAfter = (editor: { getAttributes: (t: string) => Record<string, unknown> }, delta: number) => {
+    const cmAfter = (editor: { getAttributes: (t: string) => Record<string, unknown> }, delta: number) => {
       const attrs = editor.getAttributes("paragraph");
-      const current = typeof attrs.indent === "number" ? (attrs.indent as number) : 0;
-      return Math.max(0, Math.min(INDENT_MAX, current + delta));
+      const current = typeof attrs.indentCm === "number" ? (attrs.indentCm as number) : 0;
+      // Arrondi au centième : les additions répétées de 1,25 ne
+      // dérivent jamais (0,1 + 0,2 flottants).
+      return Math.max(0, Math.min(INDENT_MAX_CM, Math.round((current + delta) * 100) / 100));
     };
+    const clampCm = (v: number) =>
+      Math.max(0, Math.min(INDENT_MAX_CM, Math.round((Number.isFinite(v) ? v : 0) * 100) / 100));
     return {
       increaseParagraphIndent:
         () =>
         ({ commands, editor }: { commands: any; editor: any }) =>
-          commands.updateAttributes("paragraph", { indent: levelAfter(editor, 1) }),
+          commands.updateAttributes("paragraph", { indentCm: cmAfter(editor, INDENT_STEP_CM) }),
       decreaseParagraphIndent:
         () =>
         ({ commands, editor }: { commands: any; editor: any }) =>
-          commands.updateAttributes("paragraph", { indent: levelAfter(editor, -1) }),
+          commands.updateAttributes("paragraph", { indentCm: cmAfter(editor, -INDENT_STEP_CM) }),
+      setParagraphIndent:
+        (leftCm: number, rightCm: number) =>
+        ({ commands }: { commands: any }) =>
+          commands.updateAttributes("paragraph", { indentCm: clampCm(leftCm), indentRightCm: clampCm(rightCm) }),
     };
   },
 
@@ -130,7 +153,7 @@ export const ParagraphMarkdown = ParagraphBase.extend({
           // attributs : le réglage était silencieusement PERDU à la
           // sauvegarde (bug préexistant sur l'alignement, révélé par la
           // vérification systématique du ruban refait).
-          if (node.attrs.textAlign || node.attrs.indent) {
+          if (node.attrs.textAlign || node.attrs.indentCm > 0 || node.attrs.indentRightCm > 0) {
             const div = document.createElement("div");
             div.appendChild(DOMSerializer.fromSchema(this.editor.schema).serializeNode(node));
             state.write(div.innerHTML);
