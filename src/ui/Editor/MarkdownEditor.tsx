@@ -68,6 +68,7 @@ import {
   ROW_RESIZE_ROW_INDEX_ATTR,
 } from "./pagination/paintPages";
 import { CODE_BLOCK_LANGUAGE_OPTIONS } from "./codeBlockLanguages";
+import { HorizontalRuler, VerticalRuler, PAGE_GAP_PX } from "./pagination/Ruler";
 import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClickPosition";
 import type { CloneIndex } from "./pagination/cloneIndex";
 import { computeCaretScreenPosition } from "./pagination/caretPosition";
@@ -860,6 +861,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // SelectionBar.tsx / effet `selBarSync` plus bas). `rev` change à chaque
     // synchro pour rafraîchir l'état actif des boutons (gras déjà appliqué…).
     const [selBar, setSelBar] = useState<{ left: number; top: number; rev: number } | null>(null);
+    // Règle verticale (roadmap 1.1) : nombre de motifs de page rendus —
+    // seul l'ASPECT qui change rarement passe en état React (hauteur du
+    // viewport, zoom) ; le calage au fil du défilement est appliqué en
+    // DIRECT sur le DOM via variables CSS (voir recomputeVRuler).
+    const [vRulerPeriods, setVRulerPeriods] = useState(2);
     const selBarSyncRef = useRef<() => void>(() => {});
     const wrapRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -2420,6 +2426,78 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       return () => wrap.removeEventListener("scroll", onScroll);
     }, [editor]);
 
+    // Règle verticale (roadmap 1.1) — recalcul calé sur le DOM réel, jamais
+    // sur des valeurs dérivées : la règle est sticky (gauche + sous la règle
+    // horizontale), ses graduations doivent suivre la page sous le viewport.
+    // Principe : un motif de page par période « hauteur de page + espace
+    // entre pages » (voir Ruler.tsx) ; on translate l'ensemble pour que le
+    // motif reste à l'aplomb des pages réelles, mesuré depuis les boîtes
+    // peintes (getBoundingClientRect intègre déjà le zoom via transform).
+    // Le calage est posé en variables CSS SUR LE DOM (pas d'état React) :
+    // le défilement le déclenche à chaque frame, un re-render serait du
+    // gaspillage ; seul le NOMBRE de motifs (dépend de la hauteur du
+    // viewport et du zoom, change rarement) passe par setVRulerPeriods.
+    const recomputeVRulerRef = useRef<() => void>(() => {});
+    recomputeVRulerRef.current = () => {
+      const wrap = wrapRef.current;
+      const canvas = canvasRef.current;
+      if (!wrap || !canvas) return;
+      const rulerV = wrap.querySelector<HTMLElement>(".xmd-ruler-v");
+      const page = canvas.querySelector<HTMLElement>(".xmd-page");
+      if (!rulerV || !page) return;
+      const wrapTop = wrap.getBoundingClientRect().top;
+      const scrollTop = wrap.scrollTop;
+      // Position réelle (coords contenu) de la règle sticky — mesurée, pas
+      // déduite : près de la fin du document, le sticky est contraint par le
+      // bas du bloc conteneur et la règle remonte avec le contenu.
+      const rulerTop = rulerV.getBoundingClientRect().top - wrapTop + scrollTop;
+      const pageTop = page.getBoundingClientRect().top - wrapTop + scrollTop;
+      const pageHeight = page.getBoundingClientRect().height;
+      // Période = hauteur de page + espace entre pages (le `gap` de
+      // .xmd-page-canvas, lu depuis le style calculé pour rester juste si
+      // la valeur CSS change un jour).
+      const gap = parseFloat(getComputedStyle(canvas).rowGap) || PAGE_GAP_PX;
+      const stride = pageHeight + gap;
+      // Hauteur visible : tout le viewport du wrap moins la règle
+      // horizontale (18px + bordure) moins une marge de sécurité.
+      const height = Math.max(0, wrap.clientHeight - 20);
+      // Calage : le motif est translaté pour que ses marques de page
+      // tombent sur les vrais bords de page (offset dans [-stride, 0)).
+      const raw = (((pageTop - rulerTop) % stride) + stride) % stride;
+      rulerV.style.setProperty("--xmd-ruler-v-offset", `${raw - stride}px`);
+      rulerV.style.setProperty("--xmd-ruler-v-stride", `${stride}px`);
+      rulerV.style.height = `${height}px`;
+      const periods = Math.max(2, Math.ceil((height + stride) / stride));
+      setVRulerPeriods((prev) => (prev === periods ? prev : periods));
+    };
+    useEffect(() => {
+      const wrap = wrapRef.current;
+      const canvas = canvasRef.current;
+      if (!wrap || !canvas) return;
+      let scheduled = false;
+      const schedule = () => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+          scheduled = false;
+          recomputeVRulerRef.current();
+        });
+      };
+      wrap.addEventListener("scroll", schedule, { passive: true });
+      // Le viewport (wrap) ET la pile de pages (canvas) changent de taille
+      // (fenêtre redimensionnée, panneaux latéraux, repaint des pages,
+      // zoom) : ResizeObserver couvre tout, y compris le premier paint
+      // (le canvas passe de 0 à la hauteur de la première page).
+      const ro = new ResizeObserver(schedule);
+      ro.observe(wrap);
+      ro.observe(canvas);
+      schedule();
+      return () => {
+        wrap.removeEventListener("scroll", schedule);
+        ro.disconnect();
+      };
+    }, [zoom, layout, editor]);
+
     // Ctrl+molette : zoom façon Word/Google Docs. Purement visuel
     // (`transform: scale()` sur `.xmd-page-canvas`, voir le rendu plus bas).
     useEffect(() => {
@@ -2476,6 +2554,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     return (
       <div className="xmd-page-wrap" ref={wrapRef} style={pageVars}>
+        {/* Règles graduées en mm, zones de marge, triangles (roadmap 1.1) —
+         * lecture seule pour l'instant, jamais imprimées. L'horizontale est
+         * sticky en haut du wrap ; la verticale est sticky à gauche dans la
+         * ligne flex .xmd-editor-row ci-dessous (calage au défilement par
+         * recomputeVRuler). */}
+        <HorizontalRuler layout={layout} zoom={zoom} />
+
         {/* Zone RÉELLEMENT éditable — jamais visible. Curseur, sélection,
          * undo/redo, IME : tout ProseMirror natif. Largeur initialisée à une
          * estimation (mm → px) puis corrigée au pixel près dès qu'une page
@@ -2500,10 +2585,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
          * coin haut-gauche de .xmd-page-canvas — s'il était positionné par
          * rapport à .xmd-page-wrap (qui a du padding), le curseur affiché
          * dériverait de cette différence à chaque frappe. */}
-        <div className="xmd-canvas-frame">
-          <div className="xmd-page-canvas" ref={canvasRef} />
-          <div className="xmd-selection-layer" ref={selectionLayerRef} />
-          <div className="xmd-fake-caret" ref={caretRef} />
+        {/* Ligne flex : règle verticale (gauche) + couche peinte. Ce
+         * conteneur NE DOIT PAS être positionné — caretPosition.ts calcule
+         * les coordonnées du curseur relativement au coin haut-gauche de
+         * .xmd-page-canvas via son ancêtre positionné .xmd-canvas-frame ;
+         * un ancêtre positionné de plus désynchroniserait le curseur. */}
+        <div className="xmd-editor-row">
+          <VerticalRuler layout={layout} zoom={zoom} periods={vRulerPeriods} />
+          <div className="xmd-canvas-frame">
+            <div className="xmd-page-canvas" ref={canvasRef} />
+            <div className="xmd-selection-layer" ref={selectionLayerRef} />
+            <div className="xmd-fake-caret" ref={caretRef} />
+          </div>
         </div>
 
         {selBar && editor && <SelectionBar editor={editor} left={selBar.left} top={selBar.top} />}

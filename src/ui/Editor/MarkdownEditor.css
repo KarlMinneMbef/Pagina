@@ -745,3 +745,22 @@
 .xmd-table-ctx-item:disabled:hover {
   background: transparent;
 }
+
+/* Ligne des règles (roadmap 1.1) : règle verticale à gauche + couche peinte.
+ * Le style des règles elles-mêmes vit dans pagination/Ruler.css (importé
+ * par Ruler.tsx) — ici seulement la DISPOSITION de cette ligne.
+ * PAS de position (relative/absolute…) sur ce conteneur : voir le commentaire
+ * au rendu dans MarkdownEditor.tsx — .xmd-canvas-frame doit rester l'ancêtre
+ * positionné de .xmd-fake-caret/.xmd-selection-layer. */
+.xmd-editor-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* La couche peinte prend tout ce qui reste après la règle verticale ;
+ * min-width: 0 pour pouvoir rétrécir quand les panneaux latéraux mangent
+ * de la largeur (même logique que `overflow-x: auto` du wrap). */
+.xmd-editor-row .xmd-canvas-frame {
+  flex: 1;
+  min-width: 0;
+}
