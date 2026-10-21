@@ -44,5 +44,5 @@ export function useHorizontalResize(
     [width, min, max, anchor]
   );
 
-  return { width, onHandleMouseDown };
+  return { width, setWidth, onHandleMouseDown };
 }

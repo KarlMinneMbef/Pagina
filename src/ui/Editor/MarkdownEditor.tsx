@@ -91,6 +91,25 @@ export interface FindReplaceOptions {
   wholeWord: boolean;
 }
 
+/** Une occurrence avec son CONTEXTE pour la liste « Résultats » du
+ * panneau Rechercher (façon Word) : ~40 caractères avant/après,
+ * l'occurrence elle-même en gras dans l'interface. */
+export interface FindMatchResult {
+  from: number;
+  to: number;
+  before: string;
+  match: string;
+  after: string;
+}
+
+/** Un titre du document pour l'onglet « Titres » du panneau Rechercher
+ * (et future vue Plan) — position = position du nœud titre. */
+export interface HeadingEntry {
+  level: number;
+  text: string;
+  pos: number;
+}
+
 export interface MarkdownEditorHandle {
   getMarkdown: () => string;
   getHTML: () => string;
@@ -255,6 +274,16 @@ export interface MarkdownEditorHandle {
     options: FindReplaceOptions,
     direction?: 1 | -1,
   ) => { total: number; index: number } | null;
+  /** Liste TOUTES les occurrences avec extrait de contexte (onglet
+   * « Résultats » du panneau Rechercher, façon Word) — pour chaque
+   * occurrence : positions + ~40 caractères autour. */
+  listFindMatches: (query: string, options: FindReplaceOptions) => FindMatchResult[];
+  /** Sélectionne une occurrence précise dans la page (clic sur un
+   * résultat) et y fait défiler — SANS voler le focus au panneau. */
+  selectMatch: (from: number, to: number) => void;
+  /** Liste les titres du document (onglet « Titres ») — texte, niveau,
+   * position. */
+  listHeadings: () => HeadingEntry[];
   /** Remplace l'occurrence ACTIVEMENT sélectionnée (si elle correspond à
    * la recherche) puis passe à la suivante — même retour que findText. */
   replaceCurrent: (
@@ -1578,6 +1607,43 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         editor.commands.setTextSelection({ from: m.from, to: m.to });
         scrollSelectionIntoViewRef.current();
         return { total: matches.length, index: index + 1 };
+      },
+      listFindMatches: (query, options) => {
+        if (!editor || !query) return [];
+        return findMatchesInDoc(editor.state.doc, query, options).map((m) => {
+          const doc = editor.state.doc;
+          const ctx = (from: number, to: number) =>
+            doc
+              .textBetween(from, to, "\n", " ")
+              .replace(/\s+/g, " ")
+              .trim();
+          return {
+            from: m.from,
+            to: m.to,
+            before: ctx(Math.max(0, m.from - 40), m.from),
+            match: ctx(m.from, m.to),
+            after: ctx(m.to, Math.min(doc.content.size, m.to + 40)),
+          };
+        });
+      },
+      selectMatch: (from, to) => {
+        if (!editor) return;
+        // SANS focus() : le panneau garde la main sur le clavier (même
+        // piège que la recherche — voir findText). Le défilement vers
+        // l'occurrence est fait à la main (couche peinte).
+        editor.commands.setTextSelection({ from, to });
+        scrollSelectionIntoViewRef.current();
+      },
+      listHeadings: () => {
+        if (!editor) return [];
+        const out: HeadingEntry[] = [];
+        editor.state.doc.descendants((node, pos) => {
+          if (node.type.name === "heading") {
+            out.push({ level: Number(node.attrs.level) || 1, text: node.textContent, pos });
+          }
+          return true;
+        });
+        return out;
       },
       replaceCurrent: (query, options, replacement) => {
         if (!editor) return null;
