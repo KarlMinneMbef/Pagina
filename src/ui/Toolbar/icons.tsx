@@ -592,3 +592,34 @@ export function IconVarAuthor({ size, className }: IconProps) {
     </Svg24>
   );
 }
+
+// --- Icônes d'en-tête des panneaux latéraux (PanelHeader, 2026-10-17) ---
+
+export function IconTrash({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M5 7h14" />
+      <path d="M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2" />
+      <path d="M7 7l1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" />
+      <path d="M10 11v5M14 11v5" />
+    </Svg24>
+  );
+}
+
+export function IconGear({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 5v2M12 17v2M5 12h2M17 12h2M7 7l1.4 1.4M15.6 15.6L17 17M17 7l-1.4 1.4M8.4 15.6L7 17" />
+    </Svg24>
+  );
+}
+
+export function IconKeyboard({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="3" y="7" width="18" height="10" rx="1.5" />
+      <path d="M7 10.5h.01M10 10.5h.01M13 10.5h.01M16 10.5h.01M7 13.5h.01M16 13.5h.01M10 13.5h4" strokeLinecap="round" />
+    </Svg24>
+  );
+}

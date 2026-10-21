@@ -28,34 +28,9 @@
 
 /* --- En-tête sobre : même fond que le corps, simple filet en dessous,
  * titre seul + bouton fermer à droite, aucun texte secondaire. --- */
-.tp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 10px 8px 12px;
-  border-bottom: 1px solid var(--tp-line);
-}
 
-.tp-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--tp-text);
-}
 
-.tp-close {
-  background: transparent;
-  border: none;
-  color: var(--tp-text);
-  font-size: 13px;
-  line-height: 1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.tp-close:hover {
-  background: var(--tp-btn-hover);
-}
 
 /* --- Corps : trois sections verticales, séparateur horizontal net. --- */
 .tp-body {
@@ -158,26 +133,8 @@
 }
 
 /* « Supprimer le tableau » : discret mais distinct (destructif). */
-.tp-delete-table {
-  margin-top: 2px;
-  background: transparent;
-  border: 1px solid var(--tp-line);
-  border-radius: 5px;
-  color: var(--tp-danger);
-  font-size: 11px;
-  font-family: Arial, sans-serif;
-  padding: 6px 8px;
-  cursor: pointer;
-}
 
-.tp-delete-table:hover:not(:disabled) {
-  background: var(--tp-btn-hover);
-}
 
-.tp-delete-table:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
 
 /* --- Section Bordures (fonctionnalités restaurées 2026-10-17,
  * présentation recalée sur la palette sobre du panneau) --- */

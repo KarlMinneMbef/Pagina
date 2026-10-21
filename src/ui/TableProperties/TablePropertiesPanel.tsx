@@ -30,7 +30,9 @@ import {
   IconValignBottom,
   IconValignMiddle,
   IconValignTop,
+  IconTrash,
 } from "../Toolbar/icons";
+import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import "./TablePropertiesPanel.css";
 
 /** Clé de `Set` pour une ligne de grille — voir `GridLine` dans
@@ -141,17 +143,19 @@ export function TablePropertiesPanel({
 
   return (
     <div className="tp-panel">
-      <header className="tp-header">
-        <span className="tp-title">Tableau</span>
-        <button
-          type="button"
-          className="tp-close"
-          onClick={onClose}
-          title="Masquer le panneau (réapparaît dès que le curseur revient dans un tableau)"
-        >
-          ✕
-        </button>
-      </header>
+      <PanelHeader
+        title="Tableau"
+        actions={[
+          {
+            icon: <IconTrash size={15} />,
+            title: "Supprimer tout le tableau",
+            onClick: () => actions?.deleteTable(),
+            danger: true,
+          },
+        ]}
+        onClose={onClose}
+        closeTitle="Masquer le panneau (réapparaît dès que le curseur revient dans un tableau)"
+      />
 
       <div className="tp-body">
         <section className="tp-section">
@@ -355,15 +359,6 @@ export function TablePropertiesPanel({
           </p>
         </section>
 
-        <button
-          type="button"
-          className="tp-delete-table"
-          onClick={() => actions?.deleteTable()}
-          disabled={inactive}
-          title="Supprimer tout le tableau"
-        >
-          Supprimer le tableau
-        </button>
       </div>
     </div>
   );

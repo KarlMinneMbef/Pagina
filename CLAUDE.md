@@ -136,6 +136,26 @@ projets"). Constats et actions :
     l'état actuel exact de ce qui existe déjà.
 
 ### Fait et fonctionnel
+- **En-têtes de panneaux HARMONISÉS : commandes en icônes (2026-10-17,
+  point ③ de la maquette validée docs/maquettes/panneau-equation.html)** :
+  - Nouveau composant PARTAGÉ ContextualPanels/PanelHeader.tsx (+ classes
+    ctx-ph dans ContextualPanelHost.css) : filet vertical sapin devant le
+    titre, puce de type éventuelle, COMMANDES DU PANNEAU EN ICÔNES à
+    droite (26px, tooltip obligatoire, survol gris, danger = survol rouge,
+    actif = fond prairie), ✕ en dernier.
+  - Application aux 5 panneaux latéraux : **Tableau** (corbeille =
+    supprimer le tableau, bouton du bas retiré), **Équation** (puce En
+    bloc/En ligne + ⌨ palette de symboles DÉSACTIVÉE — arrive avec le
+    point ② — + corbeille supprimer la formule, footer retiré),
+    **Sommaire** (⟳ mettre à jour + corbeille supprimer, gros boutons du
+    bas retirés), **Styles de titres** (engrenage = régler les styles,
+    bouton bas retiré), **En-tête/Pied** (titre seul + ✕).
+  - Nouvelles icônes dans icons.tsx : IconTrash, IconGear, IconKeyboard.
+    CSS d'en-têtes morts retiré des 5 feuilles de style.
+  - Vérifié par CDP : les 3 panneaux testés (Tableau/Équation/En-tête)
+    portent l'en-tête partagé, boutons en icônes fonctionnels, anciens
+    boutons du bas disparus. tsc, build, 38 tests verts.
+
 - **Mini-barre flottante de mise en forme à la sélection (2026-10-20)**,
   demandée d'après CasualOffice. `src/ui/Editor/SelectionBar.tsx/.css` : G I S
   S̶ x² x₂, lien, couleur du texte (`ColorPicker`), surlignage ; état actif
