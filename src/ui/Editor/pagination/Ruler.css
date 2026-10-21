@@ -20,11 +20,17 @@
 /* --- Horizontale : pleine largeur du contenu, 18px, collée en haut.
  * Contient : le COIN (largeur de la règle verticale) puis la zone de page
  * centrée sur la même largeur que .xmd-canvas-frame (alignement sur les
- * pages quel que soit le zoom — c'était le bug « règle décalée/délarge »). */
+ * pages quel que soit le zoom — c'était le bug « règle décalée/délarge »).
+ * Collée en haut SANS marge négative : .xmd-page-wrap n'a plus de
+ * padding-top (voir MarkdownEditor.css) — un margin-top négatif serait de
+ * toute façon neutralisé (le sticky ne « tire » pas un élément vers le
+ * haut, il ne fait que l'épingler au défilement). Le margin-bottom
+ * (46px) rend l'espacement au-dessus de la première page : la page
+ * démarre à 19 + 46 = 65px du haut, comme avant l'arrivée des règles. */
 .xmd-ruler-h {
   height: 18px;
   top: 0;
-  margin-bottom: 14px;
+  margin-bottom: 46px;
   border-bottom: 1px solid #d0d3d4;
   display: flex;
 }
@@ -45,12 +51,17 @@
 }
 
 /* --- Verticale : 18px de large, collée à GAUCHE, sous la règle
- * horizontale (top = 18px + bordure). Sa HAUTEUR est posée par
- * MarkdownEditor (recomputeVRuler : hauteur du viewport moins la règle
- * horizontale) — pas en CSS, elle dépend du conteneur scrollable. */
+ * horizontale (top = 18px + bordure). margin-top NÉGATIF (= margin-bottom
+ * de .xmd-ruler-h) : la remonte JUSTE sous la règle horizontale, la colonne
+ * de règle est continue dès le haut (pas de bande grise intermédiaire) ;
+ * le calage des graduations sur la page est assuré par recomputeVRuler
+ * (MarkdownEditor.tsx), qui mesure les positions RÉELLES — il s'adapte
+ * seul à cette remontée. Sa HAUTEUR est posée par MarkdownEditor
+ * (viewport - règle h) — pas en CSS, elle dépend du conteneur scrollable. */
 .xmd-ruler-v {
   left: 0;
   top: 19px;
+  margin-top: -46px;
   flex: 0 0 auto;
   border-right: 1px solid #d0d3d4;
 }
@@ -135,9 +146,14 @@
   pointer-events: none;
 }
 
+/* Neutralise le top/bottom de la classe de base : la position verticale
+ * des zones de marge verticales est donnée par les styles inline du
+ * composant (top ou bottom + height). */
 .xmd-ruler-margin-v {
   left: 0;
   right: 0;
+  top: auto;
+  bottom: auto;
 }
 
 /* --- Triangles de marge (charte MBEF, comme Word) --- */

@@ -165,9 +165,18 @@ export function VerticalRuler({
                 </span>
               ))}
           </div>
-          {/* Zones grises = marges */}
-          <div className="xmd-ruler-margin xmd-ruler-margin-v" style={{ top: 0, height: `${marginTopPx}px` }} />
-          <div className="xmd-ruler-margin xmd-ruler-margin-v" style={{ bottom: 0, height: `${marginBottomPx}px` }} />
+          {/* Zones grises = marges. `bottom`/`top: auto` explicites : la
+           * classe de base pose top+bottom à 0, et un inline height rendrait
+           * la position sur-contrainte (bottom ignoré → la marge BASSE se
+           * collait en HAUT du motif, bug remonté par l'utilisateur). */}
+          <div
+            className="xmd-ruler-margin xmd-ruler-margin-v"
+            style={{ top: 0, bottom: "auto", height: `${marginTopPx}px` }}
+          />
+          <div
+            className="xmd-ruler-margin xmd-ruler-margin-v"
+            style={{ top: "auto", bottom: 0, height: `${marginBottomPx}px` }}
+          />
           {/* Triangles de marge */}
           <div className="xmd-ruler-marker xmd-ruler-marker-v xmd-ruler-marker-top" style={{ top: `${marginTopPx}px` }} />
           <div
