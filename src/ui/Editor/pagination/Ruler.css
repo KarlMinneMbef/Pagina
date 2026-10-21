@@ -1,0 +1,173 @@
+/*
+ * Règles horizontale et verticale (Ruler.tsx) — style sobre façon Word :
+ * fond gris clair, graduations fines, libellés discrets, zones de marge
+ * en gris plus foncé, triangles (charte MBEF) aux positions de marge.
+ * Sticky : restent visibles pendant le défilement des pages.
+ * JAMAIS à l'impression (piège déjà rencontré avec .tbar/.tp-panel).
+ */
+
+/* --- Conteneur (une par orientation) --- */
+.xmd-ruler {
+  position: sticky;
+  background: #f0f0ee;
+  z-index: 20; /* au-dessus des pages peintes */
+  user-select: none;
+  pointer-events: none; /* lecture seule — pas d'interaction pour l'instant */
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* --- Horizontale : pleine largeur du contenu, 18px, collée en haut.
+ * Contient : le COIN (largeur de la règle verticale) puis la zone de page
+ * centrée sur la même largeur que .xmd-canvas-frame (alignement sur les
+ * pages quel que soit le zoom — c'était le bug « règle décalée/délarge »). */
+.xmd-ruler-h {
+  height: 18px;
+  top: 0;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #d0d3d4;
+  display: flex;
+}
+
+/* Coin haut-gauche, à l'aplomb de la règle verticale (comme Word). */
+.xmd-ruler-corner {
+  flex: 0 0 auto;
+  background: #e8e8e6;
+  border-right: 1px solid #d0d3d4;
+}
+
+/* Largeur restante = celle de .xmd-canvas-frame dans .xmd-editor-row. */
+.xmd-ruler-zone {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: safe center; /* page trop large → calée à gauche, comme les pages peintes */
+}
+
+/* --- Verticale : 18px de large, collée à GAUCHE, sous la règle
+ * horizontale (top = 18px + bordure). Sa HAUTEUR est posée par
+ * MarkdownEditor (recomputeVRuler : hauteur du viewport moins la règle
+ * horizontale) — pas en CSS, elle dépend du conteneur scrollable. */
+.xmd-ruler-v {
+  left: 0;
+  top: 19px;
+  flex: 0 0 auto;
+  border-right: 1px solid #d0d3d4;
+}
+
+/* --- Zone de la page à l'intérieur de la règle (horizontale) --- */
+.xmd-ruler-page {
+  position: relative;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #d0d3d4;
+  overflow: hidden;
+}
+
+/* --- Motif de page (verticale) : un par page, absolu dans la règle,
+ * translaté par variables CSS posées au fil du défilement — le motif
+ * reste ainsi calé sur les pages SANS re-render React à chaque frame. */
+.xmd-ruler-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: #ffffff;
+  transform: translateY(
+    calc(
+      var(--xmd-ruler-v-offset, -1123px) +
+      var(--xmd-k, 0) * var(--xmd-ruler-v-stride, 1123px)
+    )
+  );
+}
+
+/* --- Graduations --- */
+.xmd-ruler-ticks {
+  position: absolute;
+  inset: 0;
+}
+
+/* Marque horizontale (barre verticale depuis le haut) */
+.xmd-ruler-tick {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  background: #b9b9b7;
+}
+
+/* Marque verticale (barre horizontale depuis la gauche) */
+.xmd-ruler-tick-v {
+  position: absolute;
+  left: 0;
+  height: 1px;
+  background: #b9b9b7;
+}
+
+/* --- Libellés (cm) --- */
+.xmd-ruler-labels {
+  position: absolute;
+  inset: 0;
+}
+
+.xmd-ruler-label {
+  position: absolute;
+  bottom: 1px;
+  transform: translateX(-50%);
+  font-family: Arial, sans-serif;
+  font-size: 8px;
+  color: #75766f;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.xmd-ruler-label-v {
+  right: 1px;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* --- Zones de marge (gris plus foncé) --- */
+.xmd-ruler-margin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #e4e4e2;
+  pointer-events: none;
+}
+
+.xmd-ruler-margin-v {
+  left: 0;
+  right: 0;
+}
+
+/* --- Triangles de marge (charte MBEF, comme Word) --- */
+.xmd-ruler-marker {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  /* Triangle pointant vers le bas */
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #24ac6e; /* prairie (charte MBEF) */
+  transform: translateX(-5px);
+  pointer-events: none;
+}
+
+.xmd-ruler-marker-v {
+  right: 0;
+  bottom: auto;
+  /* Triangle pointant vers la droite */
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #24ac6e;
+  border-right: none;
+  transform: translateY(-5px);
+}
+
+/* --- JAMAIS à l'impression --- */
+@media print {
+  .xmd-ruler {
+    display: none !important;
+  }
+}
