@@ -2811,7 +2811,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
          * sticky en haut du wrap ; la verticale est sticky à gauche dans la
          * ligne flex .xmd-editor-row ci-dessous (calage au défilement par
          * recomputeVRuler). */}
-        <HorizontalRuler layout={layout} zoom={zoom} />
+        <HorizontalRuler
+          layout={layout}
+          zoom={zoom}
+          onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
+        />
 
         {/* Zone RÉELLEMENT éditable — jamais visible. Curseur, sélection,
          * undo/redo, IME : tout ProseMirror natif. Largeur initialisée à une
@@ -2843,7 +2847,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
          * .xmd-page-canvas via son ancêtre positionné .xmd-canvas-frame ;
          * un ancêtre positionné de plus désynchroniserait le curseur. */}
         <div className="xmd-editor-row">
-          <VerticalRuler layout={layout} zoom={zoom} periods={vRulerPeriods} />
+          <VerticalRuler
+            layout={layout}
+            zoom={zoom}
+            periods={vRulerPeriods}
+            onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
+          />
           <div className="xmd-canvas-frame">
             <div className="xmd-page-canvas" ref={canvasRef} />
             <div className="xmd-selection-layer" ref={selectionLayerRef} />

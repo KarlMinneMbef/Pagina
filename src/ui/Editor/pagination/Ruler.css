@@ -181,6 +181,32 @@
   transform: translateY(-5px);
 }
 
+/* --- Triangles GLISSANTS (roadmap 1.1, 2026-10-21) : le conteneur des
+ * règles reste pointer-events:none (les graduations ne volent aucun clic
+ * de la page), mais les triangles deviennent interactifs. Le pseudo-
+ * ::after agrandit la zone d'accroche sans déplacer le triangle (un
+ * triangle de 10×7 px serait introuvable à la souris). --- */
+.xmd-ruler-marker-drag {
+  pointer-events: auto;
+}
+
+.xmd-ruler-marker-drag::after {
+  content: "";
+  position: absolute;
+  /* Zone d'accroche généreuse : ±6 px autour du triangle. */
+  inset: -6px;
+}
+
+/* Curseurs de redimensionnement, comme Word : horizontal sur la règle
+ * horizontale, vertical sur la verticale. */
+.xmd-ruler-h .xmd-ruler-marker-drag {
+  cursor: ew-resize;
+}
+
+.xmd-ruler-v .xmd-ruler-marker-drag {
+  cursor: ns-resize;
+}
+
 /* --- JAMAIS à l'impression --- */
 @media print {
   .xmd-ruler {
