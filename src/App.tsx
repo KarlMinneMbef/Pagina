@@ -623,6 +623,10 @@ function App() {
             }
             activeId={ctxTab}
             onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme")}
+            /* « Rechercher » plus large (volet façon Word, retour
+             * utilisateur 2026-10-21) — appliqué au changement d'onglet
+             * seulement, l'utilisateur garde la main sur la poignée. */
+            widthRequest={ctxTab === "rechercher" ? 360 : 260}
           >
             {ctxTab === "tableau" &&
               tablePanelOpen &&
@@ -689,9 +693,9 @@ function App() {
               editorRef.current && (
                 <FindReplacePanel
                   seed={findSeed}
-                  onFind={(query, options, direction) =>
-                    editorRef.current?.findText(query, options, direction ?? 1) ?? null
-                  }
+                  onListMatches={(query, options) => editorRef.current?.listFindMatches(query, options) ?? []}
+                  onSelectMatch={(from, to) => editorRef.current?.selectMatch(from, to)}
+                  onListHeadings={() => editorRef.current?.listHeadings() ?? []}
                   onReplaceCurrent={(query, options, replacement) =>
                     editorRef.current?.replaceCurrent(query, options, replacement) ?? null
                   }
