@@ -90,11 +90,42 @@ export interface PageLayoutSettings {
    * l'utilisateur les met à jour lui-même quand il le juge utile. */
   documentVersion: string;
   author: string;
+  /** Propriétés du document (roadmap 1.3) — voir DocumentProperties. */
+  documentProperties: DocumentProperties;
   /** Style visuel + numérotation automatique par niveau de titre (1 à 6) —
    * voir `HeadingLevelStyle`. Réglable par document (pas un thème partagé
    * entre documents pour l'instant — l'utilisateur a mentionné vouloir un
    * import/export de cette config plus tard, pas encore développé). */
   headingStyles: Record<HeadingLevel, HeadingLevelStyle>;
+}
+
+/** Champ personnalisé des propriétés du document (roadmap 1.3, fenêtre
+ * « Propriétés du document ») — nom libre, valeur libre. Base des futures
+ * variables `{{nom}}` d'en-tête/pied (roadmap 1.6, pas encore branchées). */
+export interface DocumentCustomProperty {
+  name: string;
+  value: string;
+}
+
+/** Propriétés du document (roadmap 1.3) — mêmes propriétés que l'onglet
+ * « Fichier > Informations » de Word. Stockées dans le même commentaire
+ * `pagina:config` que la mise en page (invisibles et sans effet dans tout
+ * autre outil Markdown). L'AUTEUR et la VERSION restent dans
+ * `layout.author`/`layout.documentVersion` (variables {{author}}/
+ * {{version}} des en-têtes/pieds) — la fenêtre les édite au même endroit. */
+export interface DocumentProperties {
+  title: string;
+  subject: string;
+  /** Date de création (AAAA-MM-JJ) — établie au premier enregistrement
+   * Pagina du fichier, jamais recalculée ensuite. */
+  createdDate: string;
+  /** Date de modification — remise à aujourd'hui à CHAQUE sauvegarde
+   * (comme Word), voir `withDocumentConfig`. */
+  modifiedDate: string;
+  /** Mots-clés séparés par des points-virgules, comme Word. */
+  keywords: string;
+  comments: string;
+  custom: DocumentCustomProperty[];
 }
 
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
@@ -223,6 +254,7 @@ export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   footer: { text: "", heightMm: 12, showOnFirstPage: true, fromEdgeMm: 12.5 },
   documentVersion: "",
   author: "",
+  documentProperties: { title: "", subject: "", createdDate: "", modifiedDate: "", keywords: "", comments: "", custom: [] },
   headingStyles: DEFAULT_HEADING_STYLES,
 };
 
@@ -404,6 +436,16 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
           5: { ...DEFAULT_HEADING_STYLES[5], ...parsedHeadingStyles?.[5] },
           6: { ...DEFAULT_HEADING_STYLES[6], ...parsedHeadingStyles?.[6] },
         },
+        // Propriétés du document (roadmap 1.3) : fusion champ à champ — un
+        // ancien fichier n'a pas de bloc, il prend les défauts. La date de
+        // création absente (fichier jamais passé par la fenêtre) est établie
+        // au premier enregistrement Pagina — jamais recalculée ensuite.
+        documentProperties: {
+          ...DEFAULT_PAGE_LAYOUT.documentProperties,
+          ...parsed.layout?.documentProperties,
+          custom: parsed.layout?.documentProperties?.custom ?? [],
+          createdDate: parsed.layout?.documentProperties?.createdDate ?? dateDuJourISO(),
+        },
       };
     } catch {
       // JSON corrompu/format inconnu : on retombe sur les valeurs par défaut
@@ -412,6 +454,13 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
   }
 
   return { layout, content };
+}
+
+/** Date du jour au format AAAA-MM-JJ (propriétés du document). */
+export function dateDuJourISO(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** Construit le commentaire de config à écrire en tête de fichier. */
@@ -437,5 +486,11 @@ export function serializeGeneratorComment(): string {
  * pour la sauvegarde — toujours ces deux lignes, jamais plus (fichier `.md`
  * gardé propre). */
 export function withDocumentConfig(layout: PageLayoutSettings, content: string): string {
-  return `${serializeGeneratorComment()}\n${serializeDocumentConfig(layout)}\n${content}`;
+  // « Date de modification » = date du jour à CHAQUE sauvegarde, comme
+  // Word — posée sur la copie écrite, l'état mémoire n'est pas altéré.
+  const layoutEcrit = {
+    ...layout,
+    documentProperties: { ...layout.documentProperties, modifiedDate: dateDuJourISO() },
+  };
+  return `${serializeGeneratorComment()}\n${serializeDocumentConfig(layoutEcrit)}\n${content}`;
 }

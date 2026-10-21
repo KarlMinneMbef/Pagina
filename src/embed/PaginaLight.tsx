@@ -214,6 +214,7 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           sidebarOpen={false}
           onOpenPageSetup={AUCUNE_ACTION_DIALOGUE}
           onOpenHeadingStyles={AUCUNE_ACTION_DIALOGUE}
+          onOpenDocumentProperties={AUCUNE_ACTION_DIALOGUE}
           activeBlockStyle={stats.activeBlockStyle}
           activeMarks={stats.activeMarks}
           activeAlign={stats.activeAlign}

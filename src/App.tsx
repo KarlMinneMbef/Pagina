@@ -17,6 +17,7 @@ import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
 import { TocPanel } from "./ui/Toc/TocPanel";
 import { EquationPanel } from "./ui/Math/EquationPanel";
 import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
+import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialog";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
@@ -72,6 +73,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pageSetupOpen, setPageSetupOpen] = useState(false);
   const [headingStylesOpen, setHeadingStylesOpen] = useState(false);
+  // Fenêtre « Propriétés du document » (roadmap 1.3).
+  const [documentPropertiesOpen, setDocumentPropertiesOpen] = useState(false);
   // Panneau latéral contextuel de mise en forme de tableau (voir
   // TablePropertiesPanel.tsx). S'ouvre automatiquement au FRONT MONTANT de
   // `stats.insideTable` (même principe que la bascule d'onglet ruban
@@ -488,6 +491,7 @@ function App() {
         sidebarOpen={sidebarOpen}
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
+        onOpenDocumentProperties={() => setDocumentPropertiesOpen(true)}
         onToggleHeadingPanel={() => {
           setHeadingPanelOpen((o) => !o);
           setCtxTab("styles");
@@ -669,6 +673,13 @@ function App() {
           layout={activeTab.layout}
           onApply={(layout) => updateLayout(activeTab.path, layout)}
           onClose={() => setPageSetupOpen(false)}
+        />
+      )}
+      {documentPropertiesOpen && activeTab && (
+        <DocumentPropertiesDialog
+          layout={activeTab.layout}
+          onApply={(layout) => updateLayout(activeTab.path, layout)}
+          onClose={() => setDocumentPropertiesOpen(false)}
         />
       )}
       {headingStylesOpen && activeTab && (
