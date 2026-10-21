@@ -35,6 +35,7 @@ import {
   IconAlignJustify,
   IconIndentDecrease,
   IconIndentIncrease,
+  IconDocumentProperties,
   IconAlignLeft,
   IconAlignRight,
   IconBlockquote,
@@ -304,6 +305,7 @@ export function Toolbar({
   sidebarOpen,
   onOpenPageSetup,
   onOpenHeadingStyles,
+  onOpenDocumentProperties,
   onToggleHeadingPanel,
   headingPanelOpen = false,
   activeBlockStyle = "paragraph",
@@ -323,6 +325,8 @@ export function Toolbar({
   sidebarOpen: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
+  /** Ouvre la fenêtre « Propriétés du document » (roadmap 1.3). */
+  onOpenDocumentProperties: () => void;
   /** Ouvre/ferme le panneau latéral « Styles de titres » (chevron de la
    * galerie de styles). Absent → le chevron garde l'ancien menu déroulant. */
   onToggleHeadingPanel?: () => void;
@@ -717,6 +721,12 @@ export function Toolbar({
                 title="Mise en page (format, marges, en-tête/pied de page)"
                 icon={<IconPageSetup size={28} />}
                 label="Mise en page"
+              />
+              <BigButton
+                onClick={onOpenDocumentProperties}
+                title="Propriétés du document (titre, sujet, auteur, mots-clés, champs personnalisés)"
+                icon={<IconDocumentProperties size={28} />}
+                label="Propriétés"
               />
             </>
           )}

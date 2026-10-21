@@ -212,6 +212,18 @@ export function IconIndentDecrease({ size, className }: IconProps) {
   );
 }
 
+// --- Propriétés du document (roadmap 1.3) : page avec lignes
+// d'informations — même famille que IconPageSetup. ---
+export function IconDocumentProperties({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M15 3v4h4" />
+      <path d="M9 12h7M9 15h7M9 18h4" />
+    </Svg24>
+  );
+}
+
 // --- Explorateur ---
 
 export function IconExplorer({ size, className }: IconProps) {
