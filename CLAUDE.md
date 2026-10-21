@@ -137,6 +137,50 @@ projets"). Constats et actions :
 
 ### Fait et fonctionnel
 
+- **Fenêtres « Paramétrage » (roadmap 1.4) et « Utilisateur » V1
+  (roadmap 1.5), 2026-10-22** — les préférences GLOBALES de l'app et le
+  profil local, toutes deux indépendantes des documents (contrairement
+  à la mise en page `pagina:config`) :
+  - Nouveau store `src/core/store/settingsStore.ts` (Zustand +
+    localStorage `pagina.settings` / `pagina.user`, même try/catch
+    silencieux que `pagina.defaultPageLayout`) :
+    `useSettingsStore` (showRulers, autoSave, autoSaveIntervalSec —
+    intervalles proposés 30 s/1 min/2 min/5 min) et `useUserStore`
+    (prénom + nom, V2 connexion MBEF/Ingenerix explicitement HORS
+    périmètre de ce store) + `userInitials()` (initiales de l'avatar,
+    « ? » si vide).
+  - `src/ui/Settings/SettingsDialog.tsx` (préfixe `st-`) : sections
+    Affichage (règles — roadmap 1.2 débloquée par la même occasion),
+    Interface (langue/thème VERROUILLÉS « à venir » — français et clair
+    sont les seules valeurs existantes, les débloquer viendra avec le
+    thème sombre et l'i18n sans changer la fenêtre), Édition
+    (correction auto verrouillée = roadmap 4.3), Sauvegarde
+    (auto-sauvegarde + intervalle). Brouillon local, application au
+    OK. Ouverte par le NOUVEAU bouton ⚙ de la barre de titre.
+  - `src/ui/User/UserDialog.tsx` (préfixe `usr-`) : prénom + nom.
+    Ouverte par clic sur l'AVATAR de la barre de titre — qui n'est plus
+    le placeholder figé « KM » mais un bouton vivant : initiales
+    calculées, « ? » si non renseigné (l'utilisateur renseigne son nom
+    lui-même, ne pas préremplir au nom de l'utilisateur).
+  - Auto-sauvegarde : effet d'interval dans App.tsx — enregistre
+    l'onglet actif SEULEMENT s'il est `dirty` (refs sur
+    activeTab/handleSave pour un timer stable, reprogrammé uniquement
+    si les réglages changent). NON testée en direct (elle écrirait du
+    contenu de test sur un document réel) — logique simple à relire si
+    un bug remonte.
+  - `MarkdownEditor` : nouvelle prop `showRulers` (défaut vrai) — les
+    deux règles disparaissent COMPLÈTEMENT du layout (rendu
+    conditionnel, pas juste cachées) ; recomputeVRuler est déjà
+    gardé (`return` si `.xmd-ruler-v` absente).
+  - Vérifié par CDP dans l'app réelle : ⚙ ouvre la fenêtre (4 sections),
+    décocher « Afficher les règles » + OK retire les deux règles du
+    DOM en direct et recocher les ramène ; avatar → fenêtre Utilisateur,
+    saisie « Test/Uuid » → initiales « TU », effacement → « ? » et
+    localStorage propre ; `pagina.settings` persisté ; tsc, 38 tests,
+    build verts. Piège de méthode : après le rechargement HMR le
+    sélecteur `.tbar-avatar` est un BOUTON désormais — les vieux
+    scripts de test qui le cherchaient comme <span> ne le trouvent plus.
+
 - **Grosse journée « comme Word » (2026-10-21, 13 commits sur main)** —
   sur la roadmap ROADMAP-PAGINA.md établie la veille à la demande de
   l'utilisateur (« il faut que l'on ait bout de ce projet ») :

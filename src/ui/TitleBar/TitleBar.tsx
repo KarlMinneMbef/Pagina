@@ -16,13 +16,16 @@
  * décorations.
  *
  * Élements NON FONCTIONNELS (demandé explicitement comme purs
- * placeholders visuels, sans logique) : l'avatar "KM", le chevron
+ * placeholders visuels, sans logique) : le chevron
  * "Personnaliser". La barre "Rechercher" est FONCTIONNELLE depuis le
  * 2026-10-21 (retour utilisateur : « le champ rechercher en haut doit
  * permettre une recherche rapide ») : c'est une RECHERCHE RAPIDE — chaque
  * frappe ouvre le panneau latéral « Rechercher » (roadmap 2.4) et y porte
  * la requête en direct ; la navigation (Entrée = suivant) et le
- * remplacement continuent dans le panneau.
+ * remplacement continuent dans le panneau. L'AVATAR est fonctionnel
+ * depuis le 2026-10-21 aussi (roadmap 1.5) : initiales du prénom + nom
+ * de l'utilisateur (fenêtre Utilisateur au clic) ; le bouton ⚙ ouvre
+ * la fenêtre Paramétrage (roadmap 1.4).
  */
 import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -45,6 +48,9 @@ export function TitleBar({
   onPrint,
   onExportPdf,
   onSearch,
+  onOpenSettings,
+  onOpenUser,
+  userInitials,
 }: {
   documentTitle: string | null;
   disabled: boolean;
@@ -66,6 +72,12 @@ export function TitleBar({
    * « Rechercher » et y porte la requête (voir App.tsx). Absent = champ
    * désactivé (aucun document ouvert). */
   onSearch?: (query: string) => void;
+  /** Ouvre la fenêtre « Paramétrage » (préférences globales, roadmap 1.4). */
+  onOpenSettings: () => void;
+  /** Ouvre la fenêtre « Utilisateur » (clic sur l'avatar, roadmap 1.5). */
+  onOpenUser: () => void;
+  /** Initiales affichées dans l'avatar (store userStore) — « ? » si vide. */
+  userInitials: string;
 }) {
   const [searchValue, setSearchValue] = useState("");
   return (
@@ -144,10 +156,24 @@ export function TitleBar({
           />
           <span className="tbar-search-mic" title="Recherche vocale (à venir)">🎤</span>
         </div>
-        {/* Non fonctionnel — pas de système d'utilisateurs, initiales figées. */}
-        <span className="tbar-avatar" title="Utilisateur">
-          KM
-        </span>
+        {/* Paramétrage (roadmap 1.4) : préférences globales de
+         * l'application — règles, auto-sauvegarde… */}
+        <button
+          className="tbar-icon-btn tbar-settings"
+          onClick={onOpenSettings}
+          title="Paramétrage (règles, langue, auto-sauvegarde…)"
+        >
+          ⚙
+        </button>
+        {/* Avatar = profil utilisateur (roadmap 1.5) : initiales du
+         * prénom + nom (fenêtre Utilisateur au clic). */}
+        <button
+          className="tbar-avatar"
+          onClick={onOpenUser}
+          title={userInitials === "?" ? "Utilisateur — renseigner votre nom" : "Utilisateur (modifier)"}
+        >
+          {userInitials}
+        </button>
         <span className="tbar-sep" />
         <button className="tbar-window-btn" onClick={() => appWindow.minimize()} title="Réduire">
           ─

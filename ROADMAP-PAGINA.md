@@ -12,10 +12,10 @@
 | # | Fonctionnalité | Description | Faisabilité | Statut |
 |---|---|---|---|---|
 | 1.1 | **Règles horizontale ET verticale** | Barres graduées (mm) au-dessus et à gauche des pages, triangles de marge, glissables à la souris | Très faisable — mêmes mécaniques que les poignées de tableau | ✅ (2026-10-21 : triangles de marge glissants, mise à jour en direct) |
-| 1.2 | **Option afficher/masquer les règles** | Case à cocher dans une fenêtre Paramétrage | Simple | ⬜ (dépend de 1.4) |
+| 1.2 | **Option afficher/masquer les règles** | Case à cocher dans une fenêtre Paramétrage | Simple | ✅ (2026-10-22 : section Affichage du Paramétrage) |
 | 1.3 | **Fenêtre Propriétés du document** | Métadonnées : Titre, Sujet, Auteur, Date de création, Date de modification, Mots-clés, Commentaires — + champs personnalisés | Simple (formulaire React, stockage dans `pagina:config`) | ✅ (2026-10-21 : bouton « Propriétés » du ruban Accueil) |
-| 1.4 | **Fenêtre Paramétrage (Préférences)** | Affichage (règles, barres), Interface (langue, thème), Édition (correction auto), Sauvegarde (auto-sauvegarde, intervalle) | Simple (formulaire React, localStorage) | ⬜ |
-| 1.5 | **Fenêtre Utilisateur** | V1 : Nom + Prénom uniquement (stocké en localStorage). V2 : connexion serveur MBEF pour Ingenerix | V1 simple, V2 nécessite l'API MBEF | ⬜ (V1) ⬜ (V2) |
+| 1.4 | **Fenêtre Paramétrage (Préférences)** | Affichage (règles, barres), Interface (langue, thème), Édition (correction auto), Sauvegarde (auto-sauvegarde, intervalle) | Simple (formulaire React, localStorage) | ✅ (2026-10-22 : bouton ⚙ de la barre de titre — règles et auto-sauvegarde + intervalle fonctionnelles ; langue/thème et correction auto verrouillées « à venir ») |
+| 1.5 | **Fenêtre Utilisateur** | V1 : Nom + Prénom uniquement (stocké en localStorage). V2 : connexion serveur MBEF pour Ingenerix | V1 simple, V2 nécessite l'API MBEF | ✅ V1 (2026-10-22 : avatar de la barre de titre cliquable, initiales) ⬜ V2 |
 | 1.6 | **Champs personnalisés (en-tête/pied)** | Auteur, Sujet, Date de création, + possibilité de créer des champs personnalisés `{{marseille}}`… | Simple — étendre `resolveHeaderFooterText` | ✅ (2026-10-21 : `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` + chaque champ personnalisé par son nom) |
 
 ---
@@ -69,7 +69,7 @@
 
 ## Récapitulatif — ce qui est DÉJÀ FONCTIONNEL
 
-✅ Éditeur WYSIWYG complet (toutes les mises en forme) | ✅ Vraie pagination A4 fidèle à l'impression | ✅ Ruban à la Word (2 onglets, coin droit) | ✅ Mini-barre de sélection | ✅ Menu clic droit texte | ✅ Tableaux complets (fusion, bordures sur schéma, poignées de largeur) | ✅ En-têtes/pieds riches (Markdown + variables + champs personnalisés) | ✅ Formules MathLive WYSIWYG (palette de symboles + édition directe sur la page) | ✅ Sommaire auto + panneau | ✅ Styles de titres + numérotation + panneau avec aperçu exact | ✅ Explorateur complet | ✅ Dialogue Mise en page à la Word | ✅ Règles horizontale + verticale avec triangles de marge glissants | ✅ Rechercher/Remplacer (Ctrl+F + champ de la barre de titre) | ✅ Fenêtre Propriétés du document | ✅ Éditeur de diagrammes Mermaid dédié (panneau latéral) | ✅ Menu Interligne façon Word + fenêtre Paragraphe (retraits, espacement) | ✅ Tabulation ± | ✅ Mémorisation couleur des boutons | ✅ Panneaux latéraux harmonisés avec icônes | ✅ Export PDF + impression | ✅ Notes de bas de page | ✅ Signets + renvois | ✅ Recherche dans l'explorateur | ✅ Emoji à catégories | ✅ 38 tests unitaires | ✅ Documentation complète (guide + référence technique + README + captures)
+✅ Éditeur WYSIWYG complet (toutes les mises en forme) | ✅ Vraie pagination A4 fidèle à l'impression | ✅ Ruban à la Word (2 onglets, coin droit) | ✅ Mini-barre de sélection | ✅ Menu clic droit texte | ✅ Tableaux complets (fusion, bordures sur schéma, poignées de largeur) | ✅ En-têtes/pieds riches (Markdown + variables + champs personnalisés) | ✅ Formules MathLive WYSIWYG (palette de symboles + édition directe sur la page) | ✅ Sommaire auto + panneau | ✅ Styles de titres + numérotation + panneau avec aperçu exact | ✅ Explorateur complet | ✅ Dialogue Mise en page à la Word | ✅ Règles horizontale + verticale avec triangles de marge glissants | ✅ Rechercher/Remplacer (Ctrl+F + champ de la barre de titre) | ✅ Fenêtre Propriétés du document | ✅ Éditeur de diagrammes Mermaid dédié (panneau latéral) | ✅ Menu Interligne façon Word + fenêtre Paragraphe (retraits, espacement) | ✅ Tabulation ± | ✅ Mémorisation couleur des boutons | ✅ Fenêtre Paramétrage (règles, auto-sauvegarde, ⚙ de la barre de titre) | ✅ Fenêtre Utilisateur V1 (avatar cliquable, prénom + nom) | ✅ Panneaux latéraux harmonisés avec icônes | ✅ Export PDF + impression | ✅ Notes de bas de page | ✅ Signets + renvois | ✅ Recherche dans l'explorateur | ✅ Emoji à catégories | ✅ 38 tests unitaires | ✅ Documentation complète (guide + référence technique + README + captures)
 
 ---
 
@@ -88,8 +88,8 @@ Phase actuelle
     ├── 1.6 Champs personnalisés (en-tête/pied) — FAIT
     ├── 3.2 Sauvegarder/charger un style complet   ← PROCHAINE ÉTAPE
     ├── 3.1 Pages de garde (en attente)
-    ├── 1.4 Fenêtre Paramétrage (afficher/masquer règles, etc.)
-    ├── 1.5 Fenêtre Utilisateur (V1 : nom + prénom)
+    ├── 1.4 Fenêtre Paramétrage (afficher/masquer règles, etc.) — FAIT
+    ├── 1.5 Fenêtre Utilisateur (V1 : nom + prénom) — FAIT (V1)
     ├── 3.3 Lecture à voix haute
     ├── 3.4 Correcteur orthographique
     ├── 4.1 Palette de commandes

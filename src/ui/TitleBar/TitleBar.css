@@ -142,6 +142,7 @@
 .tbar-avatar {
   width: 24px;
   height: 24px;
+  border: none;
   border-radius: 50%;
   background: #24ac6e;
   color: #ffffff;
@@ -150,7 +151,18 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 600;
+  font-family: Arial, sans-serif;
   flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tbar-avatar:hover {
+  background: #1d8f5a;
+}
+
+.tbar-settings {
+  font-size: 13px;
 }
 
 .tbar-window-btn {
