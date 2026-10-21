@@ -22,35 +22,9 @@
   overflow: hidden;
 }
 
-.hf-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 10px 8px 12px;
-  border-bottom: 1px solid var(--hf-line);
-  flex-shrink: 0;
-}
 
-.hf-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--hf-text);
-}
 
-.hf-close {
-  background: transparent;
-  border: none;
-  color: var(--hf-text);
-  font-size: 13px;
-  line-height: 1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.hf-close:hover {
-  background: var(--hf-btn-hover);
-}
 
 .hf-body {
   flex: 1;

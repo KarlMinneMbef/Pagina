@@ -12,6 +12,7 @@
  */
 import { IconVarAuthor, IconVarDate, IconVarFile, IconVarPage, IconVarPages, IconVarVersion } from "../Toolbar/icons";
 import "./HeaderFooterPanel.css";
+import { PanelHeader } from "../ContextualPanels/PanelHeader";
 
 /** Jetons disponibles — voir `resolveHeaderFooterText` dans
  * core/pageLayout.ts pour la substitution réelle. */
@@ -39,12 +40,11 @@ export function HeaderFooterPanel({
   const noFocus = (e: React.MouseEvent) => e.preventDefault();
   return (
     <div className="hf-panel">
-      <header className="hf-header">
-        <span className="hf-title">{mode === "header" ? "En-tête" : "Pied de page"}</span>
-        <button type="button" className="hf-close" onClick={onClose} title="Terminer l'édition (le contenu est déjà appliqué)">
-          ✕
-        </button>
-      </header>
+      <PanelHeader
+        title={mode === "header" ? "En-tête" : "Pied de page"}
+        onClose={onClose}
+        closeTitle="Terminer l'édition (le contenu est déjà appliqué)"
+      />
 
       <div className="hf-body">
         <section className="hf-section">

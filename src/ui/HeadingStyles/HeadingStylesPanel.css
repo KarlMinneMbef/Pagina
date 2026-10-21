@@ -21,34 +21,9 @@
   overflow: hidden;
 }
 
-.hsp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 10px 8px 12px;
-  border-bottom: 1px solid var(--hsp-line);
-  flex-shrink: 0;
-}
 
-.hsp-title {
-  font-size: 13px;
-  font-weight: 600;
-}
 
-.hsp-close {
-  background: transparent;
-  border: none;
-  color: var(--hsp-text);
-  font-size: 13px;
-  line-height: 1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.hsp-close:hover {
-  background: var(--hsp-line);
-}
 
 .hsp-current {
   padding: 8px 12px;
@@ -107,26 +82,8 @@
   color: var(--hsp-label);
 }
 
-.hsp-footer {
-  padding: 8px 12px;
-  border-top: 1px solid var(--hsp-line);
-  flex-shrink: 0;
-}
 
-.hsp-settings {
-  width: 100%;
-  padding: 6px 8px;
-  background: #e0e2e3;
-  border: 1px solid var(--hsp-line);
-  border-radius: 4px;
-  color: var(--hsp-text);
-  font-size: 12px;
-  cursor: pointer;
-}
 
-.hsp-settings:hover {
-  background: var(--hsp-line);
-}
 
 @media print {
   .hsp-panel {

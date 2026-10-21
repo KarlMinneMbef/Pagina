@@ -22,35 +22,9 @@
   overflow: hidden;
 }
 
-.toc-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 10px 8px 12px;
-  border-bottom: 1px solid var(--toc-line);
-  flex-shrink: 0;
-}
 
-.toc-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--toc-text);
-}
 
-.toc-close {
-  background: transparent;
-  border: none;
-  color: var(--toc-text);
-  font-size: 13px;
-  line-height: 1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.toc-close:hover {
-  background: var(--toc-btn-hover);
-}
 
 .toc-body {
   flex: 1;
@@ -69,52 +43,12 @@
   line-height: 1.4;
 }
 
-.toc-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--toc-btn);
-  border: none;
-  border-radius: 5px;
-  padding: 9px 10px;
-  color: var(--toc-text);
-  font-size: 12px;
-  cursor: pointer;
-}
 
-.toc-action:hover {
-  background: var(--toc-btn-hover);
-}
 
-.toc-action:active {
-  background: var(--toc-btn-active);
-}
 
-.toc-action-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
 
-.toc-action-icon svg {
-  width: 18px;
-  height: 18px;
-}
 
 /* Action destructive : accent Carotte (#EB5B1F), couleur MBEF réservée
  * aux erreurs/actions dangereuses — voir tokens.ts. */
-.toc-action-danger {
-  background: #fbe8e0;
-  color: #b5410f;
-  font-weight: 600;
-}
 
-.toc-action-danger:hover {
-  background: #f6d3c2;
-}
 
-.toc-action-danger:active {
-  background: #efbfa3;
-}

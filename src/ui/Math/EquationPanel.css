@@ -26,67 +26,15 @@
   overflow: hidden;
 }
 
-.eq-header {
-  display: flex;
-  align-items: center;
-  padding: 9px 10px 8px 12px;
-  border-bottom: 1px solid var(--eq-line);
-  flex-shrink: 0;
-  gap: 8px;
-}
 
 /* Titre : filet vertical SAPIN, même langage visuel que les légendes de
  * sections des autres panneaux. */
-.eq-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--eq-text);
-  padding-left: 9px;
-  position: relative;
-}
 
-.eq-title::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 1px;
-  bottom: 1px;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--eq-sapin);
-}
 
 /* Puce de type : « EN LIGNE » / « EN BLOC » — lève l'ambiguïté sans
  * alourdir le titre. */
-.eq-kind {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--eq-label);
-  background: var(--eq-btn);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
 
-.eq-close {
-  margin-left: auto;
-  background: transparent;
-  border: none;
-  color: var(--eq-text);
-  font-size: 13px;
-  line-height: 1;
-  padding: 3px 7px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.eq-close:hover {
-  background: var(--eq-btn-hover);
-}
 
 .eq-body {
   flex: 1;
@@ -137,27 +85,7 @@
   line-height: 1.45;
 }
 
-.eq-footer {
-  padding: 8px 12px;
-  border-top: 1px solid var(--eq-line);
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
-}
 
 /* Suppression : lien discret en rouge (carotte), pas un gros bouton
  * encadré qui attire l'œil par erreur. */
-.eq-btn-danger {
-  background: transparent;
-  border: none;
-  color: var(--eq-danger);
-  font-family: Arial, sans-serif;
-  font-size: 11px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-}
 
-.eq-btn-danger:hover {
-  background: #f7e5e3;
-}

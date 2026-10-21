@@ -16,8 +16,9 @@
  * demandé, nécessiterait de choisir où persister ce réglage puisqu'un
  * sommaire généré ne porte aucun marqueur.
  */
-import { IconTocRefresh } from "../Toolbar/icons";
+import { IconTocRefresh, IconTrash } from "../Toolbar/icons";
 import "./TocPanel.css";
+import { PanelHeader } from "../ContextualPanels/PanelHeader";
 
 export function TocPanel({
   onUpdate,
@@ -32,27 +33,29 @@ export function TocPanel({
 }) {
   return (
     <div className="toc-panel">
-      <header className="toc-header">
-        <span className="toc-title">Sommaire</span>
-        <button type="button" className="toc-close" onClick={onClose} title="Fermer le panneau">
-          ✕
-        </button>
-      </header>
+      <PanelHeader
+        title="Sommaire"
+        actions={[
+          {
+            icon: <IconTocRefresh size={15} />,
+            title: "Régénère le sommaire avec les titres actuels du document",
+            onClick: onUpdate,
+          },
+          {
+            icon: <IconTrash size={15} />,
+            title: "Supprime entièrement ce sommaire",
+            onClick: onDelete,
+            danger: true,
+          },
+        ]}
+        onClose={onClose}
+      />
 
       <div className="toc-body">
         <p className="toc-hint">
-          Le curseur est dans un sommaire généré — mettez-le à jour après avoir ajouté des titres, ou supprimez-le
-          entièrement.
+          Le curseur est dans un sommaire généré. Icônes en haut :
+          ⟳ met à jour le sommaire avec les titres actuels, 🗑 le supprime entièrement.
         </p>
-        <button type="button" className="toc-action" onClick={onUpdate} title="Régénère le sommaire avec les titres actuels du document">
-          <span className="toc-action-icon">
-            <IconTocRefresh size={18} />
-          </span>
-          <span>Mettre à jour</span>
-        </button>
-        <button type="button" className="toc-action toc-action-danger" onClick={onDelete} title="Supprime entièrement ce sommaire">
-          Supprimer le sommaire
-        </button>
       </div>
     </div>
   );

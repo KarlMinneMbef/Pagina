@@ -21,6 +21,8 @@
  */
 import { useEffect, useRef } from "react";
 import type { MathfieldElement } from "mathlive";
+import { PanelHeader } from "../ContextualPanels/PanelHeader";
+import { IconKeyboard, IconTrash } from "../Toolbar/icons";
 import "mathlive/static.css";
 import "mathlive/fonts.css";
 import "./EquationPanel.css";
@@ -84,24 +86,32 @@ export function EquationPanel({
 
   return (
     <div className="eq-panel">
-      <header className="eq-header">
-        <span className="eq-title">
-          Équation
-          <span className="eq-kind">{kind === "block" ? "En bloc" : "En ligne"}</span>
-        </span>
-        <button type="button" className="eq-close" onClick={onClose} title="Fermer le panneau (la sélection reste)">
-          ✕
-        </button>
-      </header>
+      <PanelHeader
+        title="Équation"
+        chip={kind === "block" ? "En bloc" : "En ligne"}
+        actions={[
+          // Palette de symboles dans le panneau : maquette validée, à venir
+          // (point ②) — le bouton est déjà là, désactivé jusqu'ici.
+          {
+            icon: <IconKeyboard size={15} />,
+            title: "Palette de symboles (à venir)",
+            onClick: () => {},
+            disabled: true,
+          },
+          {
+            icon: <IconTrash size={15} />,
+            title: "Supprimer la formule du document",
+            onClick: onDelete,
+            danger: true,
+          },
+        ]}
+        onClose={onClose}
+        closeTitle="Fermer le panneau (la sélection reste)"
+      />
       <div className="eq-body">
         <div className="eq-field-host" ref={hostRef} />
         <p className="eq-hint">Tapez l'équation — le bouton clavier du champ ouvre les symboles (fractions, racines, lettres grecques). L'aperçu dans la page suit en direct.</p>
       </div>
-      <footer className="eq-footer">
-        <button type="button" className="eq-btn-danger" onClick={onDelete} title="Supprimer cette formule du document">
-          Supprimer la formule
-        </button>
-      </footer>
     </div>
   );
 }

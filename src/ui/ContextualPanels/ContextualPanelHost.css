@@ -48,3 +48,97 @@
   font-weight: 600;
   border-bottom-color: var(--tp-text);
 }
+
+/* En-tête PARTAGÉ des panneaux latéraux (PanelHeader.tsx, harmonisation
+ * 2026-10-17) : filet vertical sapin devant le titre, puce de type,
+ * commandes du panneau en ICÔNES à droite (supprimer/mettre à jour/
+ * réglages… selon le panneau), ✕ en dernier. */
+.ctx-ph {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px 8px 12px;
+  border-bottom: 1px solid var(--tp-line, #d0d3d4);
+  flex-shrink: 0;
+}
+
+.ctx-ph-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a2a24;
+  padding-left: 9px;
+  position: relative;
+}
+
+.ctx-ph-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 3px;
+  border-radius: 2px;
+  background: #003f2b; /* sapin */
+}
+
+.ctx-ph-chip {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #75766f;
+  background: #e0e2e3;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.ctx-ph-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ctx-ph-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #2a2a24;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.ctx-ph-btn:hover:not(:disabled) {
+  background: #d0d3d4;
+}
+
+.ctx-ph-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Action destructive (corbeille) : survol rouge doux. */
+.ctx-ph-btn-danger:hover:not(:disabled) {
+  background: #f7e5e3;
+  color: #b3261e;
+}
+
+/* État actif (ex. palette ouverte) : fond prairie. */
+.ctx-ph-btn-active {
+  background: #24ac6e; /* prairie */
+  color: #ffffff;
+}
+
+.ctx-ph-btn-active:hover:not(:disabled) {
+  background: #1b8a54;
+}
