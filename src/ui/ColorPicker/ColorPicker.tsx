@@ -45,8 +45,11 @@ export function ColorPicker({
   automaticSwatch = "#000000",
   trigger,
   triggerClassName,
+  caretClassName,
   disabled,
   title,
+  onApplyLast,
+  applyLastTitle,
 }: {
   /** Couleur actuelle (hex) — sert uniquement à présélectionner le champ
    * "Couleur personnalisée", aucune case n'est mise en évidence dans les
@@ -66,8 +69,20 @@ export function ColorPicker({
    * d'ouverture/fermeture et le panneau lui-même. */
   trigger: React.ReactNode;
   triggerClassName?: string;
+  /** Classe du petit chevron séparé (comportement « appliquer la dernière
+   * couleur », roadmap 2.3) — l'appelant y met la classe de bouton de son
+   * ruban/panneau pour rester cohérent visuellement. */
+  caretClassName?: string;
   disabled?: boolean;
   title?: string;
+  /** Comportement « comme Word » (roadmap 2.3) : fourni, le DÉCLENCHEUR
+   * principal n'ouvre PLUS le panneau — il APPLIQUE la dernière couleur
+   * choisie (l'appelant mémorise laquelle) — et un petit chevron séparé
+   * ouvre le panneau. Absent : le déclencheur ouvre le panneau comme
+   * avant (première utilisation, autres panneaux sans mémoire). */
+  onApplyLast?: () => void;
+  /** Tooltip du déclencheur principal quand `onApplyLast` est fourni. */
+  applyLastTitle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [customHex, setCustomHex] = useState(value ?? "#000000");
@@ -119,12 +134,27 @@ export function ColorPicker({
         type="button"
         className={triggerClassName ?? "cp-trigger"}
         disabled={disabled}
-        title={title}
+        title={onApplyLast ? (applyLastTitle ?? title) : title}
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (onApplyLast ? onApplyLast() : setOpen((o) => !o))}
       >
         {trigger}
       </button>
+      {/* Chevron séparé (roadmap 2.3) : le déclencheur principal applique
+       * la dernière couleur, ce chevron ouvre le panneau — exactement le
+       * comportement du bouton « A ▾ » de Word. */}
+      {onApplyLast && (
+        <button
+          type="button"
+          className={caretClassName ?? "cp-trigger-caret"}
+          disabled={disabled}
+          title={title}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setOpen((o) => !o)}
+        >
+          ▾
+        </button>
+      )}
 
       {open && (
         <div

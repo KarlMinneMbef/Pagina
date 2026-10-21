@@ -404,7 +404,7 @@ function App() {
       changeCase: () => handle.changeCase(),
       setColor: (color) => handle.setColor(color),
       unsetColor: () => handle.unsetColor(),
-      toggleHighlight: () => handle.toggleHighlight(),
+      setHighlightColor: (color) => handle.setHighlightColor(color),
       setTextAlign: (align) => handle.setTextAlign(align),
       increaseIndent: () => handle.increaseIndent(),
       decreaseIndent: () => handle.decreaseIndent(),
