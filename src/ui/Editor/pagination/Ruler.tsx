@@ -1,6 +1,9 @@
 /**
  * Règles horizontale et verticale (2026-10-17, roadmap 1.1 — demandées
- * « comme CasualOffice/Word »). Réimplémentées sur NOTRE modèle :
+ * « comme CasualOffice/Word »). GLISSANTES depuis le 2026-10-21 : les
+ * triangles de marge se tirent à la souris (mêmes contraintes que le
+ * dialogue Mise en page) et mettent le document à jour EN DIRECT.
+ * Réimplémentées sur NOTRE modèle :
  * - Graduation en millimètres (notre unité de référence, pas des twips)
  *   : grandes marques tous les 10 mm avec libellé (1, 2, 3… cm), moyennes
  *   tous les 5 mm, petites tous les 1 mm.
@@ -23,11 +26,23 @@
  *   MarkdownEditor via les variables CSS --xmd-ruler-v-offset /
  *   --xmd-ruler-v-stride pour rester calé sur les pages réelles.
  */
-import { useMemo } from "react";
-import type { CSSProperties } from "react";
+import { useMemo, useRef } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { PageLayoutSettings } from "../../../core/pageLayout";
 import { resolvePageSizeMm } from "../../../core/pageLayout";
 import "./Ruler.css";
+
+/** Patch de marges remonté pendant le glissé d'un triangle. */
+export type RulerMarginPatch = Partial<
+  Pick<PageLayoutSettings, "marginLeftMm" | "marginRightMm" | "marginTopMm" | "marginBottomMm">
+>;
+
+/** Bornes de glissé, mêmes règles que le dialogue Mise en page : au moins
+ * 5 mm de marge, au moins 20 mm de zone de contenu entre les deux. */
+const MIN_MARGIN_MM = 5;
+const MIN_CONTENT_MM = 20;
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** mm → px CSS à l'écran (le zoom multiplie la taille du canvas transform). */
 const MM_TO_PX = 96 / 25.4; // ≈ 3.7795 px par mm à 100 %
@@ -67,12 +82,54 @@ function generateTicks(totalMm: number, zoom: number): Tick[] {
   return ticks;
 }
 
-export function HorizontalRuler({ layout, zoom }: { layout: PageLayoutSettings; zoom: number }) {
+export function HorizontalRuler({
+  layout,
+  zoom,
+  onMarginChange,
+}: {
+  layout: PageLayoutSettings;
+  zoom: number;
+  /** Glissé des triangles de marge (MarkdownEditor) : met le document à
+   * jour en direct via onLayoutChange. Absent = lecture seule. */
+  onMarginChange?: (patch: RulerMarginPatch) => void;
+}) {
   const { widthMm } = resolvePageSizeMm(layout);
   const ticks = useMemo(() => generateTicks(widthMm, zoom), [widthMm, zoom]);
   const marginLeftPx = layout.marginLeftMm * MM_TO_PX * zoom;
   const marginRightPx = layout.marginRightMm * MM_TO_PX * zoom;
   const widthPx = widthMm * MM_TO_PX * zoom;
+  // Zone de page (px -> mm pendant le glissé) mesurée à chaque mousedown :
+  // elle bouge avec le zoom et les panneaux latéraux.
+  const zoneRef = useRef<HTMLDivElement>(null);
+
+  /** Démarre le glissé d'un triangle : convertit la position souris en mm
+   * (arrondi au mm, comme Word), bornée, et remonte le patch à CHAQUE
+   * frame — la mise à jour du layout repeint les pages en direct. */
+  const startDrag = (which: "left" | "right") => (e: ReactPointerEvent) => {
+    if (!onMarginChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const zone = zoneRef.current;
+    if (!zone) return;
+    const zoneLeft = zone.getBoundingClientRect().left;
+    const pxPerMm = MM_TO_PX * zoom;
+    const onMove = (ev: PointerEvent) => {
+      const mm = Math.round((ev.clientX - zoneLeft) / pxPerMm);
+      if (which === "left") {
+        onMarginChange({ marginLeftMm: clamp(mm, MIN_MARGIN_MM, widthMm - layout.marginRightMm - MIN_CONTENT_MM) });
+      } else {
+        onMarginChange({ marginRightMm: clamp(widthMm - mm, MIN_MARGIN_MM, widthMm - layout.marginLeftMm - MIN_CONTENT_MM) });
+      }
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "ew-resize";
+  };
 
   return (
     <div className="xmd-ruler xmd-ruler-h" aria-hidden="true">
@@ -86,7 +143,7 @@ export function HorizontalRuler({ layout, zoom }: { layout: PageLayoutSettings; 
        * si la page est plus large que la zone, on se cale à gauche (même
        * comportement que les pages peintes, atteignables au scroll). */}
       <div className="xmd-ruler-zone">
-        <div className="xmd-ruler-page" style={{ width: `${widthPx}px` }}>
+        <div className="xmd-ruler-page" ref={zoneRef} style={{ width: `${widthPx}px` }}>
           {/* Graduations */}
           <div className="xmd-ruler-ticks">
             {ticks.map((t, i) => (
@@ -106,9 +163,20 @@ export function HorizontalRuler({ layout, zoom }: { layout: PageLayoutSettings; 
           {/* Zones grises = marges */}
           <div className="xmd-ruler-margin" style={{ left: 0, width: `${marginLeftPx}px` }} />
           <div className="xmd-ruler-margin" style={{ right: 0, width: `${marginRightPx}px` }} />
-          {/* Triangles de marge */}
-          <div className="xmd-ruler-marker xmd-ruler-marker-left" style={{ left: `${marginLeftPx}px` }} />
-          <div className="xmd-ruler-marker xmd-ruler-marker-right" style={{ left: `${widthPx - marginRightPx}px` }} />
+          {/* Triangles de marge — GLISSANTS (roadmap 1.1) : tirer un triangle
+           * ajuste la marge du document en direct, comme dans Word. */}
+          <div
+            className={`xmd-ruler-marker xmd-ruler-marker-left${onMarginChange ? " xmd-ruler-marker-drag" : ""}`}
+            style={{ left: `${marginLeftPx}px` }}
+            onPointerDown={startDrag("left")}
+            title={onMarginChange ? `Marge gauche : ${layout.marginLeftMm} mm — glisser pour ajuster` : undefined}
+          />
+          <div
+            className={`xmd-ruler-marker xmd-ruler-marker-right${onMarginChange ? " xmd-ruler-marker-drag" : ""}`}
+            style={{ left: `${widthPx - marginRightPx}px` }}
+            onPointerDown={startDrag("right")}
+            title={onMarginChange ? `Marge droite : ${layout.marginRightMm} mm — glisser pour ajuster` : undefined}
+          />
         </div>
       </div>
     </div>
@@ -119,18 +187,50 @@ export function VerticalRuler({
   layout,
   zoom,
   periods,
+  onMarginChange,
 }: {
   layout: PageLayoutSettings;
   zoom: number;
   /** Nombre de motifs de page rendus — piloté par MarkdownEditor (assez
    * pour couvrir la hauteur visible, voir recomputeVRuler). */
   periods: number;
+  /** Glissé des triangles de marge haute/basse (MarkdownEditor). */
+  onMarginChange?: (patch: RulerMarginPatch) => void;
 }) {
   const { heightMm } = resolvePageSizeMm(layout);
   const ticks = useMemo(() => generateTicks(heightMm, zoom), [heightMm, zoom]);
   const pageHeightPx = heightMm * MM_TO_PX * zoom;
   const marginTopPx = layout.marginTopMm * MM_TO_PX * zoom;
   const marginBottomPx = layout.marginBottomMm * MM_TO_PX * zoom;
+
+  /** Glissé vertical : la position souris est convertie en mm depuis le
+   * HAUT DU MOTIF de page qui porte le triangle attrapé (le motif est
+   * translaté avec le défilement — jamais depuis le conteneur). */
+  const startDrag = (which: "top" | "bottom") => (e: ReactPointerEvent) => {
+    if (!onMarginChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const strip = (e.currentTarget as HTMLElement).closest<HTMLElement>(".xmd-ruler-strip");
+    if (!strip) return;
+    const stripTop = strip.getBoundingClientRect().top;
+    const pxPerMm = MM_TO_PX * zoom;
+    const onMove = (ev: PointerEvent) => {
+      const mm = Math.round((ev.clientY - stripTop) / pxPerMm);
+      if (which === "top") {
+        onMarginChange({ marginTopMm: clamp(mm, MIN_MARGIN_MM, heightMm - layout.marginBottomMm - MIN_CONTENT_MM) });
+      } else {
+        onMarginChange({ marginBottomMm: clamp(heightMm - mm, MIN_MARGIN_MM, heightMm - layout.marginTopMm - MIN_CONTENT_MM) });
+      }
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    document.body.style.cursor = "ns-resize";
+  };
 
   return (
     <div
@@ -177,11 +277,19 @@ export function VerticalRuler({
             className="xmd-ruler-margin xmd-ruler-margin-v"
             style={{ top: "auto", bottom: 0, height: `${marginBottomPx}px` }}
           />
-          {/* Triangles de marge */}
-          <div className="xmd-ruler-marker xmd-ruler-marker-v xmd-ruler-marker-top" style={{ top: `${marginTopPx}px` }} />
+          {/* Triangles de marge — GLISSANTS (roadmap 1.1) : marge haute et
+           * basse, ajustées en direct comme dans Word. */}
           <div
-            className="xmd-ruler-marker xmd-ruler-marker-v xmd-ruler-marker-bottom"
+            className={`xmd-ruler-marker xmd-ruler-marker-v xmd-ruler-marker-top${onMarginChange ? " xmd-ruler-marker-drag" : ""}`}
+            style={{ top: `${marginTopPx}px` }}
+            onPointerDown={startDrag("top")}
+            title={onMarginChange ? `Marge haute : ${layout.marginTopMm} mm — glisser pour ajuster` : undefined}
+          />
+          <div
+            className={`xmd-ruler-marker xmd-ruler-marker-v xmd-ruler-marker-bottom${onMarginChange ? " xmd-ruler-marker-drag" : ""}`}
             style={{ top: `${pageHeightPx - marginBottomPx}px` }}
+            onPointerDown={startDrag("bottom")}
+            title={onMarginChange ? `Marge basse : ${layout.marginBottomMm} mm — glisser pour ajuster` : undefined}
           />
         </div>
       ))}
