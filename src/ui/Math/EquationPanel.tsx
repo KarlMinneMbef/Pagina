@@ -85,20 +85,20 @@ export function EquationPanel({
   return (
     <div className="eq-panel">
       <header className="eq-header">
-        <span className="eq-title">{kind === "block" ? "Équation (en bloc)" : "Équation (en ligne)"}</span>
+        <span className="eq-title">
+          Équation
+          <span className="eq-kind">{kind === "block" ? "En bloc" : "En ligne"}</span>
+        </span>
         <button type="button" className="eq-close" onClick={onClose} title="Fermer le panneau (la sélection reste)">
           ✕
         </button>
       </header>
       <div className="eq-body">
         <div className="eq-field-host" ref={hostRef} />
-        <p className="eq-hint">
-          Tapez l'équation directement — elle se met en forme au fur et à mesure. Le bouton clavier dans le champ ouvre le clavier
-          mathématique (fractions, racines, lettres grecques…) ; l'aperçu dans la page suit en direct.
-        </p>
+        <p className="eq-hint">Tapez l'équation — le bouton clavier du champ ouvre les symboles (fractions, racines, lettres grecques). L'aperçu dans la page suit en direct.</p>
       </div>
       <footer className="eq-footer">
-        <button type="button" className="eq-btn eq-btn-danger" onClick={onDelete} title="Supprimer cette formule du document">
+        <button type="button" className="eq-btn-danger" onClick={onDelete} title="Supprimer cette formule du document">
           Supprimer la formule
         </button>
       </footer>
