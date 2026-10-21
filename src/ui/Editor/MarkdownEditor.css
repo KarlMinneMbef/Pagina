@@ -250,6 +250,65 @@
   white-space: pre-wrap;
 }
 
+/* Champ d'édition de formule DANS LA PAGE (point ① maquette
+ * docs/maquettes/panneau-equation.html, 2026-10-21 — startMathEdit dans
+ * MarkdownEditor.tsx) : hôte `position: fixed` sur le body, posé en JS
+ * exactement par-dessus la formule peinte (comme .xmd-header-footer-edit),
+ * donc pas de règles de position ici. Cadre pointillé prairie + étiquette,
+ * comme sur la maquette : la zone se lit « on modifie ici, dans la page ». */
+.xmd-math-edit {
+  position: fixed;
+  z-index: 50;
+  background: #ffffff;
+  border: 1px dashed #24ac6e; /* prairie (charte MBEF) */
+  border-radius: 6px;
+  padding: 3px 6px;
+  /* Une formule inline peut être très étroite : le champ garde une largeur
+   * de saisie confortable. */
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* Étiquette de la maquette, posée à cheval sur le bord haut du cadre. */
+.xmd-math-edit-tag {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  background: #24ac6e;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Le champ MathLive lui-même : transparent dans le cadre, sans bordure —
+ * le cadre pointillé de l'hôte fait tout le travail visuel. */
+.xmd-math-edit math-field {
+  display: block;
+  border: none;
+  background: transparent;
+  padding: 2px;
+  font-size: 19px;
+  min-height: 34px;
+  outline: none;
+  caret-color: #003f2b; /* sapin (charte MBEF) */
+}
+
+.xmd-math-edit-block math-field {
+  font-size: 22px;
+  width: 100%;
+}
+
+@media print {
+  .xmd-math-edit {
+    display: none !important;
+  }
+}
+
 /* Un tableau tapé dans le champ riche doit être immédiatement lisible. */
 .xmd-hf-prosemirror table,
 .xmd-header-footer-content table {

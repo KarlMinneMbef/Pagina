@@ -1,9 +1,10 @@
 /*
  * Panneau « Équation » — contenu monté dans ContextualPanelHost (l'hôte
- * fournit le châssis : fond, bordure, largeur, onglets). Même palette que
- * TablePropertiesPanel (charte MBEF), présentation soignée : puce de type
- * dans l'en-tête, champ MathLive grand et aéré, focus vert prairie doux,
- * aide discrète sur une ligne, suppression en lien discret.
+ * fournit le châssis : fond, bordure, largeur, onglets). Depuis le
+ * 2026-10-21 (points ① et ② de la maquette panneau-equation.html), le
+ * CHAMP d'édition vit sur la page (.xmd-math-edit, MarkdownEditor.css) ;
+ * ce panneau ne porte que la PALETTE DE SYMBOLES, la puce de type et la
+ * suppression. Même palette que TablePropertiesPanel (charte MBEF).
  */
 .eq-panel {
   --eq-bg: #eeefef;
@@ -26,16 +27,6 @@
   overflow: hidden;
 }
 
-
-/* Titre : filet vertical SAPIN, même langage visuel que les légendes de
- * sections des autres panneaux. */
-
-
-/* Puce de type : « EN LIGNE » / « EN BLOC » — lève l'ambiguïté sans
- * alourdir le titre. */
-
-
-
 .eq-body {
   flex: 1;
   min-height: 0;
@@ -46,43 +37,85 @@
   gap: 8px;
 }
 
-/* Le champ MathLive : GRAND et aéré (c'est la pièce maîtresse du panneau),
- * fond blanc, coins doux, ombre interne légère. Le bouton de clavier
- * virtuel est fourni par MathLive (coin du champ). */
-.eq-field-host {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.eq-field-host math-field {
-  width: 100%;
-  min-height: 96px;
-  border: 1px solid var(--eq-line);
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 10px 12px;
-  font-size: 22px;
-  outline: none;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.045);
-  caret-color: var(--eq-sapin);
-}
-
-/* Focus : vert PRAIRIE en halo doux (pas de contour dur). */
-.eq-field-host math-field:focus {
-  border-color: var(--eq-prairie);
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.045),
-    0 0 0 2px rgba(36, 172, 110, 0.22);
-}
-
-/* Aide : une ligne discrète sous le champ (raccourcie — l'ancien
- * paragraphe de 4 lignes alourdissait le panneau). */
+/* Aide : une ligne discrète sous la palette. */
 .eq-hint {
   margin: 0;
   font-size: 10px;
   color: var(--eq-label);
   line-height: 1.45;
+}
+
+/* --- Palette de symboles (point ② maquette panneau-equation.html,
+ * 2026-10-21) : vit DANS le panneau, jamais par-dessus la page. Trois
+ * onglets, grille de 6 colonnes, 18 touches par onglet. */
+.eq-palette {
+  border: 1px solid var(--eq-line);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.eq-palette-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--eq-line);
+}
+
+.eq-palette-tab {
+  flex: 1;
+  border: none;
+  background: #f7f7f5;
+  color: var(--eq-label);
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.eq-palette-tab:hover {
+  color: var(--eq-sapin);
+}
+
+/* Onglet actif : même langage que les onglets du ruban — texte sapin,
+ * filet bas PRAIRIE, fond blanc. */
+.eq-palette-tab-active {
+  color: var(--eq-sapin);
+  font-weight: 700;
+  background: #ffffff;
+  box-shadow: inset 0 -2px 0 var(--eq-prairie);
+}
+
+.eq-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 8px;
+}
+
+/* Touche : sobre, façon pavé numérique — fond bouton, glyphe Cambria Math,
+ * survol gris. Les glyphes sont en texte (pas d'icône SVG par touche :
+ * 54 glyphes à dessiner n'apporterait rien). */
+.eq-key {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--eq-btn);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: "Cambria Math", Georgia, serif;
+  font-size: 15px;
+  color: var(--eq-text);
+  padding: 0;
+}
+
+.eq-key:hover {
+  background: var(--eq-btn-hover);
+}
+
+.eq-key:active {
+  background: #dfeff8;
+  outline: 1px solid var(--eq-prairie);
 }
 
 
