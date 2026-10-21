@@ -12,7 +12,9 @@ Guide fonctionnel complet : chaque commande de l'application, commentée. La [r�
 6. [Mise en page du document](#mise-en-page-du-document)
 7. [En-têtes et pieds de page](#en-têtes-et-pieds-de-page)
 8. [Impression et export PDF](#impression-et-export-pdf)
-9. [Raccourcis clavier](#raccourcis-clavier)
+9. [Rechercher et remplacer](#rechercher-et-remplacer)
+10. [Propriétés du document](#propriétés-du-document)
+11. [Raccourcis clavier](#raccourcis-clavier)
 
 ---
 
@@ -25,6 +27,10 @@ Pagina ouvre un **dossier de travail** (bouton Explorateur en haut à droite du 
 Ce que vous voyez est **exactement** ce que vous obtenez : de vraies pages A4 à taille fixe, avec marges, en-tête et pied de page — l'aperçu écran est identique à l'impression et à l'export PDF.
 
 Le fichier enregistré reste un **Markdown standard** : tout ce qui n'existe pas nativement en Markdown (saut de page, sommaire, réglages de mise en page) est encodé dans des commentaires HTML invisibles (`<!-- ... -->`), sans effet de bord dans GitHub, VS Code, Obsidian ou tout autre outil.
+
+### Les règles graduées
+
+Comme dans Word, une règle **horizontale** en haut et une règle **verticale** à gauche des pages (graduation en millimètres, zones de marge grisées). Les **triangles de marge** se tirent à la souris : les marges du document changent **en direct**, avec les mêmes bornes que le dialogue Mise en page.
 
 ### La mini-barre de sélection
 
@@ -44,19 +50,23 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 - Menus **Police** et **Taille** ; **G** gras, **I** italique, **S** souligné, ~~S~~ barré.
 - **x²** exposant, **x₂** indice, `code` en ligne.
 - **A** + barre de couleur : couleur du texte ; **S** + barre jaune : surlignage.
+- Les deux boutons couleur **mémorisent la dernière couleur choisie** : cliquer sur le bouton seul (sans ouvrir le nuancier) l'applique directement, comme dans Word.
 - **Aa** : modifier la casse de la sélection ; Agrandir/Réduire la police ; balai : **effacer la mise en forme**.
 
 ### Paragraphe
 - Listes à puces, numérotées, de tâches (`[x]`), citation.
 - Alignements **gauche, droite, centré, justifié** (dans cet ordre).
-- Lanceur **⌄** (coin du groupe) : ouvre la boîte de dialogue [Mise en page](#mise-en-page-du-document).
+- **Tabulation − / +** : réduisent/augmentent le retrait du paragraphe courant (pas de 1,25 cm, comme Word).
+- **Menu Interligne** : préréglages 1,0 / 1,15 / 1,5 / 2,0 / 2,5 / 3,0 (coche sur la valeur active) ; « Options d'interligne… » ouvre la fenêtre [Paragraphe](#fenêtre-paragraphe--retrait-et-espacement) ; « Ajouter de l'espace avant » (+6 pt) ; « Supprimer l'espace après ».
+- Lanceur **⌄** (coin du groupe) : ouvre la fenêtre [Paragraphe](#fenêtre-paragraphe--retrait-et-espacement).
 
 ### Styles
 - Galerie **Normal / Titre 1 / Titre 2…** : applique un niveau de titre. La numérotation automatique (`1.`, `1.1`, `A.`…) est écrite **dans le texte** — correcte même ouvert ailleurs.
 - Le panneau latéral **Styles de titres** (lanceur ⌄) permet de régler police, taille, couleur et schéma de numérotation par niveau.
 
-### Mise en page (grande icône en fin de ruban)
-Ouvre la boîte de dialogue [Mise en page](#mise-en-page-du-document).
+### Mise en page / Propriétés (grandes icônes en fin de ruban)
+- **Mise en page** : ouvre la boîte de dialogue [Mise en page](#mise-en-page-du-document).
+- **Propriétés** : ouvre la fenêtre [Propriétés du document](#propriétés-du-document) (titre, sujet, auteur, mots-clés, champs personnalisés).
 
 ### Explorateur / Commenter (coin droit)
 - **Explorateur** : ouvre/ferme le panneau de fichiers ; le bouton reste surligné tant que le panneau est ouvert.
@@ -117,13 +127,17 @@ Apparaît dès que le curseur entre dans un tableau :
 ![Panneau Équation](images/capture-panneau-equation.png)
 
 Les boutons « Formule en ligne / en bloc » insèrent la formule et ouvrent le panneau **Équation** :
-- Champ d'équation **WYSIWYG** : tapez l'équation, elle se met en forme en direct (exposants, fractions, racines…).
-- Le **bouton clavier** du champ ouvre le clavier mathématique virtuel : fractions, racines, lettres grecques, Σ, ∫, opérateurs… tout au clic.
+- Champ d'équation **WYSIWYG** : tapez l'équation, elle se met en forme en direct (exposants, fractions, racines…) — **aucun LaTeX à connaître**.
+- La **palette de symboles** (fractions, racines, lettres grecques, Σ, ∫, opérateurs…) est ouverte par défaut sous le champ ; le bouton ⌨ de l'en-tête la replie.
 - L'aperçu dans la page se met à jour à chaque frappe. Cliquer une formule existante rouvre le panneau avec son contenu ; « Supprimer la formule » la retire.
 - Le fichier `.md` conserve la syntaxe standard `$formule$` / `$$formule$$`.
 
+### Diagramme (Mermaid)
+
+Ouvert au clic sur un diagramme (ou à l'insertion d'un bloc Mermaid) : la **source du diagramme** s'édite dans le panneau latéral avec un **rendu live** à chaque frappe — plus besoin d'éditer le bloc de code à la main. « Supprimer le diagramme » le retire du document.
+
 ### En-tête / Pied de page
-Ouvert pendant l'édition de la zone : propose les **variables** en un clic — `{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`, `{{version}}`, `{{author}}` — remplacées par leur valeur dans le rendu et à l'impression.
+Ouvert pendant l'édition de la zone : propose les **variables** en un clic — `{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`, `{{version}}`, `{{author}}`, `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` — et **chaque champ personnalisé** créé dans [Propriétés du document](#propriétés-du-document) par son propre nom. Remplacées par leur valeur dans le rendu et à l'impression.
 
 ### Sommaire / Styles de titres
 Ouverts selon le contexte (curseur dans un sommaire généré / bouton de styles).
@@ -168,6 +182,37 @@ Imprimé depuis la mise en page affichée (Ctrl+P) — pas de moteur de rendu s�
 
 ---
 
+## Fenêtre Paragraphe — Retrait et espacement
+
+Comme dans Word (lanceur du groupe Paragraphe, ou « Options d'interligne… » du menu Interligne) :
+
+- **Général** : alignement du paragraphe sous le curseur (gauche / centré / droite / justifié).
+- **Retrait** : gauche et droite **en cm** — appliqués au paragraphe courant (même modèle que les boutons Tabulation ±).
+- **Espacement** : avant / après **en pt** et interligne — réglages du **document** (comme le ruban et le menu Interligne).
+- **Aperçu** en direct : trois mini-paragraphes rendus avec vos réglages.
+- **Définir par défaut** : les réglages d'espacement/interligne deviennent ceux des nouveaux documents. **OK** applique et ferme.
+
+---
+
+## Rechercher et remplacer
+
+- Le champ **Rechercher** de la barre de titre filtre en direct ; **Ctrl+F** ouvre le panneau latéral **Rechercher** (même requête, champ pleine largeur).
+- La liste des **résultats** montre chaque occurrence avec son contexte ; cliquer une occurrence saute à sa position.
+- **Remplacer par…** : Remplacer (l'occurrence courante) ou **Tout remplacer**.
+- Options : **Respecter la casse**, **Mots entiers**.
+
+---
+
+## Propriétés du document
+
+Bouton **Propriétés** du ruban Accueil (comme Fichier > Informations dans Word) :
+
+- **Titre, Sujet, Auteur, Mots-clés, Commentaires** ; dates de création/modification.
+- **Champs personnalisés** libres : chacun devient une variable utilisable dans les en-têtes/pieds par son propre nom (ex. champ `Chantier` → `{{Chantier}}`).
+- Tout est enregistré **dans le document** (commentaire de configuration invisible).
+
+---
+
 ## Raccourcis clavier
 
 | Raccourci | Action |
@@ -177,7 +222,7 @@ Imprimé depuis la mise en page affichée (Ctrl+P) — pas de moteur de rendu s�
 | Ctrl+Z / Ctrl+Y | Annuler / Rétablir |
 | Ctrl+B / Ctrl+I / Ctrl+U | Gras / Italique / Souligné |
 | Ctrl+Entrée | Saut de page |
-| Ctrl+F | Rechercher (vue Markdown) |
+| Ctrl+F | Rechercher / Remplacer (panneau latéral) |
 | Flèches | Navigation dans l'explorateur / le document |
 | Suppr / F2 | Supprimer / renommer (explorateur) |
 | Échap | Fermer (recherche, menus, champs, panneaux) |

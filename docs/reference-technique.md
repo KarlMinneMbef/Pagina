@@ -53,11 +53,33 @@ Les commandes du ruban transitent par l'interface `ToolbarActions` (prop `action
 
 ## Panneaux contextuels
 
-`src/ui/ContextualPanels/ContextualPanelHost.tsx` : colonne droite unique, onglets quand plusieurs contextes actifs. Chaque contexte suit le **front montant** d'un signal `EditorStats` (Tableau : `insideTable` ; Sommaire : `insideToc` ; En-tête/pied : `headerFooterEditMode` ; Équation : `math` ; Styles : bouton). Contenus sans châssis : `TablePropertiesPanel`, `HeaderFooterPanel`, `TocPanel`, `HeadingStylesPanel`, `EquationPanel`.
+`src/ui/ContextualPanels/ContextualPanelHost.tsx` : colonne droite unique, onglets quand plusieurs contextes actifs. Chaque contexte suit le **front montant** d'un signal `EditorStats` (Tableau : `insideTable` ; Sommaire : `insideToc` ; En-tête/pied : `headerFooterEditMode` ; Équation : `math` ; Diagramme : `mermaid` ; Styles : bouton). Contenus sans châssis : `TablePropertiesPanel`, `HeaderFooterPanel`, `TocPanel`, `HeadingStylesPanel`, `EquationPanel`, `DiagramPanel`. Le panneau **Rechercher** (`FindReplacePanel`) n'est pas contextuel : ouvert volontairement par Ctrl+F, avec « seed » de requête depuis le champ de la barre de titre.
 
 ### Équation (MathLive)
 
-`src/ui/Math/EquationPanel.tsx` : champ `<math-field>` importé **dynamiquement** (ne charge pas au démarrage). Une formule est un nœud **atome** (`inlineMath`/`blockMath`, `src/ui/Editor/extensions/Math.ts`) désigné par `NodeSelection` ; `EditorStats.math` porte `{kind, source, pos}` — `pos` sert de clé React (remontage au changement de formule, jamais à la frappe). Chaque frappe → `updateMathSource` → `setNodeAttribute` → repaint. Sortie LaTeX standard.
+`src/ui/Math/EquationPanel.tsx` : champ `<math-field>` importé **dynamiquement** (ne charge pas au démarrage). Une formule est un nœud **atome** (`inlineMath`/`blockMath`, `src/ui/Editor/extensions/Math.ts`) désigné par `NodeSelection` ; `EditorStats.math` porte `{kind, source, pos}` — `pos` sert de clé React (remontage au changement de formule, jamais à la frappe). Chaque frappe → `updateMathSource` → `setNodeAttribute` → repaint. Sortie LaTeX standard. **Palette de symboles** (`eq-palette`) ouverte par défaut, repliée par le bouton ⌨ de l'`PanelHeader` ; édition directe sur la page (la formule peinte suit le champ). Pas de clavier virtuel plein écran (supprimé sur retour utilisateur).
+
+### Diagramme (Mermaid)
+
+`src/ui/Mermaid/DiagramPanel.tsx` : édition de la source Mermaid dans le panneau avec **rendu live** (SVG) à chaque frappe. Même cycle que l'Équation : front montant de `stats.mermaid` (NodeSelection sur le bloc), fermeture quand la sélection quitte le diagramme. La source reste un bloc de code Mermaid standard dans le `.md`.
+
+## Règles graduées
+
+`src/ui/Editor/pagination/Ruler.tsx` (+ `Ruler.css`) : horizontale sticky en haut du wrapper de pages, verticale sticky à gauche dans `.xmd-editor-row`. Graduation mm (marques 10/5/1 mm), zones de marge grisées, triangles de marge **glissants** → `RulerMarginPatch` → marges du document en direct (mêmes bornes que le dialogue Mise en page). La verticale répète un motif de page (graduations + marges + triangles) avec la période « hauteur de page + espace entre pages », translaté en continu par `MarkdownEditor.tsx` via les variables CSS `--xmd-ruler-v-offset` / `--xmd-ruler-v-stride` pour rester calée sur les pages réelles.
+
+## Rechercher / Remplacer
+
+`src/ui/FindReplace/FindReplacePanel.tsx` : parcourt le document Tiptap (texte des nœuds + positions ProseMirror), liste des résultats avec contexte, saut à l'occurrence, Remplacer / Tout remplacer (modifie le document via les transactions), options Respecter la casse / Mots entiers. Le champ de recherche de la barre de titre (`TabBar`) porte sa requête dans le panneau en direct (prop `findSeed`) ; Ctrl+F basculé au niveau App.
+
+## Propriétés du document et variables
+
+`src/ui/PageSetup/DocumentPropertiesDialog.tsx` : titre, sujet, auteur, mots-clés, commentaires + **champs personnalisés** libres — stockés dans `pagina:config` (commentaire HTML d'en-tête). `resolveHeaderFooterText` (`core/pageLayout.ts`) substitue `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` et **chaque champ personnalisé par son propre nom** dans les en-têtes/pieds.
+
+## Paragraphe : retraits, espacement, interligne
+
+- `src/ui/Paragraph/ParagraphDialog.tsx` : fenêtre « Retrait et espacement » façon Word (alignement + retraits cm du paragraphe sous le curseur ; espacement avant/après pt + interligne = réglages du document ; aperçu live ; « Définir par défaut » via `saveDefaultPageLayout`).
+- `src/ui/Editor/extensions/ParagraphMarkdown.ts` : retraits stockés en **centimètres** (`indentCm`/`indentRightCm`, repli HTML sur le `<p>`, migration transparente des anciens fichiers, borne 12,5 cm) ; boutons Tabulation ± du ruban = pas de 1,25 cm ; commande `setParagraphIndent(leftCm, rightCm)`.
+- **Piège de closure** : toute modification unitaire de mise en page passe par `tabsStore.patchLayout(path, patch)` — jamais par une capture de `activeTab.layout` passée par l'appelant (régler l'interligne puis l'espacement écrasait l'interligne avant le correctif du 2026-10-21).
 
 ## En-tête / pied de page
 
