@@ -4204,6 +4204,19 @@ projets"). Constats et actions :
   observé avant le fix peut persister jusqu'à un vrai redémarrage de l'app.
 
 ### Pas commencé
+- **Améliorations du panneau Équation (notées 2026-10-17, à valider via la
+  maquette docs/maquettes/panneau-equation.html avant de coder)** :
+  1. Édition directe dans la ZONE équation de la page (« plus de place,
+     plus visuel ») — piste : champ MathLive flottant posé sur la formule
+     peinte, même mécanisme que le champ en-tête/pied
+     (startHeaderFooterEdit) ; le panneau latéral garde le clavier.
+  2. Le clavier virtuel est utile mais prend trop de place : il doit VENIR
+     DU PANNEAU LATÉRAL DROIT (palette de touches maison intégrée au
+     panneau — recommandé, style MBEF maîtrisé — ou repositionnement CSS du
+     clavier MathLive).
+  3. Les commandes des panneaux latéraux (Supprimer, etc.) en ICÔNES en
+     HAUT des panneaux, à côté du ✕ (barre d'icônes dans l'en-tête).
+
 - **Avertissement avant la bascule automatique Markdown → HTML d'un
   tableau (idée notée le 2026-10-14, pas encore spécifiée en détail)**,
   sur remarque explicite de l'utilisateur : "à la création d'un tableau il
