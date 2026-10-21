@@ -153,6 +153,26 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       setTextAlign: (align) => handle.setTextAlign(align),
       increaseIndent: () => handle.increaseIndent(),
       decreaseIndent: () => handle.decreaseIndent(),
+      // Interligne/espacement (roadmap 2.2) : même chemin que
+      // onLayoutChange — layout patché, émis immédiatement à l'hôte.
+      setLineSpacing: (value) => {
+        marquerInteraction();
+        const next = { ...layoutRef.current, lineHeight: value };
+        setLayout(next);
+        emettre(contenuRef.current, next);
+      },
+      setParagraphSpacingBefore: (pt) => {
+        marquerInteraction();
+        const next = { ...layoutRef.current, spacingBeforePt: pt };
+        setLayout(next);
+        emettre(contenuRef.current, next);
+      },
+      setParagraphSpacingAfter: (pt) => {
+        marquerInteraction();
+        const next = { ...layoutRef.current, paragraphSpacingPt: pt };
+        setLayout(next);
+        emettre(contenuRef.current, next);
+      },
       toggleSubscript: () => handle.toggleSubscript(),
       toggleSuperscript: () => handle.toggleSuperscript(),
       toggleTaskList: () => handle.toggleTaskList(),
@@ -201,6 +221,9 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           activeFontFamily={stats.activeFontFamily}
         activeColor={stats.activeColor}
           activeFontSizePt={stats.activeFontSizePt}
+          lineSpacing={layout.lineHeight}
+          spacingBeforePt={layout.spacingBeforePt}
+          spacingAfterPt={layout.paragraphSpacingPt}
         />
       </div>
       <div className="xmd-embed-editor-area">

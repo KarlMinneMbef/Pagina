@@ -410,9 +410,10 @@
 .xmd-prosemirror ol {
   /* Espacement façon "après paragraphe" de Word, pas une marge symétrique
    * haut+bas comme un <p> HTML par défaut (qui double visuellement l'écart
-   * entre deux paragraphes) — valeur fixée en JS via --xmd-paragraph-spacing
-   * (src/core/pageLayout.ts). */
-  margin: 0 0 var(--xmd-paragraph-spacing, 8pt) 0;
+   * entre deux paragraphes) — valeurs fixes en JS via
+   * --xmd-paragraph-spacing-before / --xmd-paragraph-spacing
+   * (src/core/pageLayout.ts, roadmap 2.2 : « avant » ajouté). */
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-paragraph-spacing, 8pt) 0;
 }
 
 /* Les paragraphes À L'INTÉRIEUR d'un item de liste ne doivent pas cumuler
@@ -442,6 +443,10 @@
   color: var(--xmd-h1-color);
   font-weight: var(--xmd-h1-weight);
   font-style: var(--xmd-h1-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h1-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h1-spacing) 0;
 }
 .xmd-prosemirror h2 {
   font-family: var(--xmd-h2-font);
@@ -449,6 +454,10 @@
   color: var(--xmd-h2-color);
   font-weight: var(--xmd-h2-weight);
   font-style: var(--xmd-h2-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h2-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h2-spacing) 0;
 }
 .xmd-prosemirror h3 {
   font-family: var(--xmd-h3-font);
@@ -456,6 +465,10 @@
   color: var(--xmd-h3-color);
   font-weight: var(--xmd-h3-weight);
   font-style: var(--xmd-h3-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h3-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h3-spacing) 0;
 }
 .xmd-prosemirror h4 {
   font-family: var(--xmd-h4-font);
@@ -463,6 +476,10 @@
   color: var(--xmd-h4-color);
   font-weight: var(--xmd-h4-weight);
   font-style: var(--xmd-h4-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h4-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h4-spacing) 0;
 }
 .xmd-prosemirror h5 {
   font-family: var(--xmd-h5-font);
@@ -470,6 +487,10 @@
   color: var(--xmd-h5-color);
   font-weight: var(--xmd-h5-weight);
   font-style: var(--xmd-h5-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h5-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h5-spacing) 0;
 }
 .xmd-prosemirror h6 {
   font-family: var(--xmd-h6-font);
@@ -477,6 +498,10 @@
   color: var(--xmd-h6-color);
   font-weight: var(--xmd-h6-weight);
   font-style: var(--xmd-h6-style);
+  /* Interligne + espacement propres au niveau (roadmap 2.2, variables
+   * posees par MarkdownEditor pageVars, repli = valeurs du document). */
+  line-height: var(--xmd-h6-line-height);
+  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h6-spacing) 0;
 }
 
 /* Encart du marqueur de sommaire (voir extensions/TocMarker.ts) — discret
