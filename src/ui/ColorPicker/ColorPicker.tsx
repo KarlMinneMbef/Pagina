@@ -37,6 +37,9 @@ const STANDARD_COLORS = [
   "#00B050", "#00B0F0", "#0070C0", "#002060", "#7030A0",
 ];
 
+/** Nuancier de couleurs : pastilles, couleur personnalisée, mémorisation de
+ *  la dernière couleur — utilisé par le ruban (texte/surlignage) et la
+ *  mini-barre de sélection. */
 export function ColorPicker({
   value,
   onChange,

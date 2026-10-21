@@ -20,6 +20,7 @@ import { IconTocRefresh, IconTrash } from "../Toolbar/icons";
 import "./TocPanel.css";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 
+/** Panneau Sommaire : mettre à jour / supprimer le sommaire du marqueur. */
 export function TocPanel({
   onUpdate,
   onDelete,

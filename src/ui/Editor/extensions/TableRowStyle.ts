@@ -9,6 +9,7 @@
  */
 import TableRowBase from "@tiptap/extension-table-row";
 
+/** Ligne de tableau étendue : attribut hauteur — détail en tête de fichier. */
 export const TableRowStyled = TableRowBase.extend({
   addAttributes() {
     return {

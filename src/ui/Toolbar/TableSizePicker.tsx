@@ -12,6 +12,7 @@ import { IconTable } from "./icons";
 const TABLE_PICKER_MAX_COLS = 8;
 const TABLE_PICKER_MAX_ROWS = 6;
 
+/** Grille de sélection lignes × colonnes pour créer un tableau, façon Word. */
 export function TableSizePicker({
   disabled,
   onPick,

@@ -5,8 +5,10 @@
 import "./StatusBar.css";
 import { formatZoom, nextZoomPreset, previousZoomPreset } from "../Editor/pagination/zoom";
 
+/** Modes d'affichage : pages WYSIWYG / aperçu HTML / source Markdown. */
 export type ViewMode = "pages" | "preview" | "source";
 
+/** Barre de statut : mots, page courante/total, zoom et sélecteur de vue. */
 export function StatusBar({
   words,
   currentPage,

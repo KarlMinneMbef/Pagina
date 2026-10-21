@@ -82,6 +82,7 @@ function generateTicks(totalMm: number, zoom: number): Tick[] {
   return ticks;
 }
 
+/** Règle horizontale sticky (graduation mm, triangles de marge glissants). */
 export function HorizontalRuler({
   layout,
   zoom,
@@ -183,6 +184,8 @@ export function HorizontalRuler({
   );
 }
 
+/** Règle verticale sticky : motif de page répété, calé sur les pages via
+ *  les variables CSS --xmd-ruler-v-offset / --xmd-ruler-v-stride. */
 export function VerticalRuler({
   layout,
   zoom,

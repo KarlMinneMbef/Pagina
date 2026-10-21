@@ -72,6 +72,7 @@ const TEMPLATES: DiagramTemplate[] = [
   },
 ];
 
+/** Panneau Diagramme : édition de la source Mermaid avec rendu SVG live. */
 export function DiagramPanel({
   source,
   onSourceChange,

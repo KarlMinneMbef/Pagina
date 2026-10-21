@@ -17,12 +17,14 @@ export interface PageMargins {
   bottom: number;
 }
 
+/** Paramètres de pagination : dimensions de page, marges, en-tête/pied. */
 export interface PaginatorOptions {
   /** Hauteur totale d'une page (mm convertis en px), marges incluses. */
   pageHeight: number;
   margins: PageMargins;
 }
 
+/** Placement d'un bloc paginé : page, position y, hauteur mesurée. */
 export interface BlockPlacement {
   /** Numéro de page (1-indexé), comme dans Word. */
   pageNumber: number;

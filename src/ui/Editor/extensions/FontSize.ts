@@ -12,6 +12,7 @@
  */
 import { Extension } from "@tiptap/core";
 
+/** Options de l'extension taille de police. */
 export interface FontSizeOptions {
   types: string[];
 }
@@ -25,6 +26,8 @@ declare module "@tiptap/core" {
   }
 }
 
+/** Extension taille de police — sérialisée en HTML (pas d'équivalent
+ *  Markdown standard). */
 export const FontSize = Extension.create<FontSizeOptions>({
   name: "fontSize",
 

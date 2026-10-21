@@ -8,6 +8,7 @@ import type { FileNode } from "../core/types";
 
 const MARKDOWN_FILTERS = [{ name: "Markdown", extensions: ["md", "xmd"] }];
 
+/** Ouvre le sélecteur natif de dossier de travail ; null si annulé. */
 export async function pickWorkspaceFolder(): Promise<string | null> {
   const selected = await open({
     directory: true,
@@ -52,39 +53,48 @@ export async function getStartupFiles(): Promise<string[]> {
   return invoke<string[]>("pending_open_files");
 }
 
+/** Lit l'arborescence complète du dossier de travail (commande Rust). */
 export async function readWorkspaceTree(root: string): Promise<FileNode[]> {
   const nodes = await invoke<RustFileNode[]>("read_workspace_tree", { root });
   return nodes.map(fromRustNode);
 }
 
+/** Lit un fichier texte (UTF-8). */
 export async function readTextFile(path: string): Promise<string> {
   return invoke<string>("read_text_file", { path });
 }
 
+/** Écrit un fichier texte (UTF-8), écrase sans confirmation. */
 export async function writeTextFile(path: string, content: string): Promise<void> {
   return invoke("write_text_file", { path, content });
 }
 
+/** Crée un fichier (vide par défaut). */
 export async function createFile(path: string, content = ""): Promise<void> {
   return invoke("create_file", { path, content });
 }
 
+/** Crée un dossier. */
 export async function createFolder(path: string): Promise<void> {
   return invoke("create_folder", { path });
 }
 
+/** Renomme/déplace un fichier ou un dossier. */
 export async function renamePath(from: string, to: string): Promise<void> {
   return invoke("rename_path", { from, to });
 }
 
+/** Supprime un fichier ou un dossier. */
 export async function deletePath(path: string): Promise<void> {
   return invoke("delete_path", { path });
 }
 
+/** Duplique un fichier et renvoie le chemin de la copie. */
 export async function duplicatePath(path: string): Promise<string> {
   return invoke<string>("duplicate_path", { path });
 }
 
+/** Démarre le watcher Rust du dossier de travail (changements externes). */
 export async function watchWorkspace(root: string): Promise<void> {
   return invoke("watch_workspace", { root });
 }

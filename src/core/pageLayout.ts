@@ -39,6 +39,8 @@
  */
 import { APP_NAME, APP_VERSION, PUBLISHER, PUBLISHER_WEBSITE, LICENSE_NOTE } from "./appInfo";
 
+/** Réglages de la zone d'en-tête ou de pied de page d'un document
+ *  (texte, hauteur, première page, distance au bord). */
 export interface HeaderFooterSettings {
   /** Texte affiché, PEUT contenir des variables `{{page}}` (voir
    * `resolveHeaderFooterText`) — vide = pas d'en-tête/pied de page du tout. */
@@ -53,6 +55,10 @@ export interface HeaderFooterSettings {
   fromEdgeMm: number;
 }
 
+/** MISE EN PAGE complète d'un document : marges, papier, police de base,
+ *  en-tête/pied, styles de titres, interligne/espacement, propriétés et champs
+ *  personnalisés. Sérialisée dans le commentaire `pagina:config` en tête du
+ *  .md (voir serializeDocumentConfig / extractDocumentConfig). */
 export interface PageLayoutSettings {
   /** Police de base du corps de texte (hors mise en forme "avancée" appliquée à la main). */
   fontFamily: string;
@@ -128,6 +134,7 @@ export interface DocumentProperties {
   custom: DocumentCustomProperty[];
 }
 
+/** Niveau de titre : 1 (h1) à 6 (h6). */
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Comment un niveau de titre numérote ses occurrences successives.
@@ -136,6 +143,8 @@ export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
  * numéroter "1.1", "1.2"... par rapport à lui). */
 export type NumberingScheme = "none" | "decimal" | "upperRoman" | "lowerRoman" | "upperAlpha" | "lowerAlpha";
 
+/** Format d'un niveau de titre (police, taille, couleur, gras/italique,
+ *  numérotation) — édité par le dialogue « Régler les styles de titres ». */
 export interface HeadingLevelStyle {
   fontFamily: string;
   fontSize: string;
@@ -176,6 +185,7 @@ function defaultHeadingStyle(level: HeadingLevel): HeadingLevelStyle {
   };
 }
 
+/** Styles de titres par défaut des nouveaux documents. */
 export const DEFAULT_HEADING_STYLES: Record<HeadingLevel, HeadingLevelStyle> = {
   1: defaultHeadingStyle(1),
   2: defaultHeadingStyle(2),
@@ -238,6 +248,8 @@ export function formatCounter(n: number, scheme: NumberingScheme): string {
   }
 }
 
+/** Mise en page par défaut des nouveaux documents — base du « Définir par
+ *  défaut » des dialogues Mise en page et Paragraphe. */
 export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   fontFamily: "Arial, sans-serif",
   fontSize: "10pt",

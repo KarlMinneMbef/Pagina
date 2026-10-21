@@ -12,6 +12,8 @@ import { Node, mergeAttributes } from "@tiptap/core";
 
 const PAGEBREAK_COMMENT = /^<!--\s*pagebreak\s*-->$/i;
 
+/** Saut de page — sérialisé en commentaire HTML `<!-- pagebreak -->`,
+ *  compatible avec n'importe quel outil Markdown. */
 export const PageBreak = Node.create({
   name: "pageBreak",
   group: "block",

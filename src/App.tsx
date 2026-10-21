@@ -1,3 +1,10 @@
+/**
+ * Composant racine de Pagina : disposition générale (barre de titre, ruban,
+ * explorateur, zone éditeur, colonne de panneaux contextuels) et orchestration
+ * de l'état applicatif — onglets actifs, dialogues (Mise en page, Styles de
+ * titres, Propriétés du document, Paragraphe), panneaux latéraux et câblage
+ * des actions du ruban vers l'éditeur via MarkdownEditorHandle.
+ */
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm as confirmDialog, message as messageDialog } from "@tauri-apps/plugin-dialog";

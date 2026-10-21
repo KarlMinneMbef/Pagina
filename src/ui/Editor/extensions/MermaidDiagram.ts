@@ -42,6 +42,8 @@ function ensureMermaidInitialized() {
 
 let renderCounter = 0;
 
+/** Bloc diagramme Mermaid : source + rendu SVG live dans la couche peinte,
+ *  édité par le panneau Diagramme. */
 export const MermaidDiagram = Node.create({
   name: "mermaidDiagram",
   group: "block",

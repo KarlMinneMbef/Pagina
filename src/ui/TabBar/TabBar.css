@@ -1,3 +1,6 @@
+/*
+ * Styles de la barre d'onglets document (.tabbar) — voir TabBar.tsx.
+ */
 .tabbar {
   display: flex;
   align-items: stretch;

@@ -16,6 +16,7 @@ import type { Selection } from "@tiptap/pm/state";
 import { CellSelection } from "@tiptap/pm/tables";
 import { LIST_NODE_NAMES, SRC_POS_ATTR } from "./paintPages";
 
+/** Rectangle de sélection à l'écran (un par ligne de texte). */
 export interface SelectionRect {
   left: number;
   top: number;
@@ -101,6 +102,8 @@ function computeCellSelectionRects(
   return rects;
 }
 
+/** Calcule les rectangles écran de la sélection courante dans la couche
+ *  peinte (surbrillance + mini-barre de sélection). */
 export function computeSelectionRects(
   view: EditorView,
   canvas: HTMLElement,

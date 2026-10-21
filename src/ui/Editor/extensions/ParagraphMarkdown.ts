@@ -78,6 +78,9 @@ declare module "@tiptap/core" {
   }
 }
 
+/** Paragraphe étendu : retraits gauche/droite en CENTIMÈTRES
+ *  (indentCm/indentRightCm) + commandes des boutons Tabulation ± et de la
+ *  fenêtre Paragraphe (increase/decrease/setParagraphIndent). */
 export const ParagraphMarkdown = ParagraphBase.extend({
   addAttributes() {
     return {

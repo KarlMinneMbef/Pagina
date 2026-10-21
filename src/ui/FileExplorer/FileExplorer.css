@@ -1,3 +1,8 @@
+/*
+ * Explorateur de fichiers : arbre du dossier de travail, recherche aplatie,
+ * badge « modifié » (•), menu contextuel, boîtes de dialogue intégrées
+ * (renommage/suppression) et ergonomie clavier.
+ */
 .fx-panel {
   position: relative;
   display: flex;

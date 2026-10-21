@@ -11,6 +11,7 @@
  */
 import type { ReactNode } from "react";
 
+/** Commande d'en-tête de panneau : icône, tooltip, états actif/danger. */
 export interface PanelHeaderAction {
   /** Icône SVG (module Toolbar/icons) ou glyphe ✕. */
   icon: ReactNode;
@@ -25,6 +26,8 @@ export interface PanelHeaderAction {
   disabled?: boolean;
 }
 
+/** En-tête HARMONISÉ de tous les panneaux latéraux : filet vertical sapin,
+ *  titre, commandes en icônes, ✕ en dernier. */
 export function PanelHeader({
   title,
   chip,

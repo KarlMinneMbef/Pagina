@@ -105,6 +105,8 @@ function formatHtmlBlock(html: string): string {
   return element.outerHTML;
 }
 
+/** Tableau étendu : bascule automatique en `<table>` HTML dès qu'un
+ *  réglage sort du GFM (fusion, bordures, hauteurs de ligne). */
 export const TableMarkdown = TableBase.extend({
   addStorage() {
     return {

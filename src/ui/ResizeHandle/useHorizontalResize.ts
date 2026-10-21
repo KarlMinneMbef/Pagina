@@ -12,6 +12,8 @@
  */
 import { useCallback, useRef, useState } from "react";
 
+/** Hook de glissière horizontale : redimensionne un panneau latéral à la
+ *  souris (anchor left/right — pourquoi pas resize: both : tête de fichier). */
 export function useHorizontalResize(
   initialWidth: number,
   { min = 180, max = 520, anchor }: { min?: number; max?: number; anchor: "left" | "right" }

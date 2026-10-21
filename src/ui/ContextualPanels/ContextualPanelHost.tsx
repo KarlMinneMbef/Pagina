@@ -11,11 +11,14 @@ import { useHorizontalResize } from "../ResizeHandle/useHorizontalResize";
 import { ResizeHandle } from "../ResizeHandle/ResizeHandle";
 import "./ContextualPanelHost.css";
 
+/** Un panneau de la colonne contextuelle (id, titre, contenu React). */
 export interface ContextualTab {
   id: string;
   label: string;
 }
 
+/** Colonne de panneaux latéraux à droite de l'éditeur : un panneau à la fois,
+ *  onglets quand plusieurs contextes sont actifs. */
 export function ContextualPanelHost({
   tabs,
   activeId,

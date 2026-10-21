@@ -32,6 +32,7 @@ export function isValidHex(value: string): boolean {
   return /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 }
 
+/** Normalise un code hexadécimal (préfixe « # » ajouté si absent). */
 export function normalizeHex(value: string): string {
   const v = value.trim();
   return v.startsWith("#") ? v : `#${v}`;

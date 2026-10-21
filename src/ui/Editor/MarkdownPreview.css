@@ -1,3 +1,7 @@
+/*
+ * Aperçu Markdown brut (Vue → Aperçu) : rendu HTML simple du document,
+ * sans pagination — complément de la vue WYSIWYG à pages réelles.
+ */
 .xmd-preview-wrap {
   flex: 1;
   overflow-y: auto;

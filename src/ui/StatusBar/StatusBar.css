@@ -1,3 +1,7 @@
+/*
+ * Barre d'état bas de fenêtre : nombre de mots/caractères, position
+ * curseur, état d'enregistrement.
+ */
 .sb-bar {
   display: flex;
   align-items: center;

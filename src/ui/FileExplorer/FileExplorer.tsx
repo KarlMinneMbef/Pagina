@@ -150,6 +150,8 @@ function relativePath(root: string, path: string): string {
   return path;
 }
 
+/** Explorateur du dossier de travail : arbre, recherche aplatie, menu
+ *  contextuel, boîtes intégrées, ergonomie clavier. */
 export function FileExplorer({
   onOpenFile,
   onClose,
