@@ -1,0 +1,111 @@
+# Roadmap Pagina — Tout ce qui reste à développer avant le format `.xmd`
+
+> Établi le 2026-10-17 sur la demande explicite de l'utilisateur : « il faut que l'on ait bout de ce projet. »
+> Objectif : compléter Pagina pour qu'il s'approche d'un Word complet (pour les utilisateurs), puis passer au format `.xmd` (avec images, commentaires, version et historique).
+>
+> Les priorités 1-3 sont les prérequis fonctionnels avant `.xmd`. Les priorités 4-5 peuvent se faire en parallèle ou après.
+
+---
+
+## Priorité 1 — Fondations de l'interface (prérequis pour tout le reste)
+
+| # | Fonctionnalité | Description | Faisabilité | Statut |
+|---|---|---|---|---|
+| 1.1 | **Règles horizontale ET verticale** | Barres graduées (mm) au-dessus et à gauche des pages, triangles de marge, glissables à la souris | Très faisable — mêmes mécaniques que les poignées de tableau | ⬜ |
+| 1.2 | **Option afficher/masquer les règles** | Case à cocher dans une fenêtre Paramétrage | Simple | ⬜ (dépend de 1.4) |
+| 1.3 | **Fenêtre Propriétés du document** | Métadonnées : Titre, Sujet, Auteur, Date de création, Date de modification, Mots-clés, Commentaires — + champs personnalisés | Simple (formulaire React, stockage dans `pagina:config`) | ⬜ |
+| 1.4 | **Fenêtre Paramétrage (Préférences)** | Affichage (règles, barres), Interface (langue, thème), Édition (correction auto), Sauvegarde (auto-sauvegarde, intervalle) | Simple (formulaire React, localStorage) | ⬜ |
+| 1.5 | **Fenêtre Utilisateur** | V1 : Nom + Prénom uniquement (stocké en localStorage). V2 : connexion serveur MBEF pour Ingenerix | V1 simple, V2 nécessite l'API MBEF | ⬜ (V1) ⬜ (V2) |
+| 1.6 | **Champs personnalisés (en-tête/pied)** | Auteur, Sujet, Date de création, + possibilité de créer des champs personnalisés `{{marseille}}`… | Simple — étendre `resolveHeaderFooterText` | ⬜ |
+
+---
+
+## Priorité 2 — Ergonomie d'édition (le « comme Word »)
+
+| # | Fonctionnalité | Description | Faisabilité | Statut |
+|---|---|---|---|---|
+| 2.1 | **Boutons Tabulation + / Tabulation −** | Augmenter/réduire le retrait du paragraphe courant (indent) | Simple — extension Tiptap Indent ou custom | ⬜ |
+| 2.2 | **Interligne et espacement de paragraphe** | Sélecteur d'interligne (1,0 / 1,15 / 1,5 / 2,0 / personnalisé) + espacement avant/après paragraphe — **à ajouter AUSSI dans le dialogue Styles de titres** (interligne et espacement par niveau) | Moyen — étendre le modèle `PageLayoutSettings` | ⬜ |
+| 2.3 | **Mémorisation de la couleur** | Le bouton Couleur/Surlignage **retient** la dernière couleur choisie — cliquer sur le bouton (sans ouvrir le nuancier) applique cette couleur, comme Word | Simple — état React du bouton | ⬜ |
+| 2.4 | **Rechercher / Remplacer** | Panneau latéral avec : champ de recherche + boutons Suivant/Précédent, champ de remplacement + boutons Remplacer / Remplacer tout, options (casse, mots entiers) | Moyen — parcourir le document Tiptap | ⬜ |
+| 2.5 | **Première page différente** | SANS en-tête et SANS pied de page — déjà implémenté via « Première page différente » dans Mise en page | **Fait** (vérifié) | ✅ |
+
+---
+
+## Priorité 3 — Fonctionnalités riches (le « pour les utilisateurs »)
+
+| # | Fonctionnalité | Description | Faisabilité | Statut |
+|---|---|---|---|---|
+| 3.1 | **Pages de garde** | Galerie de modèles prêts à l'emploi (titre, sous-titre, logo, date, auteur) + possibilité de **créer** la sienne et de l'**exporter** pour la réutiliser | Moyen — liste de blocs de contenu + interface de sélection | ⬜ |
+| 3.2 | **Sauvegarder/charger un style complet** | Enregistrer TOUTE la mise en forme du document (styles de titres, marges, format papier, en-tête/pied, couleurs) comme un « modèle » réutilisable — export/import en JSON | Moyen — sérialiser `PageLayoutSettings` en fichier | ⬜ |
+| 3.3 | **Lecture à voix haute** | Comme Word : sélectionner du texte → clic bouton « Lire à voix haute » → le texte est lu par la synthèse vocale (Web Speech API, déjà dans Chromium/WebView2) | Moyen — `speechSynthesis` natif, découpage du texte en phrases | ⬜ |
+| 3.4 | **Correcteur orthographique** | Détection en temps réel (soulignement rouge) + clic droit pour suggestions — **ATTENTION** : le spellcheck natif du navigateur est DÉSACTIVÉ sur l'éditeur invisible (voir CLAUDE.md) — nécessite un moteur JS dédié (ex: `nspell` ou équivalent français) | Complexe — intégrer un dictionnaire français, marquer les erreurs dans la couche peinte | ⬜ |
+
+---
+
+## Priorité 4 — Infrastructure (peut se faire en parallèle)
+
+| # | Fonctionnalité | Description | Faisabilité | Statut |
+|---|---|---|---|---|
+| 4.1 | **Palette de commandes** | Ctrl+K — recherche rapide de toutes les commandes (façon VS Code) | Simple | ⬜ |
+| 4.2 | **Mise en forme Markdown à la frappe** | Taper `**gras**` convertit automatiquement en gras visuel | Simple — InputRule Tiptap | ⬜ |
+| 4.3 | **Correction automatique** | Guillemets intelligents (« »), majuscule en début de phrase, etc. | Simple — InputRules Tiptap | ⬜ |
+| 4.4 | **Export HTML autonome** | Un fichier HTML avec tout inclus (CSS inline, mise en page, images en base64) pour publication web ou partage sans lecteur PDF | Moyen | ⬜ |
+| 4.5 | **Plan du document** | Navigateur de titres dans un panneau latéral (cliquer pour sauter à la section) | Simple — mêmes données que le sommaire | ⬜ |
+
+---
+
+## Priorité 5 — Le format `.xmd` (APRÈS tout le reste)
+
+| # | Fonctionnalité | Description |
+|---|---|---|
+| 5.1 | **Images** | Dossier `images/` par document (dans le conteneur `.xmd`), copie automatique au collage/glisser, chemins relatifs dans le `.md` |
+| 5.2 | **Commentaires de relecture** | Ajouter/répondre/résoudre des commentaires sur une sélection de texte (comme Word) |
+| 5.3 | **Suivi des versions** | Historique des modifications avec diff structurel (comparer deux versions) |
+| 5.4 | **Champs de version** | Variables `{{version}}` enrichies : historique des révisions dans les métadonnées du conteneur |
+| 5.5 | **Format conteneur** | Voir les questions ouvertes dans `docs/format-fichier.md` §9 — à trancher ensemble |
+
+---
+
+## Récapitulatif — ce qui est DÉJÀ FONCTIONNEL
+
+✅ Éditeur WYSIWYG complet (toutes les mises en forme) | ✅ Vraie pagination A4 fidèle à l'impression | ✅ Ruban à la Word (2 onglets, coin droit) | ✅ Mini-barre de sélection | ✅ Menu clic droit texte | ✅ Tableaux complets (fusion, bordures sur schéma, poignées de largeur) | ✅ En-têtes/pieds riches (Markdown + variables) | ✅ Formules MathLive WYSIWYG | ✅ Sommaire auto + panneau | ✅ Styles de titres + numérotation + panneau avec aperçu exact | ✅ Explorateur complet | ✅ Dialogue Mise en page à la Word | ✅ Panneaux latéraux harmonisés avec icônes | ✅ Export PDF + impression | ✅ Notes de bas de page | ✅ Diagrammes Mermaid | ✅ Signets + renvois | ✅ Recherche dans l'explorateur | ✅ Emoji à catégories | ✅ 38 tests unitaires | ✅ Documentation complète (guide + référence technique + README + captures)
+
+---
+
+## Ordre de développement proposé
+
+```
+Phase actuelle
+    ├── Panneau Équation : palette de symboles (point ② maquette)
+    ├── Panneau Équation : édition directe sur la page (point ① maquette)
+    ├── 2.1 Boutons Tabulation ±
+    ├── 2.2 Interligne + espacement (dans Styles de titres aussi)
+    ├── 2.3 Mémorisation couleur (boutons)
+    ├── 1.1 Règles horizontale + verticale (lecture seule puis glissables)
+    ├── 2.4 Rechercher / Remplacer (panneau latéral)
+    ├── 1.3 Fenêtre Propriétés du document
+    ├── 1.6 Champs personnalisés (en-tête/pied)
+    ├── 3.2 Sauvegarder/charger un style complet
+    ├── 3.1 Pages de garde
+    ├── 1.4 Fenêtre Paramétrage (afficher/masquer règles, etc.)
+    ├── 1.5 Fenêtre Utilisateur (V1 : nom + prénom)
+    ├── 3.3 Lecture à voix haute
+    ├── 3.4 Correcteur orthographique
+    ├── 4.1 Palette de commandes
+    ├── 4.2 Markdown à la frappe
+    ├── 4.3 Correction automatique
+    ├── 4.4 Export HTML
+    ┬── 4.5 Plan du document
+    │
+    ╰──► FORMAT .xmd (5.1-5.5) : images, commentaires, versions, historique
+```
+
+---
+
+<!-- ================================================================ -->
+<!-- VOS COMMENTAIRES / PRIORITÉS ==================================== -->
+<!-- Ajoutez ci-dessous vos ajustements, vos priorités, ce que je dois -->
+<!-- faire avant autre chose, etc. -->
+<!-- ... -->
+<!-- ================================================================ -->
