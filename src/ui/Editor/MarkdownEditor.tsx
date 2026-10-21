@@ -174,6 +174,12 @@ export interface MarkdownEditorHandle {
   unsetColor: () => void;
   toggleHighlight: () => void;
   setTextAlign: (align: "left" | "center" | "right" | "justify") => void;
+  /** Augmente le retrait du paragraphe courant d'un pas de 1,25 cm
+   * (bouton « Tabulation + » du ruban, raccourci Ctrl+M comme Word). */
+  increaseIndent: () => void;
+  /** Diminue le retrait du paragraphe courant d'un pas (bouton
+   * « Tabulation − », raccourci Ctrl+Shift+M comme Word). */
+  decreaseIndent: () => void;
   toggleSubscript: () => void;
   toggleSuperscript: () => void;
   toggleTaskList: () => void;
@@ -1266,6 +1272,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       unsetColor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetColor().run(),
       toggleHighlight: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHighlight().run(),
       setTextAlign: (align) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(align).run(),
+      // Tabulation ± (roadmap 2.1) : commandes du paragraphe étendu
+      // (ParagraphMarkdown.ts) — sérialisées en repli HTML <p style>, pas
+      // d'espaces en tête de ligne (= bloc de code en Markdown !).
+      increaseIndent: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).increaseParagraphIndent().run(),
+      decreaseIndent: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).decreaseParagraphIndent().run(),
       toggleSubscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSubscript().run(),
       toggleSuperscript: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleSuperscript().run(),
       toggleTaskList: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleTaskList().run(),

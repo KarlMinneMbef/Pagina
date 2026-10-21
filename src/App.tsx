@@ -406,6 +406,8 @@ function App() {
       unsetColor: () => handle.unsetColor(),
       toggleHighlight: () => handle.toggleHighlight(),
       setTextAlign: (align) => handle.setTextAlign(align),
+      increaseIndent: () => handle.increaseIndent(),
+      decreaseIndent: () => handle.decreaseIndent(),
       toggleSubscript: () => handle.toggleSubscript(),
       toggleSuperscript: () => handle.toggleSuperscript(),
       toggleTaskList: () => handle.toggleTaskList(),

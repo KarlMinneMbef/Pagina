@@ -33,6 +33,8 @@ import { TableSizePicker } from "./TableSizePicker";
 import {
   IconAlignCenter,
   IconAlignJustify,
+  IconIndentDecrease,
+  IconIndentIncrease,
   IconAlignLeft,
   IconAlignRight,
   IconBlockquote,
@@ -202,6 +204,9 @@ export interface ToolbarActions {
   toggleTaskList: () => void;
   toggleBlockquote: () => void;
   setTextAlign: (align: "left" | "center" | "right" | "justify") => void;
+  /** Tabulation ± (roadmap 2.1) : retrait du paragraphe courant. */
+  increaseIndent: () => void;
+  decreaseIndent: () => void;
   // --- Styles ---
   toggleHeading: (level: 1 | 2 | 3 | 4 | 5 | 6) => void;
   setParagraph: () => void;
@@ -565,6 +570,15 @@ export function Toolbar({
             </button>
             <button className={activeBtnClass(activeAlign === "justify")} disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
               <IconAlignJustify size={16} />
+            </button>
+            {/* Tabulation ± (roadmap 2.1) : retrait du paragraphe courant
+             * d'un pas de 1,25 cm, comme les boutons Increase/Decrease
+             * Indent de Word/Casual. Raccourcis : Ctrl+M / Ctrl+Shift+M. */}
+            <button disabled={disabled} onClick={() => actions?.decreaseIndent()} title="Diminuer le retrait (Tabulation −, Ctrl+Shift+M)">
+              <IconIndentDecrease size={16} />
+            </button>
+            <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
+              <IconIndentIncrease size={16} />
             </button>
           </RibbonGroup>
 
