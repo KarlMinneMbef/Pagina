@@ -16,9 +16,15 @@
  * décorations.
  *
  * Élements NON FONCTIONNELS (demandé explicitement comme purs
- * placeholders visuels, sans logique) : la barre "Rechercher", l'avatar
- * "KM", le chevron "Personnaliser".
+ * placeholders visuels, sans logique) : l'avatar "KM", le chevron
+ * "Personnaliser". La barre "Rechercher" est FONCTIONNELLE depuis le
+ * 2026-10-21 (retour utilisateur : « le champ rechercher en haut doit
+ * permettre une recherche rapide ») : c'est une RECHERCHE RAPIDE — chaque
+ * frappe ouvre le panneau latéral « Rechercher » (roadmap 2.4) et y porte
+ * la requête en direct ; la navigation (Entrée = suivant) et le
+ * remplacement continuent dans le panneau.
  */
+import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import "./TitleBar.css";
 
@@ -36,6 +42,7 @@ export function TitleBar({
   onSaveAs,
   onPrint,
   onExportPdf,
+  onSearch,
 }: {
   documentTitle: string | null;
   disabled: boolean;
@@ -53,7 +60,12 @@ export function TitleBar({
   /** Export PDF DIRECT (pas de boîte de dialogue d'impression système) —
    * voir `handleExportPdf` dans App.tsx. */
   onExportPdf: () => void;
+  /** Recherche rapide : chaque frappe ouvre le panneau latéral
+   * « Rechercher » et y porte la requête (voir App.tsx). Absent = champ
+   * désactivé (aucun document ouvert). */
+  onSearch?: (query: string) => void;
 }) {
+  const [searchValue, setSearchValue] = useState("");
   return (
     <div className="tbar" data-tauri-drag-region>
       {/* `data-tauri-drag-region` ne s'hérite PAS aux enfants (comportement
@@ -107,11 +119,28 @@ export function TitleBar({
       </div>
 
       <div className="tbar-right" data-tauri-drag-region>
-        {/* Non fonctionnelle — voir le commentaire d'en-tête. */}
-        <div className="tbar-search" title="Recherche (à venir)">
+        {/* Recherche rapide (2026-10-21) : ouvre le panneau latéral
+         * « Rechercher » et y porte la requête à chaque frappe. */}
+        <div className="tbar-search" title="Recherche rapide dans le document — ouvre le panneau Rechercher">
           <span className="tbar-search-icon">🔍</span>
-          <span className="tbar-search-placeholder">Rechercher</span>
-          <span className="tbar-search-mic">🎤</span>
+          <input
+            className="tbar-search-input"
+            type="text"
+            placeholder="Rechercher"
+            value={searchValue}
+            disabled={disabled || !onSearch}
+            onChange={(e) => {
+              setSearchValue(e.target.value);
+              onSearch?.(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSearch?.(searchValue);
+              }
+            }}
+          />
+          <span className="tbar-search-mic" title="Recherche vocale (à venir)">🎤</span>
         </div>
         {/* Non fonctionnel — pas de système d'utilisateurs, initiales figées. */}
         <span className="tbar-avatar" title="Utilisateur">
