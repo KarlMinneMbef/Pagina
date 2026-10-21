@@ -136,6 +136,24 @@ projets"). Constats et actions :
     l'état actuel exact de ce qui existe déjà.
 
 ### Fait et fonctionnel
+- **Panneau « Styles de titres » REFAIT (2026-10-17, remontée : « il y a
+  des problèmes, à revoir » + « plus propre, plus net comme Word : le
+  formatage exact du titre, il manque la numérotation »)** :
+  - Le fichier était CORROMPU : la liste Normal+Titre 1-6 apparaissait
+    DEUX FOIS et le bouton « Régler les styles… » traînait encore en bas
+    (restes de patchs antérieurs) — réécriture propre de
+    HeadingStylesPanel.tsx.
+  - Façon Word : chaque entrée rendue avec le FORMATAGE EXACT du style
+    (police, taille, couleur, gras/italique du document) ET le préfixe
+    de NUMÉROTATION que porterait le titre — calculé avec les mêmes
+    règles que HeadingAutoNumber.ts (formatCounter + concaténation des
+    niveaux parents numérotés, compteurs à 1) : « 1. Titre 1 », « 1.1.
+    Titre 2 »… Vide si le niveau n'est pas numéroté (défaut = none,
+    cohérent avec le document).
+  - Vérifié par CDP : 7 entrées uniques, styles exacts (taille/couleur/
+    gras réels), engrenage en haut, rien en bas. tsc, build, 38 tests
+    verts.
+
 - **En-têtes de panneaux HARMONISÉS : commandes en icônes (2026-10-17,
   point ③ de la maquette validée docs/maquettes/panneau-equation.html)** :
   - Nouveau composant PARTAGÉ ContextualPanels/PanelHeader.tsx (+ classes
