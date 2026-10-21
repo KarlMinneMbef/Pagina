@@ -196,7 +196,9 @@ export interface ToolbarActions {
   changeCase: () => void;
   setColor: (color: string) => void;
   unsetColor: () => void;
-  toggleHighlight: () => void;
+  /** Surligne la sélection avec la couleur donnée (roadmap 2.3 —
+   * multicolor ; re-sélectionner la même couleur l'enlève). */
+  setHighlightColor: (color: string) => void;
   clearFormatting: () => void;
   // --- Paragraphe ---
   toggleBulletList: () => void;
@@ -363,6 +365,32 @@ export function Toolbar({
 }) {
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
+
+  // Dernières couleurs choisies (roadmap 2.3, comme Word : le bouton
+  // APPLIQUE, le chevron choisit) — persistées en localStorage pour
+  // survivre à la fermeture de l'application.
+  const [lastTextColor, setLastTextColor] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("pagina.derniereCouleurTexte") ?? null;
+    } catch {
+      return null;
+    }
+  });
+  const [lastHighlightColor, setLastHighlightColor] = useState<string>(() => {
+    try {
+      return localStorage.getItem("pagina.derniereCouleurSurlignage") ?? "#FFFF00";
+    } catch {
+      return "#FFFF00";
+    }
+  });
+  const memoriserCouleur = (cle: string, setter: (v: string) => void, couleur: string) => {
+    setter(couleur);
+    try {
+      localStorage.setItem(cle, couleur);
+    } catch {
+      /* localStorage indisponible : mémoire de session seulement */
+    }
+  };
 
   const showAccueil = leger || tab === "accueil";
 
@@ -535,32 +563,52 @@ export function Toolbar({
               >
                 <IconCodeInline size={16} />
               </button>
+              {/* Couleur du texte (roadmap 2.3, comme Word) : le « A »
+               * APPLIQUE la dernière couleur choisie (mémorisée, persistée
+               * en localStorage), le chevron ouvre le panneau. Tant
+               * qu'aucune couleur n'a été choisie, tout le bouton ouvre le
+               * panneau. */}
               <ColorPicker
                 disabled={disabled}
                 title="Couleur du texte"
-                triggerClassName="tb-btn-icon tb-btn-with-caret"
+                triggerClassName="tb-btn-icon"
+                caretClassName="tb-btn-icon"
                 trigger={
-                  <>
-                    <span className="tb-letter tb-letter-highlight">
-                      A<span className="tb-highlight-bar" style={{ background: activeColor ?? "#ffffff" }} />
-                    </span>
-                    <span className="tb-swatch-caret">▾</span>
-                  </>
+                  <span className="tb-letter tb-letter-highlight">
+                    A<span className="tb-highlight-bar" style={{ background: activeColor ?? (lastTextColor ?? "#ffffff") }} />
+                  </span>
+                }
+                onApplyLast={lastTextColor ? () => actions?.setColor(lastTextColor) : undefined}
+                applyLastTitle={
+                  lastTextColor ? `Appliquer la dernière couleur choisie (${lastTextColor})` : "Couleur du texte"
                 }
                 onAutomatic={() => actions?.unsetColor()}
                 automaticSwatch="#343334"
-                onChange={(color) => actions?.setColor(color)}
+                onChange={(color) => {
+                  memoriserCouleur("pagina.derniereCouleurTexte", (v) => setLastTextColor(v), color);
+                  actions?.setColor(color);
+                }}
               />
-              <button
-                className={activeBtnClass(activeMarks.highlight)}
+              {/* Surlignage (roadmap 2.3, comme Word) : même mécanique —
+               * le bouton applique la dernière couleur de surlignage
+               * (jaune par défaut), le chevron ouvre le panneau. */}
+              <ColorPicker
                 disabled={disabled}
-                onClick={() => actions?.toggleHighlight()}
-                title="Surlignage"
-              >
-                <span className="tb-letter tb-letter-highlight">
-                  S<span className="tb-highlight-bar" />
-                </span>
-              </button>
+                title="Couleur de surlignage"
+                triggerClassName="tb-btn-icon"
+                caretClassName="tb-btn-icon"
+                trigger={
+                  <span className="tb-letter tb-letter-highlight">
+                    S<span className="tb-highlight-bar" style={{ background: lastHighlightColor }} />
+                  </span>
+                }
+                onApplyLast={() => actions?.setHighlightColor(lastHighlightColor)}
+                applyLastTitle={`Surligner avec ${lastHighlightColor}`}
+                onChange={(color) => {
+                  memoriserCouleur("pagina.derniereCouleurSurlignage", (v) => setLastHighlightColor(v), color);
+                  actions?.setHighlightColor(color);
+                }}
+              />
             </div>
           </RibbonGroup>
 

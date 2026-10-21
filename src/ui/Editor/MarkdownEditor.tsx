@@ -173,6 +173,9 @@ export interface MarkdownEditorHandle {
   setColor: (color: string) => void;
   unsetColor: () => void;
   toggleHighlight: () => void;
+  /** Surligne la sélection avec la couleur donnée (roadmap 2.3 — bouton
+   * mémorisé du ruban ; re-sélectionner la même couleur l'enlève). */
+  setHighlightColor: (color: string) => void;
   setTextAlign: (align: "left" | "center" | "right" | "justify") => void;
   /** Augmente le retrait du paragraphe courant d'un pas de 1,25 cm
    * (bouton « Tabulation + » du ruban, raccourci Ctrl+M comme Word). */
@@ -1005,7 +1008,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         FontFamily,
         FontSize,
         Color,
-        Highlight.configure({ multicolor: false }),
+        // multicolor (roadmap 2.3) : le bouton Surlignage du ruban
+        // mémorise/applique une couleur choisie, comme Word. Sérialisation
+        // en repli HTML <mark style="background-color: …"> pour les
+        // couleurs — lisible partout, comme tous les réglages avancés.
+        Highlight.configure({ multicolor: true }),
         TextAlign.configure({ types: ["heading", "paragraph", "tableCell", "tableHeader"] }),
         Subscript,
         Superscript,
@@ -1271,6 +1278,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       setColor: (color) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setColor(color).run(),
       unsetColor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).unsetColor().run(),
       toggleHighlight: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHighlight().run(),
+      setHighlightColor: (color) =>
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleHighlight({ color }).run(),
       setTextAlign: (align) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setTextAlign(align).run(),
       // Tabulation ± (roadmap 2.1) : commandes du paragraphe étendu
       // (ParagraphMarkdown.ts) — sérialisées en repli HTML <p style>, pas

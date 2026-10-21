@@ -10,6 +10,16 @@
   cursor: pointer;
 }
 
+/* Chevron séparé (roadmap 2.3) — même neutralité que le déclencheur, la
+ * classe du ruban/panneau appelant passe par `caretClassName`. */
+.cp-trigger-caret {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
 .cp-panel {
   position: absolute;
   z-index: 60;
