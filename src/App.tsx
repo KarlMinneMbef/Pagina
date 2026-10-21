@@ -94,6 +94,9 @@ function App() {
   // Panneau « Rechercher / Remplacer » (roadmap 2.4) : ouvert par Ctrl+F,
   // comme Word — pas contextuel, c'est l'utilisateur qui l'ouvre/ferme.
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  // Requête venant du champ de RECHERCHE RAPIDE de la barre de titre :
+  // portée dans le panneau « Rechercher » (seed) à chaque frappe.
+  const [findSeed, setFindSeed] = useState("");
   // Panneau « Diagramme » (édition Mermaid, 2026-10-21) : ouvert au clic
   // sur un diagramme peint / à l'insertion, refermé quand la sélection
   // quitte le diagramme — même cycle que le panneau Équation.
@@ -501,6 +504,17 @@ function App() {
         onSaveAs={() => void handleSaveAs()}
         onPrint={handlePrint}
         onExportPdf={() => void handleExportPdf()}
+        /* Recherche rapide (barre de titre) : chaque frappe ouvre le
+         * panneau « Rechercher » et y porte la requête en direct. */
+        onSearch={
+          activeTab
+            ? (query) => {
+                setFindReplaceOpen(true);
+                setCtxTab("rechercher");
+                setFindSeed(query);
+              }
+            : undefined
+        }
       />
       <Toolbar
         actions={actions}
@@ -674,6 +688,7 @@ function App() {
               activeTab &&
               editorRef.current && (
                 <FindReplacePanel
+                  seed={findSeed}
                   onFind={(query, options, direction) =>
                     editorRef.current?.findText(query, options, direction ?? 1) ?? null
                   }

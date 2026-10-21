@@ -57,6 +57,22 @@
   box-shadow: 0 0 0 2px rgba(36, 172, 110, 0.18);
 }
 
+/* Champ de recherche : PLEINE LARGEUR et plus haut (retour utilisateur
+ * 2026-10-21 : « pas assez grand ») — la rangée compteur/boutons vit en
+ * dessous, séparée. */
+.fr-input-search {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.fr-row-nav {
+  margin-top: -2px;
+}
+
+.fr-nav-spacer {
+  flex: 1;
+}
+
 /* Compteur « n/m » façon Word, discret, rouge quand aucune occurrence. */
 .fr-counter {
   min-width: 38px;
