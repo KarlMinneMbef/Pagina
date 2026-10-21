@@ -76,8 +76,20 @@ import { computeCaretScreenPosition } from "./pagination/caretPosition";
 import { computeSelectionRects } from "./pagination/selectionHighlight";
 import { SelectionBar } from "./SelectionBar";
 import { resolvePageSizeMm, formatTodayForHeaderFooter, type PageLayoutSettings } from "../../core/pageLayout";
+import type { Node as ProseNode } from "@tiptap/pm/model";
 import "katex/dist/katex.min.css";
 import "./MarkdownEditor.css";
+
+/** Options de recherche du panneau « Rechercher / Remplacer » (roadmap
+ * 2.4) — mêmes sémantiques que Word. */
+export interface FindReplaceOptions {
+  /** `false` (défaut) : insensible à la casse, comme la recherche de Word
+   * par défaut. */
+  matchCase: boolean;
+  /** `true` : l'occurrence doit être délimitée par des caractères non
+   * "mot" (lettres/chiffres) de chaque côté. */
+  wholeWord: boolean;
+}
 
 export interface MarkdownEditorHandle {
   getMarkdown: () => string;
@@ -228,6 +240,26 @@ export interface MarkdownEditorHandle {
   /** Supprime la formule sélectionnée (panneau « Équation »). */
   deleteMath: () => void;
   insertEmoji: (emoji: string) => void;
+  // --- Rechercher / Remplacer (roadmap 2.4, panneau latéral) ---
+  /** Recherche toutes les occurrences puis SÉLECTIONNE la suivante (ou
+   * la précédente, `direction: -1`) à partir du curseur, en bouclant.
+   * Retourne le nombre TOTAL d'occurrences et le rang (1-based) de
+   * l'occurrence sélectionnée, ou `null` si aucune. */
+  findText: (
+    query: string,
+    options: FindReplaceOptions,
+    direction?: 1 | -1,
+  ) => { total: number; index: number } | null;
+  /** Remplace l'occurrence ACTIVEMENT sélectionnée (si elle correspond à
+   * la recherche) puis passe à la suivante — même retour que findText. */
+  replaceCurrent: (
+    query: string,
+    options: FindReplaceOptions,
+    replacement: string,
+  ) => { total: number; index: number } | null;
+  /** Remplace TOUTES les occurrences en UNE seule étape d'annulation
+   * (une transaction) — retourne le nombre de remplacements. */
+  replaceAll: (query: string, options: FindReplaceOptions, replacement: string) => number;
   /** Pose un signet (ancre invisible `<a id="…">`) à la position du
    * curseur — cible des renvois. Voir `Bookmark.ts`. */
   insertBookmark: () => void;
@@ -451,6 +483,41 @@ function getInsideToc(editor: Editor): boolean {
  * « Équation » (voir `EditorStats.math`). Une formule est un nœud ATOME :
  * la sélection la désigne par NodeSelection (posée à l'insertion ou au
  * clic sur la formule peinte), jamais par un curseur « dedans ». */
+/**
+ * Toutes les occurrences de `query` dans le document, dans l'ordre —
+ * moteur du panneau « Rechercher / Remplacer » (roadmap 2.4). Parcours
+ * des nœuds TEXTE (les positions retournées sont des positions de
+ * document directement sélectionnables), recherche non chevauchante.
+ */
+function findMatchesInDoc(
+  doc: ProseNode,
+  query: string,
+  options: FindReplaceOptions,
+): { from: number; to: number }[] {
+  const matches: { from: number; to: number }[] = [];
+  if (!query) return matches;
+  const needle = options.matchCase ? query : query.toLowerCase();
+  doc.descendants((node, pos) => {
+    if (!node.isText || !node.text) return true;
+    const hay = options.matchCase ? node.text : node.text.toLowerCase();
+    let idx = hay.indexOf(needle);
+    while (idx !== -1) {
+      // « Mots entiers » : l'occurrence doit être bordée de caractères
+      // non "mot" de chaque côté (définition lettre/chiffre proche de
+      // Word — les accents ne comptent pas comme bordure, comportement
+      // mineur assumé).
+      const wordBefore = idx > 0 && /[A-Za-z0-9_]/.test(hay[idx - 1]);
+      const wordAfter = idx + needle.length < hay.length && /[A-Za-z0-9_]/.test(hay[idx + needle.length]);
+      if (!(options.wholeWord && (wordBefore || wordAfter))) {
+        matches.push({ from: pos + idx, to: pos + idx + needle.length });
+      }
+      idx = hay.indexOf(needle, idx + needle.length);
+    }
+    return true;
+  });
+  return matches;
+}
+
 function getMathAtSelection(editor: Editor): EditorStats["math"] {
   const sel = editor.state.selection;
   const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
@@ -960,6 +1027,34 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // LaTeX à insérer dès que le champ flottant est créé (palette cliquée
     // alors qu'aucun champ n'est ouvert — il est rouvert à la demande).
     const pendingMathLatexRef = useRef<string | null>(null);
+    // Défilement manuel vers la sélection courante (recherche, roadmap
+    // 2.4) : le défilement natif de ProseMirror est intercepté
+    // (handleScrollToSelection, l'éditeur invisible serait "scrollé"
+    // hors écran) — on amène la zone PEINTE de la sélection dans le
+    // viewport nous-mêmes, via les mêmes rectangles que la
+    // surbrillance de sélection (computeSelectionRects), dans un rAF
+    // pour laisser le repaint se faire.
+    const scrollSelectionIntoViewRef = useRef<() => void>(() => {});
+    scrollSelectionIntoViewRef.current = () => {
+      const wrap = wrapRef.current;
+      if (!wrap || !canvasRef.current || !editor) return;
+      requestAnimationFrame(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !wrapRef.current || !editor) return;
+        const rects = computeSelectionRects(editor.view, canvas, editor.state.selection, zoomRef.current);
+        if (!rects.length) return;
+        const r = rects[0];
+        const canvasTop = canvas.getBoundingClientRect().top;
+        const wrapRect = wrapRef.current.getBoundingClientRect();
+        const targetTop = canvasTop + r.top;
+        const MARGIN = 90;
+        if (targetTop < wrapRect.top + MARGIN) {
+          wrapRef.current.scrollBy({ top: targetTop - wrapRect.top - MARGIN, behavior: "smooth" });
+        } else if (targetTop + r.height > wrapRect.bottom - MARGIN) {
+          wrapRef.current.scrollBy({ top: targetTop + r.height - wrapRect.bottom + MARGIN, behavior: "smooth" });
+        }
+      });
+    };
     // Peuplée après le montage de l'éditeur (voir plus bas) — permet aux
     // callbacks `onUpdate`/`onSelectionUpdate`, créés une seule fois par
     // Tiptap, d'appeler la version toujours à jour de `repaint`.
@@ -1402,6 +1497,77 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         editor.view.dispatch(editor.view.state.tr.delete(math.pos, math.pos + node.nodeSize));
       },
       insertEmoji: (emoji) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent(emoji).run(),
+      // --- Rechercher / Remplacer (roadmap 2.4) ---
+      findText: (query, options, direction = 1) => {
+        if (!editor || !query) return null;
+        const matches = findMatchesInDoc(editor.state.doc, query, options);
+        if (!matches.length) return null;
+        const sel = editor.state.selection;
+        let index: number;
+        if (direction === 1) {
+          index = matches.findIndex((m) => m.from >= sel.from);
+          if (index === -1) index = 0; // boucle : repart du début
+          // Le match sous le curseur EST le match courant : passer au
+          // suivant pour que « Suivant » avance vraiment.
+          if (matches[index].from === sel.from && matches[index].to === sel.to && matches.length > 1) {
+            index = (index + 1) % matches.length;
+          }
+        } else {
+          index = -1;
+          for (let i = matches.length - 1; i >= 0; i--) {
+            if (matches[i].to <= sel.from) { index = i; break; }
+          }
+          if (index === -1) index = matches.length - 1; // boucle : repart de la fin
+          if (matches[index].from === sel.from && matches[index].to === sel.to && matches.length > 1) {
+            index = (index - 1 + matches.length) % matches.length;
+          }
+        }
+        const m = matches[index];
+        // SANS focus() : le champ du panneau garde la main sur le clavier
+        // (focuser l'éditeur invisible VOLAIT le focus à la première frappe
+        // — les caractères suivants s'inséraient DANS LE DOCUMENT, bug
+        // trouvé en test). La sélection se peint pareil (couche peinte),
+        // seul le curseur clignotant natif ne suit pas — sans importance.
+        editor.commands.setTextSelection({ from: m.from, to: m.to });
+        scrollSelectionIntoViewRef.current();
+        return { total: matches.length, index: index + 1 };
+      },
+      replaceCurrent: (query, options, replacement) => {
+        if (!editor) return null;
+        const sel = editor.state.selection;
+        const selText = editor.state.doc.textBetween(sel.from, sel.to);
+        const matchesQuery =
+          options.matchCase ? selText === query : selText.toLowerCase() === query.toLowerCase();
+        if (!matchesQuery) {
+          // Rien de remplaçable sous le curseur : se positionner d'abord.
+          return null; // le panneau appelle alors findText pour avancer
+        }
+        // SANS focus() : le panneau garde le clavier (même piège que
+        // findText — le remplacement s'applique très bien sans focus).
+        editor.chain().insertContentAt({ from: sel.from, to: sel.to }, replacement).run();
+        // Occurrence suivante (les positions d'après le remplacement).
+        const matches = findMatchesInDoc(editor.state.doc, query, options);
+        if (!matches.length) return null;
+        const next = matches.find((m) => m.from >= sel.from);
+        const index = next ? matches.indexOf(next) : 0;
+        const m = matches[index];
+        editor.commands.setTextSelection({ from: m.from, to: m.to });
+        scrollSelectionIntoViewRef.current();
+        return { total: matches.length, index: index + 1 };
+      },
+      replaceAll: (query, options, replacement) => {
+        if (!editor || !query) return 0;
+        const matches = findMatchesInDoc(editor.state.doc, query, options);
+        if (!matches.length) return 0;
+        // UNE seule transaction : un seul Ctrl+Z annule tout le
+        // « Remplacer tout », comme dans Word.
+        let tr = editor.state.tr;
+        for (let i = matches.length - 1; i >= 0; i--) {
+          tr = tr.insertText(replacement, matches[i].from, matches[i].to);
+        }
+        editor.view.dispatch(tr);
+        return matches.length;
+      },
       // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
       insertBookmark: () => {
         if (!editor) return;
