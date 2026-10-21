@@ -11,12 +11,12 @@
 
 | # | Fonctionnalité | Description | Faisabilité | Statut |
 |---|---|---|---|---|
-| 1.1 | **Règles horizontale ET verticale** | Barres graduées (mm) au-dessus et à gauche des pages, triangles de marge, glissables à la souris | Très faisable — mêmes mécaniques que les poignées de tableau | ⬜ |
+| 1.1 | **Règles horizontale ET verticale** | Barres graduées (mm) au-dessus et à gauche des pages, triangles de marge, glissables à la souris | Très faisable — mêmes mécaniques que les poignées de tableau | ✅ (2026-10-21 : triangles de marge glissants, mise à jour en direct) |
 | 1.2 | **Option afficher/masquer les règles** | Case à cocher dans une fenêtre Paramétrage | Simple | ⬜ (dépend de 1.4) |
-| 1.3 | **Fenêtre Propriétés du document** | Métadonnées : Titre, Sujet, Auteur, Date de création, Date de modification, Mots-clés, Commentaires — + champs personnalisés | Simple (formulaire React, stockage dans `pagina:config`) | ⬜ |
+| 1.3 | **Fenêtre Propriétés du document** | Métadonnées : Titre, Sujet, Auteur, Date de création, Date de modification, Mots-clés, Commentaires — + champs personnalisés | Simple (formulaire React, stockage dans `pagina:config`) | ✅ (2026-10-21 : bouton « Propriétés » du ruban Accueil) |
 | 1.4 | **Fenêtre Paramétrage (Préférences)** | Affichage (règles, barres), Interface (langue, thème), Édition (correction auto), Sauvegarde (auto-sauvegarde, intervalle) | Simple (formulaire React, localStorage) | ⬜ |
 | 1.5 | **Fenêtre Utilisateur** | V1 : Nom + Prénom uniquement (stocké en localStorage). V2 : connexion serveur MBEF pour Ingenerix | V1 simple, V2 nécessite l'API MBEF | ⬜ (V1) ⬜ (V2) |
-| 1.6 | **Champs personnalisés (en-tête/pied)** | Auteur, Sujet, Date de création, + possibilité de créer des champs personnalisés `{{marseille}}`… | Simple — étendre `resolveHeaderFooterText` | ⬜ |
+| 1.6 | **Champs personnalisés (en-tête/pied)** | Auteur, Sujet, Date de création, + possibilité de créer des champs personnalisés `{{marseille}}`… | Simple — étendre `resolveHeaderFooterText` | ✅ (2026-10-21 : `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` + chaque champ personnalisé par son nom) |
 
 ---
 
@@ -24,10 +24,10 @@
 
 | # | Fonctionnalité | Description | Faisabilité | Statut |
 |---|---|---|---|---|
-| 2.1 | **Boutons Tabulation + / Tabulation −** | Augmenter/réduire le retrait du paragraphe courant (indent) | Simple — extension Tiptap Indent ou custom | ⬜ |
-| 2.2 | **Interligne et espacement de paragraphe** | Sélecteur d'interligne (1,0 / 1,15 / 1,5 / 2,0 / personnalisé) + espacement avant/après paragraphe — **à ajouter AUSSI dans le dialogue Styles de titres** (interligne et espacement par niveau) | Moyen — étendre le modèle `PageLayoutSettings` | ⬜ |
-| 2.3 | **Mémorisation de la couleur** | Le bouton Couleur/Surlignage **retient** la dernière couleur choisie — cliquer sur le bouton (sans ouvrir le nuancier) applique cette couleur, comme Word | Simple — état React du bouton | ⬜ |
-| 2.4 | **Rechercher / Remplacer** | Panneau latéral avec : champ de recherche + boutons Suivant/Précédent, champ de remplacement + boutons Remplacer / Remplacer tout, options (casse, mots entiers) | Moyen — parcourir le document Tiptap | ⬜ |
+| 2.1 | **Boutons Tabulation + / Tabulation −** | Augmenter/réduire le retrait du paragraphe courant (indent) | Simple — extension Tiptap Indent ou custom | ✅ (2026-10-21 : pas de 1,25 cm, modèle en cm dans `ParagraphMarkdown.ts`) |
+| 2.2 | **Interligne et espacement de paragraphe** | Sélecteur d'interligne (1,0 / 1,15 / 1,5 / 2,0 / personnalisé) + espacement avant/après paragraphe — **à ajouter AUSSI dans le dialogue Styles de titres** (interligne et espacement par niveau) | Moyen — étendre le modèle `PageLayoutSettings` | ✅ (2026-10-21 : menu Interligne façon Word + fenêtre « Paragraphe — Retrait et espacement », interligne/espacement par niveau de titre aussi) |
+| 2.3 | **Mémorisation de la couleur** | Le bouton Couleur/Surlignage **retient** la dernière couleur choisie — cliquer sur le bouton (sans ouvrir le nuancier) applique cette couleur, comme Word | Simple — état React du bouton | ✅ (2026-10-21) |
+| 2.4 | **Rechercher / Remplacer** | Panneau latéral avec : champ de recherche + boutons Suivant/Précédent, champ de remplacement + boutons Remplacer / Remplacer tout, options (casse, mots entiers) | Moyen — parcourir le document Tiptap | ✅ (2026-10-21 : panneau Ctrl+F + champ de la barre de titre, liste de résultats avec contexte, Remplacer / Tout remplacer, casse et mots entiers) |
 | 2.5 | **Première page différente** | SANS en-tête et SANS pied de page — déjà implémenté via « Première page différente » dans Mise en page | **Fait** (vérifié) | ✅ |
 
 ---
@@ -69,7 +69,7 @@
 
 ## Récapitulatif — ce qui est DÉJÀ FONCTIONNEL
 
-✅ Éditeur WYSIWYG complet (toutes les mises en forme) | ✅ Vraie pagination A4 fidèle à l'impression | ✅ Ruban à la Word (2 onglets, coin droit) | ✅ Mini-barre de sélection | ✅ Menu clic droit texte | ✅ Tableaux complets (fusion, bordures sur schéma, poignées de largeur) | ✅ En-têtes/pieds riches (Markdown + variables) | ✅ Formules MathLive WYSIWYG | ✅ Sommaire auto + panneau | ✅ Styles de titres + numérotation + panneau avec aperçu exact | ✅ Explorateur complet | ✅ Dialogue Mise en page à la Word | ✅ Panneaux latéraux harmonisés avec icônes | ✅ Export PDF + impression | ✅ Notes de bas de page | ✅ Diagrammes Mermaid | ✅ Signets + renvois | ✅ Recherche dans l'explorateur | ✅ Emoji à catégories | ✅ 38 tests unitaires | ✅ Documentation complète (guide + référence technique + README + captures)
+✅ Éditeur WYSIWYG complet (toutes les mises en forme) | ✅ Vraie pagination A4 fidèle à l'impression | ✅ Ruban à la Word (2 onglets, coin droit) | ✅ Mini-barre de sélection | ✅ Menu clic droit texte | ✅ Tableaux complets (fusion, bordures sur schéma, poignées de largeur) | ✅ En-têtes/pieds riches (Markdown + variables + champs personnalisés) | ✅ Formules MathLive WYSIWYG (palette de symboles + édition directe sur la page) | ✅ Sommaire auto + panneau | ✅ Styles de titres + numérotation + panneau avec aperçu exact | ✅ Explorateur complet | ✅ Dialogue Mise en page à la Word | ✅ Règles horizontale + verticale avec triangles de marge glissants | ✅ Rechercher/Remplacer (Ctrl+F + champ de la barre de titre) | ✅ Fenêtre Propriétés du document | ✅ Éditeur de diagrammes Mermaid dédié (panneau latéral) | ✅ Menu Interligne façon Word + fenêtre Paragraphe (retraits, espacement) | ✅ Tabulation ± | ✅ Mémorisation couleur des boutons | ✅ Panneaux latéraux harmonisés avec icônes | ✅ Export PDF + impression | ✅ Notes de bas de page | ✅ Signets + renvois | ✅ Recherche dans l'explorateur | ✅ Emoji à catégories | ✅ 38 tests unitaires | ✅ Documentation complète (guide + référence technique + README + captures)
 
 ---
 
@@ -77,17 +77,17 @@
 
 ```
 Phase actuelle
-    ├── Panneau Équation : palette de symboles (point ② maquette)
-    ├── Panneau Équation : édition directe sur la page (point ① maquette)
-    ├── 2.1 Boutons Tabulation ±
-    ├── 2.2 Interligne + espacement (dans Styles de titres aussi)
-    ├── 2.3 Mémorisation couleur (boutons)
-    ├── 1.1 Règles horizontale + verticale (lecture seule puis glissables)
-    ├── 2.4 Rechercher / Remplacer (panneau latéral)
-    ├── 1.3 Fenêtre Propriétés du document
-    ├── 1.6 Champs personnalisés (en-tête/pied)
-    ├── 3.2 Sauvegarder/charger un style complet
-    ├── 3.1 Pages de garde
+    ├── Panneau Équation : palette de symboles (point ② maquette) — FAIT
+    ├── Panneau Équation : édition directe sur la page (point ① maquette) — FAIT
+    ├── 2.1 Boutons Tabulation ± — FAIT
+    ├── 2.2 Interligne + espacement (menu Word + fenêtre Paragraphe) — FAIT
+    ├── 2.3 Mémorisation couleur (boutons) — FAIT
+    ├── 1.1 Règles horizontale + verticale glissantes — FAIT
+    ├── 2.4 Rechercher / Remplacer (panneau latéral) — FAIT
+    ├── 1.3 Fenêtre Propriétés du document — FAIT
+    ├── 1.6 Champs personnalisés (en-tête/pied) — FAIT
+    ├── 3.2 Sauvegarder/charger un style complet   ← PROCHAINE ÉTAPE
+    ├── 3.1 Pages de garde (en attente)
     ├── 1.4 Fenêtre Paramétrage (afficher/masquer règles, etc.)
     ├── 1.5 Fenêtre Utilisateur (V1 : nom + prénom)
     ├── 3.3 Lecture à voix haute
@@ -96,7 +96,7 @@ Phase actuelle
     ├── 4.2 Markdown à la frappe
     ├── 4.3 Correction automatique
     ├── 4.4 Export HTML
-    ┬── 4.5 Plan du document
+    ├── 4.5 Plan du document
     │
     ╰──► FORMAT .xmd (5.1-5.5) : images, commentaires, versions, historique
 ```

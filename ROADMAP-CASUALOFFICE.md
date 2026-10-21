@@ -137,8 +137,14 @@ vertical, menu clic-droit, glisser-sélectionner correctement reconnu comme
   Directement pertinent et à faible risque architectural : n'importe quel
   éditeur Markdown-natif peut avoir cette règle d'auto-complétion sans
   toucher à la sérialisation.
-- ⬜ Rechercher/Remplacer (`FindReplaceDialog.tsx`) — manque actuellement
-  totalement dans Pagina.
+- ✅ **Rechercher/Remplacer (2026-10-21)** — réimplémenté sur notre modèle
+  (`src/ui/FindReplace/FindReplacePanel.tsx`, aucun code copié) : panneau
+  latéral ouvert par Ctrl+F, alimenté aussi par le champ de recherche de la
+  barre de titre (la requête y est portée en direct) ; liste des résultats
+  avec contexte, options Respecter la casse / Mots entiers, champ
+  « Remplacer par… » + Remplacer / Tout remplacer. Leur
+  `FindReplaceDialog.tsx` reste modal : notre choix est un volet latéral
+  façon Word, navigation possible pendant la recherche.
 - ⬜ Palette de commandes (Cmd/Ctrl+K façon VS Code) — `CommandPaletteDialog.tsx`,
   pattern générique, aucune dépendance docx.
 - ⬜ Correction automatique / guillemets intelligents.

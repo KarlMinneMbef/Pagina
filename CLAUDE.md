@@ -136,6 +136,103 @@ projets"). Constats et actions :
     l'état actuel exact de ce qui existe déjà.
 
 ### Fait et fonctionnel
+
+- **Grosse journée « comme Word » (2026-10-21, 13 commits sur main)** —
+  sur la roadmap ROADMAP-PAGINA.md établie la veille à la demande de
+  l'utilisateur (« il faut que l'on ait bout de ce projet ») :
+  - **Panneau Équation complété puis allégé** : palette de symboles
+    (point ② de la maquette `docs/maquettes/panneau-equation.html`) +
+    édition directe sur la page (point ①) — puis, sur retour explicite
+    de l'utilisateur (« trop grossier »), le clavier virtuel MathLive
+    du bas a été SUPPRIMÉ : `EquationPanel.tsx` ne garde que le champ
+    WYSIWYG + la palette de symboles (`eq-palette`, ouverte par défaut,
+    bouton ⌨ de l'en-tête partagé pour la replier).
+  - **Tabulation ± (roadmap 2.1)** : boutons du groupe Paragraphe du
+    ruban, pas de 1,25 cm (0,5" comme Word), extension custom
+    `ParagraphMarkdown.ts` (repli HTML sur le `<p>`).
+  - **Interligne + espacements (roadmap 2.2, deux temps)** : d'abord au
+    ruban (groupe Paragraphe) et PAR NIVEAU DE TITRE dans le panneau
+    Styles de titres ; PUIS sur demande « reprends le fonctionnement de
+    Word, plus la fenêtre retrait et espacement » : menu Interligne
+    déroulant façon Word (1,0/1,15/1,5/2,0/2,5/3,0 avec coche,
+    « Options d'interligne… », « Ajouter de l'espace avant » (+6 pt),
+    « Supprimer l'espace après ») et NOUVELLE fenêtre
+    `src/ui/Paragraph/ParagraphDialog.tsx` (« Retrait et espacement » :
+    alignement, retraits gauche/droite cm, espacement avant/après pt,
+    interligne Multiple, aperçu live 3 mini-paragraphes, « Définir par
+    défaut », OK/Annuler). Le lanceur du groupe Paragraphe du ruban
+    ouvre cette fenêtre (plus Mise en page).
+  - **Modèle de retrait en CENTIMÈTRES** (`ParagraphMarkdown.ts`) :
+    attributs `indentCm`/`indentRightCm`, migration transparente des
+    anciens fichiers, borne 12,5 cm, nouvelle commande
+    `setParagraphIndent(leftCm, rightCm)` ; handles
+    `getActiveParagraphFormat()` (alignement + retraits du paragraphe
+    sous le curseur) et `setParagraphIndent` dans MarkdownEditor.tsx.
+    **NOUVEAU retrait DROITE** (n'existait pas avant cette journée).
+  - **BUG important corrigé (piège de closure)** : régler l'interligne
+    PUIS l'espacement écrasait l'interligne — les actions du ruban
+    capturaient `activeTab.layout` (une CAPTURE) dans une closure
+    React, périmée au moment du clic. Nouvelle méthode
+    `tabsStore.patchLayout(path, patch)` qui lit TOUJOURS le layout
+    courant du store : à privilégier pour TOUT réglage unitaire de
+    mise en page, ne jamais passer un layout capturé.
+  - **Mémorisation couleur (roadmap 2.3)** : les boutons Couleur du
+    texte / Surlignage retiennent la dernière couleur — re-cliquer
+    sur le bouton seul (sans ouvrir le nuancier) applique, comme Word.
+  - **Règles glissantes (roadmap 1.1 terminée)** :
+    `pagination/Ruler.tsx` — triangles de marge tirables à la souris,
+    document mis à jour EN DIRECT (mêmes bornes que le dialogue Mise
+    en page), graduation mm, zones de marge grisées. Horizontale
+    sticky en haut, verticale sticky à gauche calée sur les pages via
+    variables CSS `--xmd-ruler-v-offset`/`--xmd-ruler-v-stride`
+    (période = hauteur de page + espace entre pages, motif répété).
+  - **Rechercher/Remplacer (roadmap 2.4, trois itérations)** :
+    `src/ui/FindReplace/FindReplacePanel.tsx` — panneau latéral ouvert
+    par Ctrl+F ; champ de la BARRE DE TITRE fonctionnel (porte sa
+    requête dans le panneau en direct, seed) ; champ du panneau en
+    pleine largeur ; liste des résultats avec contexte cliquable ;
+    « Remplacer par… » + Remplacer / Tout remplacer ; options
+    Respecter la casse / Mots entiers. Iterations sur retour
+    utilisateur : « champ trop petit » puis « plus comme Word, on
+    garde le remplacer » puis suppression de l'onglet « Titres »
+    (retour utilisateur) — le panneau reste un volet de navigation.
+  - **Fenêtre Propriétés du document (roadmap 1.3)** :
+    `src/ui/PageSetup/DocumentPropertiesDialog.tsx`, bouton
+    « Propriétés » du ruban Accueil (grosse icône à côté de Mise en
+    page) — titre, sujet, auteur, mots-clés, commentaires, dates,
+    + CHAMPS PERSONNALISÉS libres. Stockage dans `pagina:config`.
+  - **Variables d'en-tête/pied enrichies (roadmap 1.6)** :
+    `resolveHeaderFooterText` reconnaît désormais `{{title}}`,
+    `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` ET
+    chaque champ personnalisé par son propre nom (`{{Chantier}}`…) —
+    alimentés par la fenêtre Propriétés.
+  - **Panneau Diagramme (Mermaid dédié)** :
+    `src/ui/Mermaid/DiagramPanel.tsx` — édition de la source Mermaid
+    dans un panneau latéral avec rendu live, ouvert au clic sur un
+    diagramme peint / à l'insertion (front montant de `stats.mermaid`,
+    même cycle que le panneau Équation).
+  - **INCIDENT disque (2026-10-21 soir) — retour arrière accidentel de
+    l'arborescence + récupération intégrale** : vers 19h12, des
+    fichiers du disque ont été remplacés par un état ancien (fichiers
+    récents supprimés : Ruler, FindReplace, Mermaid, PanelHeader,
+    ROADMAPs… ; d'autres écrasés par des versions plus vieilles) —
+    cause inconnue (pas git : HEAD était intact). Le travail non
+    committé (fenêtre Paragraphe) n'existait plus nulle part sur le
+    disque. RÉCUPÉRÉ À L'IDENTIQUE grâce au serveur Vite encore en
+    mémoire dans le navigateur : les modules transformés gardent leur
+    SOURcemap AVEC `sourcesContent` → `Debugger.getScriptSource` par
+    CDP, base64 décodé, sources TSX originales restaurées au texte
+    près (y compris les .css via la chaîne `__vite__css`). Pièges
+    rencontrés : playwright-core plantait en attach sur une cible
+    `shared_worker` (contourner par CDP brut via WebSocket natif de
+    Node) ; un module .css re-servi par HMR ÉCRASE la version
+    précédente dans le debugger — filtrer par horodatage `?t=` et
+    garder la PLUS ANCIENNE (= la bonne) ; vérifier la propreté des
+    onglets (pas de « • ») AVANT tout reload. Leçons : COMMITTER
+    souvent (le travail perdu n'était pas dans git), et si un
+    incident de ce type survient, NE PAS fermer l'app : les sources
+    survivent dans le module graph du serveur de dev.
+
 - **Panneau « Styles de titres » REFAIT (2026-10-17, remontée : « il y a
   des problèmes, à revoir » + « plus propre, plus net comme Word : le
   formatage exact du titre, il manque la numérotation »)** :
