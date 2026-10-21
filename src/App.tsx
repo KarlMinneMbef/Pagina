@@ -16,6 +16,7 @@ import { TablePropertiesPanel } from "./ui/TableProperties/TablePropertiesPanel"
 import { HeaderFooterPanel } from "./ui/HeaderFooter/HeaderFooterPanel";
 import { TocPanel } from "./ui/Toc/TocPanel";
 import { EquationPanel } from "./ui/Math/EquationPanel";
+import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
@@ -85,13 +86,33 @@ function App() {
   // Panneau « Équation » (2026-10-17, éditeur MathLive) : même front montant
   // que tablePanelOpen, piloté par stats.math (NodeSelection sur une formule).
   const [mathPanelOpen, setMathPanelOpen] = useState(false);
+  // Panneau « Rechercher / Remplacer » (roadmap 2.4) : ouvert par Ctrl+F,
+  // comme Word — pas contextuel, c'est l'utilisateur qui l'ouvre/ferme.
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "f") {
+        // Ne pas voler le Ctrl+F de l'EXPLORATEUR (son propre champ de
+        // recherche) ni hors document ouvert.
+        const inExplorerInput = (e.target as HTMLElement)?.closest?.(".app-sidebar");
+        if (inExplorerInput || !document.querySelector(".xmd-page-wrap")) return;
+        e.preventDefault();
+        setFindReplaceOpen((o) => {
+          if (!o) setCtxTab("rechercher");
+          return true;
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const wasMathSelRef = useRef(false);
   const wasInsideTocRef = useRef(false);
   // Onglet actif de l'hôte de panneaux contextuels (« tableau » | « hf » |
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -118,11 +139,15 @@ function App() {
     wasInsideTocRef.current = stats.insideToc;
     if (stats.insideToc && !wasInside) {
       setTocPanelOpen(true);
-      setCtxTab("toc");
+      // Ne prend PAS la main sur l'onglet « Rechercher » : une recherche qui
+      // atterrit dans un sommaire ne doit pas éjecter le panneau ouvert
+      // volontairement par l'utilisateur (route 2.4) — l'onglet Sommaire
+      // reste accessible dans le bandeau.
+      if (!findReplaceOpen) setCtxTab("toc");
     } else if (!stats.insideToc && wasInside) {
       setTocPanelOpen(false);
     }
-  }, [stats.insideToc]);
+  }, [stats.insideToc, findReplaceOpen]);
 
   // Formule sélectionnée → panneau « Équation » (front montant), fermeture
   // quand la sélection quitte la formule (clic ailleurs dans le document).
@@ -151,12 +176,16 @@ function App() {
   }, [stats.headerFooterEditMode, tablePanelOpen]);
 
   // Un onglet Tableau ouvert doit toujours être sélectionné si aucun
-  // contexte en-tête/pied n'est actif (état initial, retour de l'hôte).
+  // contexte en-tête/pied n'est actif (état initial, retour de l'hôte) —
+  // SAUF pendant une recherche (roadmap 2.4) : l'effet forcerait l'onglet
+  // Tableau dès qu'une occurrence atterrit dans un tableau, éjectant le
+  // panneau Rechercher que l'utilisateur a ouvert volontairement. La
+  // recherche terminée (panneau fermé), la priorité Tableau revient.
   useEffect(() => {
-    if (tablePanelOpen && !stats.headerFooterEditMode && !stats.insideToc && !headingPanelOpen && ctxTab !== "tableau") {
+    if (tablePanelOpen && !stats.headerFooterEditMode && !stats.insideToc && !headingPanelOpen && !findReplaceOpen && ctxTab !== "tableau") {
       setCtxTab("tableau");
     }
-  }, [tablePanelOpen, stats.headerFooterEditMode, stats.insideToc]);
+  }, [tablePanelOpen, stats.headerFooterEditMode, stats.insideToc, findReplaceOpen]);
 
   // Ouverture depuis l'Explorateur Windows (double-clic sur un .md/.xmd
   // associé à Pagina, ou "Ouvrir avec") — voir `startup_files.rs` côté Rust.
@@ -542,7 +571,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -553,10 +582,11 @@ function App() {
                 ...(tocPanelOpen ? [{ id: "toc", label: "Sommaire" }] : []),
                 ...(mathPanelOpen && stats.math ? [{ id: "equation", label: stats.math.kind === "block" ? "Équation (bloc)" : "Équation" }] : []),
                 ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
+                ...(findReplaceOpen ? [{ id: "rechercher", label: "Rechercher" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher")}
           >
             {ctxTab === "tableau" &&
               tablePanelOpen &&
@@ -612,6 +642,23 @@ function App() {
                   onInsertLatex={(latex) => editorRef.current?.insertMathLatex(latex)}
                   onDelete={() => editorRef.current?.deleteMath()}
                   onClose={() => setMathPanelOpen(false)}
+                />
+              )}
+            {ctxTab === "rechercher" &&
+              findReplaceOpen &&
+              activeTab &&
+              editorRef.current && (
+                <FindReplacePanel
+                  onFind={(query, options, direction) =>
+                    editorRef.current?.findText(query, options, direction ?? 1) ?? null
+                  }
+                  onReplaceCurrent={(query, options, replacement) =>
+                    editorRef.current?.replaceCurrent(query, options, replacement) ?? null
+                  }
+                  onReplaceAll={(query, options, replacement) =>
+                    editorRef.current?.replaceAll(query, options, replacement) ?? 0
+                  }
+                  onClose={() => setFindReplaceOpen(false)}
                 />
               )}
           </ContextualPanelHost>

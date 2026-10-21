@@ -1,0 +1,153 @@
+/*
+ * Panneau « Rechercher / Remplacer » (roadmap 2.4, 2026-10-21) — même
+ * palette que les autres panneaux latéraux (charte MBEF), présentation
+ * compacte façon Word : champ + compteur + navigation sur une ligne.
+ */
+.fr-panel {
+  --fr-bg: #eeefef;
+  --fr-line: #d0d3d4;
+  --fr-text: #2a2a24;
+  --fr-label: #75766f;
+  --fr-btn: #e0e2e3;
+  --fr-btn-hover: #d0d3d4;
+  --fr-sapin: #003f2b;
+  --fr-prairie: #24ac6e;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  color: var(--fr-text);
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.fr-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fr-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--fr-line);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 6px 8px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: var(--fr-text);
+  outline: none;
+}
+
+.fr-input:focus {
+  border-color: var(--fr-prairie);
+  box-shadow: 0 0 0 2px rgba(36, 172, 110, 0.18);
+}
+
+/* Compteur « n/m » façon Word, discret, rouge quand aucune occurrence. */
+.fr-counter {
+  min-width: 38px;
+  text-align: center;
+  color: var(--fr-label);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fr-counter-none {
+  color: #b3261e;
+}
+
+.fr-nav-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fr-btn);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--fr-text);
+  padding: 0;
+}
+
+.fr-nav-btn:hover:not(:disabled) {
+  background: var(--fr-btn-hover);
+}
+
+.fr-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.fr-options {
+  display: flex;
+  gap: 14px;
+  padding-left: 2px;
+}
+
+.fr-option {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--fr-text);
+}
+
+.fr-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.fr-btn {
+  border: 1px solid var(--fr-line);
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 5px 10px;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--fr-text);
+}
+
+.fr-btn:hover:not(:disabled) {
+  background: var(--fr-btn);
+}
+
+.fr-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Bouton principal « Tout remplacer » : sapin, comme les boutons primaires
+ * des dialogues de l'app. */
+.fr-btn-primary {
+  background: var(--fr-sapin);
+  border-color: var(--fr-sapin);
+  color: #ffffff;
+}
+
+.fr-btn-primary:hover:not(:disabled) {
+  background: #00503a;
+}
+
+.fr-message {
+  margin: 0;
+  font-size: 11px;
+  color: var(--fr-label);
+}
