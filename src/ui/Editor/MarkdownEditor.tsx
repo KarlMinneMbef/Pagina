@@ -2372,7 +2372,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       load.then(({ MathfieldElement: MathfieldElementClass }) => {
         if (closed || !host.isConnected) return;
         const mf = new MathfieldElementClass();
-        mf.setAttribute("virtual-keyboard-mode", "off");
+        // « manual » : le clavier virtuel flottant de MathLive ne se
+        // déclenche JAMAIS automatiquement. L'ancien attribut
+        // « virtual-keyboard-mode » n'existait pas (ignoré en silence) et
+        // le clavier géant s'affichait au focus — supprimé définitivement
+        // (retour utilisateur : « trop grossier ») : la palette de
+        // symboles du panneau latéral Équation la remplace, et le clavier
+        // est en plus tué par CSS (voir MarkdownEditor.css).
+        mf.setAttribute("math-virtual-keyboard-policy", "manual");
         mf.setAttribute("locale", "fr");
         mf.setValue(source, { silenceNotifications: true });
         mf.addEventListener("input", () => {
