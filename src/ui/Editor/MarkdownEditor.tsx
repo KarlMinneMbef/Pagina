@@ -102,14 +102,6 @@ export interface FindMatchResult {
   after: string;
 }
 
-/** Un titre du document pour l'onglet « Titres » du panneau Rechercher
- * (et future vue Plan) — position = position du nœud titre. */
-export interface HeadingEntry {
-  level: number;
-  text: string;
-  pos: number;
-}
-
 export interface MarkdownEditorHandle {
   getMarkdown: () => string;
   getHTML: () => string;
@@ -281,9 +273,6 @@ export interface MarkdownEditorHandle {
   /** Sélectionne une occurrence précise dans la page (clic sur un
    * résultat) et y fait défiler — SANS voler le focus au panneau. */
   selectMatch: (from: number, to: number) => void;
-  /** Liste les titres du document (onglet « Titres ») — texte, niveau,
-   * position. */
-  listHeadings: () => HeadingEntry[];
   /** Remplace l'occurrence ACTIVEMENT sélectionnée (si elle correspond à
    * la recherche) puis passe à la suivante — même retour que findText. */
   replaceCurrent: (
@@ -1633,17 +1622,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // l'occurrence est fait à la main (couche peinte).
         editor.commands.setTextSelection({ from, to });
         scrollSelectionIntoViewRef.current();
-      },
-      listHeadings: () => {
-        if (!editor) return [];
-        const out: HeadingEntry[] = [];
-        editor.state.doc.descendants((node, pos) => {
-          if (node.type.name === "heading") {
-            out.push({ level: Number(node.attrs.level) || 1, text: node.textContent, pos });
-          }
-          return true;
-        });
-        return out;
       },
       replaceCurrent: (query, options, replacement) => {
         if (!editor) return null;
