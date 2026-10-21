@@ -303,6 +303,20 @@
   width: 100%;
 }
 
+/* Clavier virtuel MathLive : SUPPRIMÉ (retour utilisateur 2026-10-21 :
+ * « le panneau bas pour l'édition des équations, trop grossier ») — la
+ * palette de symboles du panneau latéral Équation le remplace. Double
+ * verrou : le bouton d'appel dans le champ est masqué, et le panneau
+ * clavier lui-même ne peut jamais s'afficher, même déclenché par un
+ * tactile ou une ancienne commande. */
+.xmd-math-edit math-field .ML__virtual-keyboard-toggle {
+  display: none !important;
+}
+
+math-virtual-keyboard {
+  display: none !important;
+}
+
 @media print {
   .xmd-math-edit {
     display: none !important;
