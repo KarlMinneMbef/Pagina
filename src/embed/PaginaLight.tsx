@@ -53,6 +53,7 @@ const STATS_INITIALES: EditorStats = {
   headerFooterEditMode: null,
   insideToc: false,
   math: null,
+  mermaid: null,
 };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};

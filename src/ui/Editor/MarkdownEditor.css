@@ -555,33 +555,29 @@
   color: #2f52a0;
 }
 
-/* Diagramme Mermaid (voir extensions/MermaidDiagram.ts) : source éditable
- * au-dessus, aperçu SVG rendu en direct en dessous. */
+/* Diagramme Mermaid (voir extensions/MermaidDiagram.ts, refonte
+ * 2026-10-21) : la page ne montre QUE le diagramme rendu, comme une
+ * image Word — la source s'édite dans le panneau latéral « Diagramme »
+ * (ui/Mermaid/DiagramPanel.tsx), plus jamais de textarea sur la page. */
 .xmd-mermaid {
-  border: 1px solid #d9d9d7;
-  border-radius: 4px;
   margin: 10px 0;
-  overflow: hidden;
+  cursor: pointer;
 }
 
-.xmd-mermaid-source {
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  border-bottom: 1px solid #d9d9d7;
-  background: #f4f4f3;
-  font-family: "Courier New", monospace;
-  font-size: 11px;
-  padding: 8px 10px;
-  resize: vertical;
-  min-height: 60px;
+.xmd-mermaid:hover {
+  background: rgba(36, 172, 110, 0.06);
 }
 
 .xmd-mermaid-preview {
-  padding: 12px;
+  padding: 8px;
   display: flex;
   justify-content: center;
   overflow-x: auto;
+}
+
+.xmd-mermaid-preview svg {
+  max-width: 100%;
+  height: auto;
 }
 
 .xmd-mermaid-preview.xmd-mermaid-error {

@@ -641,6 +641,18 @@ export function IconVarAuthor({ size, className }: IconProps) {
   );
 }
 
+// --- Variables d'en-tête/pied : propriétés du document (roadmap 1.6,
+// 2026-10-21) — titre/sujet/mots-clés, un « T » textuel façon Word. ---
+export function IconVarText({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M5 6h14" />
+      <path d="M12 6v13" />
+      <path d="M9 19h6" />
+    </Svg24>
+  );
+}
+
 // --- Icônes d'en-tête des panneaux latéraux (PanelHeader, 2026-10-17) ---
 
 export function IconTrash({ size, className }: IconProps) {

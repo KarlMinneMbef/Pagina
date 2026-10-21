@@ -227,6 +227,11 @@ export interface MarkdownEditorHandle {
    * en fin de document (n = 1 + le plus grand id de note déjà utilisé). */
   insertFootnote: () => void;
   insertMermaidDiagram: () => void;
+  /** Met à jour la source du diagramme sélectionné (panneau
+   * « Diagramme ») — sans effet si aucun diagramme n'est sélectionné. */
+  updateMermaidSource: (source: string) => void;
+  /** Supprime le diagramme sélectionné. */
+  deleteMermaid: () => void;
   insertInlineMath: () => void;
   insertBlockMath: () => void;
   /** Met à jour la source LaTeX de la formule sélectionnée (panneau
@@ -516,6 +521,19 @@ function findMatchesInDoc(
     return true;
   });
   return matches;
+}
+
+/** Diagramme Mermaid sélectionné (NodeSelection posée au clic sur le
+ * diagramme peint ou à l'insertion) — pilote le panneau latéral
+ * « Diagramme » (roadmap Mermaid, 2026-10-21), même principe que
+ * `getMathAtSelection` pour le panneau Équation. */
+function getMermaidAtSelection(editor: Editor): EditorStats["mermaid"] {
+  const sel = editor.state.selection;
+  const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
+  if (selNode && selNode.type.name === "mermaidDiagram") {
+    return { pos: sel.from, source: String(selNode.attrs.source ?? "") };
+  }
+  return null;
 }
 
 function getMathAtSelection(editor: Editor): EditorStats["math"] {
@@ -898,6 +916,12 @@ export interface EditorStats {
    * panneau latéral « Sommaire » (Mettre à jour/Supprimer), même principe
    * que `insideTable`. */
   insideToc: boolean;
+  /** Diagramme Mermaid sélectionné (NodeSelection posée au clic sur le
+   * diagramme peint ou à l'insertion) — pilote le panneau latéral
+   * « Diagramme » ; `null` quand aucun diagramme n'est sélectionné.
+   * `pos` sert de CLÉ d'identité (le panneau se remonte au changement de
+   * diagramme, jamais à la frappe). */
+  mermaid: { pos: number; source: string } | null;
   /** Formule mathématique sélectionnée (`inlineMath`/`blockMath` — nœud
    * atomique désigné par NodeSelection, posée à l'insertion ou au clic sur
    * la formule peinte) — pilote le panneau latéral « Équation » (éditeur
@@ -1227,6 +1251,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
+          mermaid: getMermaidAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1405,6 +1430,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
         headerFooterEditMode: headerFooterModeRef.current,
+        mermaid: editor ? getMermaidAtSelection(editor) : null,
       }),
       editHeader: () => {
         const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
@@ -1451,8 +1477,29 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           }
         });
       },
-      insertMermaidDiagram: () =>
-        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "mermaidDiagram" }).run(),
+      insertMermaidDiagram: () => {
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "mermaidDiagram" }).run();
+        // Sélectionne le diagramme inséré (NodeSelection) : le panneau
+        // « Diagramme » s'ouvre, comme le panneau Équation à l'insertion
+        // d'une formule.
+        const $from = editor?.state.selection.$from;
+        const nb = $from?.nodeBefore;
+        if (nb && nb.type.name === "mermaidDiagram" && editor) {
+          editor.commands.setNodeSelection($from.pos - nb.nodeSize);
+        }
+      },
+      updateMermaidSource: (source) => {
+        const m = editor ? getMermaidAtSelection(editor) : null;
+        if (!editor || !m) return;
+        editor.view.dispatch(editor.view.state.tr.setNodeAttribute(m.pos, "source", source));
+      },
+      deleteMermaid: () => {
+        const m = editor ? getMermaidAtSelection(editor) : null;
+        if (!editor || !m) return;
+        const node = editor.state.doc.nodeAt(m.pos);
+        if (!node) return;
+        editor.view.dispatch(editor.view.state.tr.delete(m.pos, m.pos + node.nodeSize));
+      },
       insertInlineMath: () => {
         // Insère la formule VIDE et la SÉLECTIONNE (NodeSelection) : le
         // panneau latéral « Équation » s'ouvre automatiquement (stats.math)
@@ -1751,6 +1798,16 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             filename: documentTitleRef.current,
             version: layout.documentVersion,
             author: layout.author,
+            // Propriétés du document + champs personnalisés (roadmap 1.6) —
+            // disponibles comme variables d'en-tête/pied ({{title}},
+            // {{subject}}, {{keywords}}, {{created}}, {{modified}} et
+            // {{NomDuChamp}} pour chaque champ personnalisé).
+            title: layout.documentProperties?.title ?? "",
+            subject: layout.documentProperties?.subject ?? "",
+            keywords: layout.documentProperties?.keywords ?? "",
+            created: layout.documentProperties?.createdDate ?? "",
+            modified: layout.documentProperties?.modifiedDate ?? "",
+            custom: layout.documentProperties?.custom ?? [],
           },
         });
         pageCountRef.current = result.pageCount;
@@ -1780,6 +1837,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
+          mermaid: getMermaidAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -2008,6 +2066,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideTable: editor.isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
+          mermaid: getMermaidAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: mode,
         });
@@ -2582,6 +2641,40 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // resolveClickPosition.ts) pour retrouver la position réelle du
         // clic, puis cherche l'atome pile à cette position (ou juste avant,
         // selon de quel côté `posFromEvent` est tombé).
+        // Diagramme Mermaid (2026-10-21, éditeur dédié) : clic sur le
+        // diagramme peint → NodeSelection → le panneau latéral
+        // « Diagramme » s'ouvre avec la source et l'aperçu en direct
+        // (la PAGE ne montre QUE le diagramme rendu, plus jamais la
+        // source brute).
+        // NB : le clone peint porte la CLASSE .xmd-mermaid (le DOM du
+        // NodeView, cloné tel quel), pas l'attribut data-type (qui n'existe
+        // que sur le HTML sérialisé) — viser la classe, pas l'attribut.
+        const mermaidTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-mermaid");
+        if (mermaidTarget) {
+          e.preventDefault();
+          const isMermaidNode = (n: any) => n && n.type.name === "mermaidDiagram";
+          let mermaidPos: number | null = null;
+          // Chemin PRINCIPAL : le clone peint du bloc porte data-src-pos =
+          // la position EXACTE du nœud dans le document (paintPages) — un
+          // atome sans texte ne passe pas toujours bien posFromEvent.
+          const blockPosAttr = mermaidTarget.closest<HTMLElement>("[data-src-pos]")?.getAttribute("data-src-pos");
+          if (blockPosAttr != null) {
+            const p = parseInt(blockPosAttr, 10);
+            if (isMermaidNode(editor.state.doc.nodeAt(p))) mermaidPos = p;
+          }
+          // Repli : résolution au point cliqué (position avant/après l'atome).
+          if (mermaidPos === null) {
+            const clickPos = posFromEvent(e);
+            if (clickPos !== null) {
+              if (isMermaidNode(editor.state.doc.nodeAt(clickPos))) mermaidPos = clickPos;
+              else if (isMermaidNode(editor.state.doc.nodeAt(clickPos - 1))) mermaidPos = clickPos - 1;
+            }
+          }
+          if (mermaidPos === null) return;
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setNodeSelection(mermaidPos);
+          return;
+        }
         const mathTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-math");
         if (mathTarget) {
           e.preventDefault();
@@ -2821,6 +2914,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             insideTable: editor.isActive("table"),
             insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
+          mermaid: getMermaidAtSelection(editor),
             tableSelectionShape: getSelectionShape(editor),
             headerFooterEditMode: headerFooterModeRef.current,
           });

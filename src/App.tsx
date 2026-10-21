@@ -18,6 +18,7 @@ import { TocPanel } from "./ui/Toc/TocPanel";
 import { EquationPanel } from "./ui/Math/EquationPanel";
 import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
 import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialog";
+import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
@@ -43,6 +44,7 @@ const EMPTY_STATS: EditorStats = {
   headerFooterEditMode: null,
   insideToc: false,
   math: null,
+  mermaid: null,
 };
 
 function App() {
@@ -92,6 +94,21 @@ function App() {
   // Panneau « Rechercher / Remplacer » (roadmap 2.4) : ouvert par Ctrl+F,
   // comme Word — pas contextuel, c'est l'utilisateur qui l'ouvre/ferme.
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  // Panneau « Diagramme » (édition Mermaid, 2026-10-21) : ouvert au clic
+  // sur un diagramme peint / à l'insertion, refermé quand la sélection
+  // quitte le diagramme — même cycle que le panneau Équation.
+  const [mermaidPanelOpen, setMermaidPanelOpen] = useState(false);
+  const wasMermaidSelRef = useRef(false);
+  useEffect(() => {
+    const was = wasMermaidSelRef.current;
+    wasMermaidSelRef.current = !!stats.mermaid;
+    if (stats.mermaid && !was) {
+      setMermaidPanelOpen(true);
+      setCtxTab("diagramme");
+    } else if (!stats.mermaid && was) {
+      setMermaidPanelOpen(false);
+    }
+  }, [stats.mermaid]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -115,7 +132,7 @@ function App() {
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -575,7 +592,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -587,10 +604,11 @@ function App() {
                 ...(mathPanelOpen && stats.math ? [{ id: "equation", label: stats.math.kind === "block" ? "Équation (bloc)" : "Équation" }] : []),
                 ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
                 ...(findReplaceOpen ? [{ id: "rechercher", label: "Rechercher" }] : []),
+                ...(mermaidPanelOpen && stats.mermaid ? [{ id: "diagramme", label: "Diagramme" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme")}
           >
             {ctxTab === "tableau" &&
               tablePanelOpen &&
@@ -607,6 +625,9 @@ function App() {
               editorRef.current && (
                 <HeaderFooterPanel
                   mode={stats.headerFooterEditMode}
+                  customVariables={(activeTab?.layout.documentProperties?.custom ?? [])
+                    .filter((c) => c.name.trim() !== "")
+                    .map((c) => ({ token: `{{${c.name.trim()}}}`, label: c.name.trim() }))}
                   onInsertVariable={(token) => actions?.insertHeaderFooterVariable(token)}
                   onClose={() => editorRef.current?.closeHeaderFooterEdit()}
                 />
@@ -663,6 +684,18 @@ function App() {
                     editorRef.current?.replaceAll(query, options, replacement) ?? 0
                   }
                   onClose={() => setFindReplaceOpen(false)}
+                />
+              )}
+            {ctxTab === "diagramme" &&
+              mermaidPanelOpen &&
+              stats.mermaid &&
+              editorRef.current && (
+                <DiagramPanel
+                  key={stats.mermaid.pos}
+                  source={stats.mermaid.source}
+                  onSourceChange={(source) => editorRef.current?.updateMermaidSource(source)}
+                  onDelete={() => editorRef.current?.deleteMermaid()}
+                  onClose={() => setMermaidPanelOpen(false)}
                 />
               )}
           </ContextualPanelHost>

@@ -1,0 +1,122 @@
+/*
+ * Panneau « Diagramme » (édition Mermaid, 2026-10-21) — même palette que
+ * les autres panneaux latéraux (charte MBEF) : modèles en pastilles,
+ * source monospace aérée, aperçu rendu centré, erreur discrète.
+ */
+.dm-panel {
+  --dm-bg: #eeefef;
+  --dm-line: #d0d3d4;
+  --dm-text: #2a2a24;
+  --dm-label: #75766f;
+  --dm-btn: #e0e2e3;
+  --dm-btn-hover: #d0d3d4;
+  --dm-sapin: #003f2b;
+  --dm-prairie: #24ac6e;
+  --dm-danger: #b3261e;
+
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  color: var(--dm-text);
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.dm-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Modèles : pastilles repliées sur deux lignes, style sobre. */
+.dm-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dm-template-btn {
+  background: var(--dm-btn);
+  border: none;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+  color: var(--dm-text);
+}
+
+.dm-template-btn:hover {
+  background: var(--dm-btn-hover);
+}
+
+.dm-template-btn:active {
+  background: #dfeff8;
+  outline: 1px solid var(--dm-prairie);
+}
+
+/* Source : monospace aérée — c'est la pièce maîtresse du panneau. */
+.dm-source {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--dm-text);
+  padding: 10px;
+  min-height: 150px;
+  resize: vertical;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.045);
+}
+
+.dm-source:focus {
+  border-color: var(--dm-prairie);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.045),
+    0 0 0 2px rgba(36, 172, 110, 0.18);
+}
+
+/* Aperçu : fond blanc encadré, scroll horizontal si le diagramme dépasse. */
+.dm-preview {
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  min-height: 60px;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+}
+
+.dm-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.dm-error {
+  margin: 0;
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  background: #fdf1f0;
+  color: var(--dm-danger);
+  font-size: 11px;
+  font-style: italic;
+  padding: 8px 10px;
+}
+
+.dm-hint {
+  margin: 0;
+  font-size: 10px;
+  color: var(--dm-label);
+  line-height: 1.45;
+}
