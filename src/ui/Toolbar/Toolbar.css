@@ -635,3 +635,28 @@
   background: #ffffff;
 }
 
+/* Champ numérique compact du ruban (roadmap 2.2 : espacement avant/après
+ * en points, groupe Paragraphe) — même langage que .tb-select. */
+.tb-num-input {
+  width: 52px;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 4px 4px;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+}
+
+.tb-num-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Flèches des input number : trop grosses par défaut pour 52px. */
+.tb-num-input::-webkit-outer-spin-button,
+.tb-num-input::-webkit-inner-spin-button {
+  opacity: 0.35;
+  height: 14px;
+}
+

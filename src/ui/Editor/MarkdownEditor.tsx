@@ -2756,6 +2756,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       "--xmd-font-size": layout.fontSize,
       "--xmd-line-height": layout.lineHeight,
       "--xmd-paragraph-spacing": `${layout.paragraphSpacingPt}pt`,
+      "--xmd-paragraph-spacing-before": `${layout.spacingBeforePt}pt`,
       "--xmd-zoom": zoom,
       "--xmd-page-height": `${pageHeightMm}mm`,
       "--xmd-page-width": `${pageWidthMm}mm`,
@@ -2784,6 +2785,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             [`--xmd-h${level}-color`, style.color],
             [`--xmd-h${level}-weight`, style.bold ? "bold" : "normal"],
             [`--xmd-h${level}-style`, style.italic ? "italic" : "normal"],
+            // Interligne + espacement propres au niveau (roadmap 2.2) —
+            // non définis = suivre le document (les variables prennent les
+            // valeurs du document, le CSS n'a pas besoin de repli spécial).
+            [`--xmd-h${level}-line-height`, String(style.lineHeight ?? layout.lineHeight)],
+            [`--xmd-h${level}-spacing`, `${style.spacingAfterPt ?? layout.paragraphSpacingPt}pt`],
           ];
         }),
       ),

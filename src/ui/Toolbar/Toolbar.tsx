@@ -207,6 +207,13 @@ export interface ToolbarActions {
   /** Tabulation ± (roadmap 2.1) : retrait du paragraphe courant. */
   increaseIndent: () => void;
   decreaseIndent: () => void;
+  // --- Interligne / espacement (roadmap 2.2, réglages du document) ---
+  /** Interligne du document (1,0 / 1,15 / 1,5 / 2,0 / 3,0). */
+  setLineSpacing: (value: number) => void;
+  /** Espace AVANT chaque paragraphe, en points. */
+  setParagraphSpacingBefore: (pt: number) => void;
+  /** Espace APRÈS chaque paragraphe, en points. */
+  setParagraphSpacingAfter: (pt: number) => void;
   // --- Styles ---
   toggleHeading: (level: 1 | 2 | 3 | 4 | 5 | 6) => void;
   setParagraph: () => void;
@@ -270,6 +277,12 @@ const FONT_FAMILIES = [
  * MarkdownEditor.tsx — les boutons Agrandir/Réduire y font référence). */
 const FONT_SIZES = FONT_SIZE_STEPS.map((pt) => `${pt}pt`);
 
+/** Interlignes proposés (roadmap 2.2) — l'échelle de Word : 1,0 / 1,15
+ * (défaut Word « Multiple 1,15 ») / 1,5 / 2,0 / 3,0. Une valeur
+ * personnalisée du document hors échelle apparaît comme option
+ * supplémentaire plutôt que de « sauter » au plus proche. */
+const LINE_SPACINGS = [1, 1.15, 1.5, 2, 3];
+
 type RibbonTab = "accueil" | "insertion";
 
 const EMPTY_ACTIVE_MARKS = {
@@ -298,6 +311,9 @@ export function Toolbar({
   activeFontFamily = null,
   activeColor = null,
   activeFontSizePt = 12,
+  lineSpacing = 1.15,
+  spacingBeforePt = 0,
+  spacingAfterPt = 8,
   leger = false,
 }: {
   actions: ToolbarActions | null;
@@ -337,6 +353,13 @@ export function Toolbar({
   activeColor?: string | null;
   /** Taille de police de la sélection (pt) — affichée dans le sélecteur "Taille". */
   activeFontSizePt?: number;
+  /** Interligne du document (layout.lineHeight) — affiché dans le sélecteur
+   * "Interligne" du groupe Paragraphe (roadmap 2.2). */
+  lineSpacing?: number;
+  /** Espace avant chaque paragraphe, en points (layout.spacingBeforePt). */
+  spacingBeforePt?: number;
+  /** Espace après chaque paragraphe, en points (layout.paragraphSpacingPt). */
+  spacingAfterPt?: number;
 }) {
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
@@ -580,6 +603,44 @@ export function Toolbar({
             <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
               <IconIndentIncrease size={16} />
             </button>
+            {/* Interligne + espacement du document (roadmap 2.2, comme Word) :
+             * sélecteur d'interligne et espacement avant/après en points. */}
+            <select
+              className="tb-select tb-select-narrow"
+              disabled={disabled}
+              value={lineSpacing}
+              title="Interligne du document"
+              onChange={(e) => actions?.setLineSpacing(Number(e.target.value))}
+            >
+              {(LINE_SPACINGS.includes(lineSpacing) ? LINE_SPACINGS : [...LINE_SPACINGS, lineSpacing])
+                .slice()
+                .sort((a, b) => a - b)
+                .map((v) => (
+                  <option key={v} value={v}>
+                    {String(v).replace(".", ",")}
+                  </option>
+                ))}
+            </select>
+            <input
+              className="tb-num-input"
+              type="number"
+              min={0}
+              step={2}
+              disabled={disabled}
+              value={spacingBeforePt}
+              title="Espace avant chaque paragraphe (points)"
+              onChange={(e) => actions?.setParagraphSpacingBefore(Math.max(0, Number(e.target.value) || 0))}
+            />
+            <input
+              className="tb-num-input"
+              type="number"
+              min={0}
+              step={2}
+              disabled={disabled}
+              value={spacingAfterPt}
+              title="Espace après chaque paragraphe (points)"
+              onChange={(e) => actions?.setParagraphSpacingAfter(Math.max(0, Number(e.target.value) || 0))}
+            />
           </RibbonGroup>
 
           <RibbonGroup

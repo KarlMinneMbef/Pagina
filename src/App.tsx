@@ -408,6 +408,15 @@ function App() {
       setTextAlign: (align) => handle.setTextAlign(align),
       increaseIndent: () => handle.increaseIndent(),
       decreaseIndent: () => handle.decreaseIndent(),
+      setLineSpacing: (value) => {
+        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, lineHeight: value });
+      },
+      setParagraphSpacingBefore: (pt) => {
+        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, spacingBeforePt: pt });
+      },
+      setParagraphSpacingAfter: (pt) => {
+        if (activeTab) updateLayout(activeTab.path, { ...activeTab.layout, paragraphSpacingPt: pt });
+      },
       toggleSubscript: () => handle.toggleSubscript(),
       toggleSuperscript: () => handle.toggleSuperscript(),
       toggleTaskList: () => handle.toggleTaskList(),
@@ -462,6 +471,9 @@ function App() {
         activeFontFamily={stats.activeFontFamily}
         activeColor={stats.activeColor}
         activeFontSizePt={stats.activeFontSizePt}
+        lineSpacing={activeTab?.layout.lineHeight}
+        spacingBeforePt={activeTab?.layout.spacingBeforePt}
+        spacingAfterPt={activeTab?.layout.paragraphSpacingPt}
       />
       <div className="app-body">
         {sidebarOpen && (

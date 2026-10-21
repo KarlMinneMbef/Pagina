@@ -66,6 +66,9 @@ export interface PageLayoutSettings {
    * après paragraphe" de Word (~8pt par défaut), pas une marge symétrique
    * haut+bas comme un <p> HTML classique. */
   paragraphSpacingPt: number;
+  /** Espace AVANT chaque paragraphe, en points (roadmap 2.2, 2026-10-21 —
+   * « Espacement avant » de Word, 0 par défaut comme Word). */
+  spacingBeforePt: number;
   /** Marges de page, en millimètres. */
   marginTopMm: number;
   marginBottomMm: number;
@@ -109,6 +112,13 @@ export interface HeadingLevelStyle {
   bold: boolean;
   italic: boolean;
   numbering: NumberingScheme;
+  /** Interligne PROPRE au niveau (roadmap 2.2, 2026-10-21) — `undefined`
+   * = suivre l'interligne du document (`layout.lineHeight`). */
+  lineHeight?: number;
+  /** Espacement APRÈS chaque titre de ce niveau, en points (roadmap 2.2) —
+   * `undefined` = suivre l'espacement des paragraphes du document
+   * (`layout.paragraphSpacingPt`). */
+  spacingAfterPt?: number;
 }
 
 const HEADING_LEVEL_DEFAULT_SIZES: Record<HeadingLevel, string> = {
@@ -202,6 +212,7 @@ export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   fontSize: "10pt",
   lineHeight: 1.15,
   paragraphSpacingPt: 8,
+  spacingBeforePt: 0,
   marginTopMm: 25,
   marginBottomMm: 25,
   marginLeftMm: 20,

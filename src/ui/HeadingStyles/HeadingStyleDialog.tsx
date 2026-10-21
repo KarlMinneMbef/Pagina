@@ -34,6 +34,10 @@ const FONT_FAMILIES = [
   { label: "Verdana", value: "Verdana, sans-serif" },
 ];
 
+/** Interlignes proposés par niveau (roadmap 2.2) — 0 = « suivre le
+ * document » (layout.lineHeight), les autres sont des valeurs propres. */
+const LEVEL_LINE_SPACINGS = [0, 1, 1.15, 1.5, 2, 3];
+
 export function HeadingStyleDialog({
   layout,
   onApply,
@@ -81,6 +85,8 @@ export function HeadingStyleDialog({
                 <th>Gras</th>
                 <th>Italique</th>
                 <th>Numérotation</th>
+                <th>Interligne</th>
+                <th>Espace après (pt)</th>
               </tr>
             </thead>
             <tbody>
@@ -136,6 +142,43 @@ export function HeadingStyleDialog({
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                      {/* Interligne du niveau (roadmap 2.2) : 0 = suivre le
+                       * document, sinon valeur propre. */}
+                      <select
+                        value={style.lineHeight ?? 0}
+                        title="Interligne de ce niveau de titre (0 = suivre l'interligne du document)"
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setLevel(level, { lineHeight: v === 0 ? undefined : v });
+                        }}
+                      >
+                        {LEVEL_LINE_SPACINGS.map((v) => (
+                          <option key={v} value={v}>
+                            {v === 0 ? "Défaut" : String(v).replace(".", ",")}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      {/* Espacement APRÈS les titres de ce niveau : vide =
+                       * suivre l'espacement des paragraphes du document. */}
+                      <input
+                        type="text"
+                        className="hs-size-input"
+                        value={style.spacingAfterPt ?? ""}
+                        title="Espace après chaque titre de ce niveau, en points (vide = suivre le document)"
+                        onChange={(e) => {
+                          const raw = e.target.value.trim();
+                          if (raw === "") {
+                            setLevel(level, { spacingAfterPt: undefined });
+                            return;
+                          }
+                          const pt = Number(raw);
+                          if (Number.isFinite(pt) && pt >= 0) setLevel(level, { spacingAfterPt: pt });
+                        }}
+                      />
                     </td>
                   </tr>
                 );
