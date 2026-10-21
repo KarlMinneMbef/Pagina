@@ -695,7 +695,6 @@ function App() {
                   seed={findSeed}
                   onListMatches={(query, options) => editorRef.current?.listFindMatches(query, options) ?? []}
                   onSelectMatch={(from, to) => editorRef.current?.selectMatch(from, to)}
-                  onListHeadings={() => editorRef.current?.listHeadings() ?? []}
                   onReplaceCurrent={(query, options, replacement) =>
                     editorRef.current?.replaceCurrent(query, options, replacement) ?? null
                   }

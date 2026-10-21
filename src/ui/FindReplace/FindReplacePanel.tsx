@@ -4,10 +4,9 @@
  * remplacer ») :
  *
  * - Champ de recherche PLEINE LARGEUR avec bouton ✕ d'effacement.
- * - « n résultats » puis ONGLETS : « Résultats » (chaque occurrence avec
+ * - « n résultats » puis la LISTE DES OCCURRENCES (chaque occurrence avec
  *   son contexte, l'occurrence en gras — clic = y aller, la sélection se
- *   peint sur la page et le document y défile) et « Titres » (plan du
- *   document : chaque titre, clic = y aller).
+ *   peint sur la page et le document y défile).
  * - REMPLACER conservé : champ « Remplacer par… », Remplacer (l'occurrence
  *   sélectionnée) et Tout remplacer (une seule étape d'annulation),
  *   options Respecter la casse / Mots entiers.
@@ -20,18 +19,15 @@
  * ne navigue jamais ; les positions viennent du document.
  */
 import { useEffect, useRef, useState } from "react";
-import type { FindReplaceOptions, FindMatchResult, HeadingEntry } from "../Editor/MarkdownEditor";
+import type { FindReplaceOptions, FindMatchResult } from "../Editor/MarkdownEditor";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import { IconTrash } from "../Toolbar/icons";
 import "./FindReplacePanel.css";
-
-type PanelTab = "resultats" | "titres";
 
 export function FindReplacePanel({
   seed = "",
   onListMatches,
   onSelectMatch,
-  onListHeadings,
   onReplaceCurrent,
   onReplaceAll,
   onClose,
@@ -44,8 +40,6 @@ export function FindReplacePanel({
   onListMatches: (query: string, options: FindReplaceOptions) => FindMatchResult[];
   /** Handle selectMatch — sélectionne une occurrence et y défile. */
   onSelectMatch: (from: number, to: number) => void;
-  /** Handle listHeadings — titres du document (onglet « Titres »). */
-  onListHeadings: () => HeadingEntry[];
   /** Handle replaceCurrent (remplace la sélection courante si elle correspond). */
   onReplaceCurrent: (
     query: string,
@@ -62,8 +56,6 @@ export function FindReplacePanel({
   const [wholeWord, setWholeWord] = useState(false);
   const [matches, setMatches] = useState<FindMatchResult[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [tab, setTab] = useState<PanelTab>("resultats");
-  const [headings, setHeadings] = useState<HeadingEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -103,12 +95,6 @@ export function FindReplacePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, matchCase, wholeWord]);
 
-  // Titres : chargés à l'ouverture de l'onglet.
-  useEffect(() => {
-    if (tab === "titres") setHeadings(onListHeadings());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
-
   /** Occurrence suivante/précédente (Entrée / Maj+Entrée, ou boutons) —
    * en boucle, comme Word. */
   const goto = (delta: 1 | -1) => {
@@ -123,11 +109,6 @@ export function FindReplacePanel({
   const gotoMatch = (index: number) => {
     setActiveIndex(index);
     onSelectMatch(matches[index].from, matches[index].to);
-  };
-
-  const gotoHeading = (h: HeadingEntry) => {
-    // Curseur au début du titre (position + 1 = début du contenu).
-    onSelectMatch(h.pos + 1, h.pos + 1);
   };
 
   const replaceOne = () => {
@@ -238,35 +219,11 @@ export function FindReplacePanel({
           </button>
         </div>
 
-        {/* Onglets façon volet Word : Résultats (occurrences avec
-         * contexte) / Titres (plan du document). */}
-        <div className="fr-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "resultats"}
-            className={`fr-tab${tab === "resultats" ? " fr-tab-active" : ""}`}
-            onClick={() => setTab("resultats")}
-          >
-            Résultats
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "titres"}
-            className={`fr-tab${tab === "titres" ? " fr-tab-active" : ""}`}
-            onClick={() => setTab("titres")}
-          >
-            Titres
-          </button>
-        </div>
-
         <div className="fr-list" ref={listRef}>
-          {tab === "resultats" &&
-            (matches.length === 0 ? (
-              <p className="fr-empty">{query ? "Aucune occurrence trouvée." : "Tapez une recherche pour voir les occurrences du document."}</p>
-            ) : (
-              matches.map((m, i) => (
+          {matches.length === 0 ? (
+            <p className="fr-empty">{query ? "Aucune occurrence trouvée." : "Tapez une recherche pour voir les occurrences du document."}</p>
+          ) : (
+            matches.map((m, i) => (
                 <button
                   key={`${m.from}-${i}`}
                   type="button"
@@ -281,24 +238,7 @@ export function FindReplacePanel({
                   </span>
                 </button>
               ))
-            ))}
-          {tab === "titres" &&
-            (headings.length === 0 ? (
-              <p className="fr-empty">Ce document ne contient aucun titre.</p>
-            ) : (
-              headings.map((h, i) => (
-                <button
-                  key={`${h.pos}-${i}`}
-                  type="button"
-                  className="fr-result fr-heading"
-                  style={{ paddingLeft: 8 + (h.level - 1) * 12 }}
-                  onClick={() => gotoHeading(h)}
-                  title={`Aller au titre ${h.text}`}
-                >
-                  <span className="fr-result-text">{h.text || "(sans titre)"}</span>
-                </button>
-              ))
-            ))}
+          )}
         </div>
 
         {/* Remplacement (conservé, comme demandé). */}
