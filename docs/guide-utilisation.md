@@ -114,6 +114,8 @@ Apparaît dès que le curseur entre dans un tableau :
 
 ### Équation
 
+![Panneau Équation](images/capture-panneau-equation.png)
+
 Les boutons « Formule en ligne / en bloc » insèrent la formule et ouvrent le panneau **Équation** :
 - Champ d'équation **WYSIWYG** : tapez l'équation, elle se met en forme en direct (exposants, fractions, racines…).
 - Le **bouton clavier** du champ ouvre le clavier mathématique virtuel : fractions, racines, lettres grecques, Σ, ∫, opérateurs… tout au clic.
