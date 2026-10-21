@@ -102,6 +102,8 @@ export interface FindMatchResult {
   after: string;
 }
 
+/** Contrat exposé par <MarkdownEditor /> via ref : toutes les actions du
+ *  ruban (ToolbarActions), stats, zoom, pagination, mise en page. */
 export interface MarkdownEditorHandle {
   getMarkdown: () => string;
   getHTML: () => string;
@@ -304,6 +306,8 @@ export interface MarkdownEditorHandle {
 // plus courants (JS/TS, Python, C/C++/C#, Java, HTML/CSS, JSON, Bash, SQL,
 // YAML...) sans alourdir le bundle avec les ~190 langages disponibles.
 const lowlight = createLowlight(common);
+/** Langues de coloration syntaxique proposées par la pastille de langage
+ *  des blocs de code. */
 export const CODE_BLOCK_LANGUAGES = Object.keys(common).sort();
 
 /** Échelle de tailles de police (en pt) — partagée entre le menu "Taille"
@@ -897,6 +901,8 @@ function applyRowHeight(editor: Editor, tablePos: number, rowIndex: number, heig
   editor.view.dispatch(tr);
 }
 
+/** État contextuel remonté en continu à App : sélection active, tableaux,
+ *  formules, diagrammes, en-tête/pied, sommaire — pilotent ruban et panneaux. */
 export interface EditorStats {
   words: number;
   characters: number;
@@ -981,6 +987,8 @@ interface MarkdownEditorProps {
   readOnly?: boolean;
 }
 
+/** Éditeur complet : ProseMirror INVISIBLE + couche peinte paginée (voir
+ *  pagination/README.md) — le composant central de Pagina. */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
   ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, onZoomChange, readOnly = false }, ref) => {
     const loadedContentRef = useRef(initialContent);

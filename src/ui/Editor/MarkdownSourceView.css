@@ -1,3 +1,7 @@
+/*
+ * Vue source Markdown (Vue → Source) : zone de texte brute affichant le
+ * fichier .md tel qu'enregistré sur disque, commentaires HTML compris.
+ */
 .xmd-source-wrap {
   flex: 1;
   display: flex;

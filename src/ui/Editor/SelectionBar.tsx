@@ -17,6 +17,8 @@ import "./SelectionBar.css";
 
 const run = (editor: Editor) => editor.chain().focus(undefined, { scrollIntoView: false });
 
+/** Mini-barre flottante de mise en forme au-dessus de la sélection
+ *  (G I S, exposant/indice, lien, couleur, surlignage). */
 export function SelectionBar({ editor, left, top }: { editor: Editor; left: number; top: number }) {
   const mark = (name: string, label: React.ReactNode, title: string, toggle: () => void, extraClass = "") => (
     <button

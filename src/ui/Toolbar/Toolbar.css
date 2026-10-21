@@ -1,3 +1,8 @@
+/*
+ * Ruban à la Word (.tb-*) : onglets Accueil/Format avancé, groupes avec
+ * légende en bas, boutons icônes 26px, sélecteurs .tb-select, menu
+ * Interligne (.tb-linespacing) et grille de création de tableau.
+ */
 .tb-ribbon-stack {
   display: flex;
   flex-direction: column;

@@ -74,6 +74,8 @@ const PRESETS: { key: "all" | "outside" | "inside" | "none"; label: string; titl
   { key: "none", label: "Aucune", title: "Retire la bordure des 4 côtés de chaque cellule sélectionnée" },
 ];
 
+/** Panneau contextuel des tableaux : lignes, colonnes, cellules, alignement
+ *  vertical, bordures sur schéma interactif. */
 export function TablePropertiesPanel({
   actions,
   disabled,

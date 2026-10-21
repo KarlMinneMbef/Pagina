@@ -32,6 +32,8 @@
  */
 import type { EditorView } from "@tiptap/pm/view";
 
+/** Index reconstruit à chaque repaint : lien clone peint ↔ document
+ *  ProseMirror (positions de texte, plages de cellules). */
 export interface CloneIndex {
   /** Nœud texte du clone → position PM de son premier caractère. */
   text: Map<Text, number>;
@@ -39,6 +41,7 @@ export interface CloneIndex {
   cells: Map<HTMLElement, { from: number; to: number }>;
 }
 
+/** Crée un index de clones vide — rempli pendant le parcours de paintPages. */
 export function createCloneIndex(): CloneIndex {
   return { text: new Map(), cells: new Map() };
 }

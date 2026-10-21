@@ -1,3 +1,7 @@
+/*
+ * Styles globaux de la coquille applicative : reset de base, application
+ * plein-fenêtre, polices par défaut, ascenseurs discrets façon Word.
+ */
 * {
   box-sizing: border-box;
 }

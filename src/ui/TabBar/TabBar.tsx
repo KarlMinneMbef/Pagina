@@ -1,6 +1,12 @@
+/**
+ * Barre d'onglets document : un onglet par fichier ouvert (titre tronqué,
+ * marqueur « • » si non enregistré, bouton ✕ pour fermer — confirmation si
+ * des modifications ne sont pas sauvegardées). Gérée par tabsStore.
+ */
 import type { EditorTab } from "../../core/store/tabsStore";
 import "./TabBar.css";
 
+/** Rend la barre d'onglets document (voir l'en-tête du fichier). */
 export function TabBar({
   tabs,
   activePath,

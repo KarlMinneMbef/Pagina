@@ -8,6 +8,8 @@ import { isEditableDocument } from "../types";
 import { readTextFile, writeTextFile } from "../../persistence/fileService";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../pageLayout";
 
+/** Un onglet document ouvert : chemin, contenu Markdown courant, mise en
+ *  page, état modifié, restauration de session. */
 export interface EditorTab {
   path: string;
   title: string;
@@ -60,6 +62,9 @@ interface TabsState {
   restoreSession: () => Promise<void>;
 }
 
+/** Store Zustand des onglets : ouverture/fermeture, activation, contenu,
+ *  dirty state, patchs de mise en page (patchLayout — toujours par là pour un
+ *  réglage unitaire, jamais par une capture de layout). */
 export const useTabsStore = create<TabsState>((set, get) => ({
   tabs: [],
   activePath: null,

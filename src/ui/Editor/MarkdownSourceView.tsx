@@ -7,6 +7,8 @@
  */
 import "./MarkdownSourceView.css";
 
+/** Vue « code Markdown » : le texte source brut du fichier, éditable à la
+ *  main — détail du cycle Pages/Source en tête de fichier. */
 export function MarkdownSourceView({
   value,
   onChange,

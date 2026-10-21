@@ -42,6 +42,8 @@ function numberingPreview(level: HeadingLevel, headingStyles: Record<HeadingLeve
   return segments.length > 0 ? `${segments.join(".")}. ` : "";
 }
 
+/** Panneau latéral Styles de titres : Normal + Titre 1-6 rendus avec le
+ *  FORMATAGE EXACT et le préfixe de numérotation du document. */
 export function HeadingStylesPanel({
   headingStyles,
   active,

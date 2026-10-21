@@ -18,6 +18,8 @@ import { Toolbar, type ToolbarActions } from "../ui/Toolbar/Toolbar";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../core/pageLayout";
 import "./embed.css";
 
+/** Props du composant embarqué — chaque champ est documenté dans
+ *  l'interface (contenu contrôlé, mise en page, événements, accroches DOM). */
 export interface PaginaLightProps {
   /** Contenu Markdown de départ. */
   value: string;
@@ -58,6 +60,8 @@ const STATS_INITIALES: EditorStats = {
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
 
+/** Composant EMBARQUÉ de Pagina : version légère sans Tauri ni explorateur,
+ *  pour MBEF Platform (voir docs/version-legere.md). */
 export function PaginaLight({ value, onChange, onSave, documentTitle = "Document", height = 640, resetKey = 0, readOnly = false }: PaginaLightProps) {
   // Décomposition du fichier : la config de mise en page vit hors du texte donné à l'éditeur (un commentaire
   // HTML n'a pas de nœud de schéma et disparaîtrait au premier aller-retour — voir pageLayout.ts).

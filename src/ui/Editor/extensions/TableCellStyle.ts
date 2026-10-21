@@ -17,6 +17,7 @@
 import TableCellBase from "@tiptap/extension-table-cell";
 import TableHeaderBase from "@tiptap/extension-table-header";
 
+/** Côté d'une bordure de cellule (schéma de bordures du panneau Tableau). */
 export type BorderSide = "borderTop" | "borderRight" | "borderBottom" | "borderLeft";
 
 const BORDER_SIDES: BorderSide[] = ["borderTop", "borderRight", "borderBottom", "borderLeft"];
@@ -64,6 +65,8 @@ function cellStyleAttributes() {
   return attrs;
 }
 
+/** Cellule de tableau stylée : bordures par côté, fond, alignement
+ *  vertical — repli HTML dès qu'on sort du GFM. */
 export const TableCellStyled = TableCellBase.extend({
   addAttributes() {
     return {
@@ -73,6 +76,7 @@ export const TableCellStyled = TableCellBase.extend({
   },
 });
 
+/** Cellule d'en-tête de tableau — mêmes réglages que TableCellStyled. */
 export const TableHeaderStyled = TableHeaderBase.extend({
   addAttributes() {
     return {

@@ -29,6 +29,8 @@ const ALIGNEMENTS: { value: "left" | "center" | "right" | "justify"; label: stri
   { value: "justify", label: "Justifié" },
 ];
 
+/** Fenêtre « Paragraphe » — onglet « Retrait et espacement », comme Word
+ *  (détail complet en tête de fichier). */
 export function ParagraphDialog({
   layout,
   paragraphFormat,

@@ -113,6 +113,8 @@ const SYMBOL_TABS: EqTab[] = [
   },
 ];
 
+/** Panneau Équation : champ MathLive WYSIWYG + palette de symboles,
+ *  rendu live sur la page (voir l'en-tête du fichier). */
 export function EquationPanel({
   kind,
   onInsertLatex,

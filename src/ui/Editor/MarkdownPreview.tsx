@@ -6,6 +6,7 @@
  */
 import "./MarkdownPreview.css";
 
+/** Aperçu HTML brut du document (Vue → Aperçu), sans pagination. */
 export function MarkdownPreview({ html }: { html: string }) {
   return (
     <div className="xmd-preview-wrap">

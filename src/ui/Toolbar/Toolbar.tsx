@@ -176,6 +176,8 @@ const HEADING_PREVIEW_SIZE: Record<1 | 2 | 3 | 4 | 5 | 6, number> = {
   6: 12,
 };
 
+/** Toutes les commandes du ruban, implémentées par MarkdownEditorHandle —
+ *  contrat unique entre Toolbar et l'éditeur. */
 export interface ToolbarActions {
   undo: () => void;
   redo: () => void;
@@ -303,6 +305,8 @@ const EMPTY_ACTIVE_MARKS = {
   highlight: false,
 };
 
+/** Ruban à la Word : onglets Accueil / Format avancé, groupes à légende,
+ *  coin droit Explorateur/Commenter (détail en tête de fichier). */
 export function Toolbar({
   actions,
   onToggleSidebar,

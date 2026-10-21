@@ -117,6 +117,7 @@ function PagePreview({ layout }: { layout: PageLayoutSettings }) {
   );
 }
 
+/** Boîte de dialogue Mise en page : onglets Marges, Papier, Mise en page. */
 export function PageSetupDialog({
   layout,
   onApply,

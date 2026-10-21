@@ -4,6 +4,8 @@
 import type { EditorView } from "@tiptap/pm/view";
 import { LIST_NODE_NAMES, SRC_POS_ATTR } from "./paintPages";
 
+/** Position écran du curseur, recalculée à chaque repaint pour le dessiner
+ *  dans la couche peinte. */
 export interface CaretScreenPosition {
   left: number;
   top: number;

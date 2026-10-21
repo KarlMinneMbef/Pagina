@@ -1,3 +1,6 @@
+/**
+ * Point d'entrée React : monte <App /> dans #root en mode StrictMode.
+ */
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

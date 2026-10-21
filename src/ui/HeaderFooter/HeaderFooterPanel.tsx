@@ -32,6 +32,8 @@ const VARIABLES: { token: string; label: string; title: string; icon: React.Reac
   { token: "{{modified}}", label: "Modifié le", title: "Insérer la date de modification du document", icon: <IconVarDate size={20} /> },
 ];
 
+/** Panneau d'édition de l'en-tête/pied courant : variables insérables en un
+ *  clic ({{page}}, {{title}}, champs personnalisés…). */
 export function HeaderFooterPanel({
   mode,
   onInsertVariable,

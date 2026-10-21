@@ -23,6 +23,7 @@ function renderKatex(source: string, displayMode: boolean): string {
   }
 }
 
+/** Formule EN LIGNE `$...$` — atome édité par le panneau Équation. */
 export const InlineMath = Node.create({
   name: "inlineMath",
   group: "inline",
@@ -120,6 +121,7 @@ export const InlineMath = Node.create({
   },
 });
 
+/** Formule EN BLOC `$$...$$` — même mécanique qu'InlineMath. */
 export const BlockMath = Node.create({
   name: "blockMath",
   group: "block",

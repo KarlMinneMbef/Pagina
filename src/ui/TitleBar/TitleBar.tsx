@@ -30,6 +30,8 @@ import "./TitleBar.css";
 
 const appWindow = getCurrentWindow();
 
+/** Barre de titre : actions fichier, nom du document, recherche rapide,
+ *  boutons du coin droit (voir TitleBar.css). */
 export function TitleBar({
   documentTitle,
   disabled,

@@ -1,0 +1,5 @@
+/*
+ * Feuille volontairement VIDE : substitut du CSS de l'application complète
+ * dans le build embarqué PaginaLight (le « mode léger » n'a ni ruban ni
+ * explorateur). Voir vite.lib.config.ts / vite.harness.config.ts.
+ */

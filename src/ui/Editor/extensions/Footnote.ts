@@ -37,6 +37,7 @@ declare module "@tiptap/core" {
   }
 }
 
+/** Référence de note de bas de page `[^n]` — lien vers la définition. */
 export const FootnoteReference = Node.create({
   name: "footnoteReference",
   group: "inline",
@@ -126,6 +127,8 @@ export const FootnoteReference = Node.create({
 
 const DEFINITION_RE = /^\[\^([^\]:\s]+)\]:\s?(.*)$/;
 
+/** Définition de note de bas de page (regroupées en fin de document),
+ *  contenu riche réel. */
 export const FootnoteDefinition = Node.create({
   name: "footnoteDefinition",
   group: "block",

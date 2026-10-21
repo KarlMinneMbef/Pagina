@@ -1,3 +1,8 @@
+/*
+ * Nuancier de couleurs (couleur du texte / surlignage) : grille de pastilles,
+ * ligne « personnalisée » avec <input type="color">, mémorisation de la
+ * dernière couleur choisie (2026-10-21, comme Word).
+ */
 .cp-root {
   position: relative;
   display: inline-flex;

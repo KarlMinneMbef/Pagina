@@ -1,3 +1,7 @@
+/*
+ * Poignée de redimensionnement des panneaux latéraux (glissière verticale
+ * entre l'éditeur et la colonne de panneaux).
+ */
 .rh-handle {
   position: absolute;
   top: 0;

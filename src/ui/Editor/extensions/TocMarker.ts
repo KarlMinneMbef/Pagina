@@ -172,6 +172,8 @@ export function isInsideToc(doc: any, pos: number): boolean {
   return findTocListAt(doc, pos) !== null;
 }
 
+/** Marqueur d'emplacement de sommaire — le panneau Sommaire y génère la
+ *  liste des titres réels avec liens cliquables. */
 export const TocMarker = Node.create({
   name: "tocMarker",
   group: "block",

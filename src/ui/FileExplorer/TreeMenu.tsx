@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
+/** Action du menu contextuel de l'explorateur (libellé, callback, danger). */
 export interface TreeMenuAction {
   id: string;
   label: string;

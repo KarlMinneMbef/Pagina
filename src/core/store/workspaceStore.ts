@@ -43,6 +43,7 @@ interface WorkspaceState {
   duplicateEntry: (path: string) => Promise<string>;
 }
 
+/** Concatène root + nom avec le bon séparateur (Windows/Unix). */
 export function joinPath(root: string, name: string): string {
   const sep = root.includes("\\") ? "\\" : "/";
   return root.endsWith(sep) ? `${root}${name}` : `${root}${sep}${name}`;
@@ -87,6 +88,8 @@ function flattenPaths(nodes: FileNode[], out: Set<string> = new Set()): Set<stri
   return out;
 }
 
+/** Store Zustand du dossier de travail : arborescence, chargement,
+ *  création/renommage/suppression/duplication, fichiers disparus du disque. */
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   root: null,
   tree: [],

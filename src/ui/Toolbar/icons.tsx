@@ -43,6 +43,7 @@ export function IconPaste({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Couper ». */
 export function IconCut({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -53,6 +54,7 @@ export function IconCut({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Copier ». */
 export function IconCopy({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -72,6 +74,7 @@ export function IconCodeInline({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Effacer la mise en forme » (balai). */
 export function IconClearFormat({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -95,6 +98,7 @@ export function IconBulletList({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Liste numérotée ». */
 export function IconOrderedList({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -106,6 +110,7 @@ export function IconOrderedList({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Liste de tâches ». */
 export function IconTaskList({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -117,6 +122,7 @@ export function IconTaskList({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Citation ». */
 export function IconBlockquote({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -144,6 +150,7 @@ function alignBars(shortX: number | null): ReactNode {
   );
 }
 
+/** Icône « Aligner à gauche ». */
 export function IconAlignLeft({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -152,6 +159,7 @@ export function IconAlignLeft({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Centrer ». */
 export function IconAlignCenter({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -160,6 +168,7 @@ export function IconAlignCenter({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Aligner à droite ». */
 export function IconAlignRight({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -168,6 +177,7 @@ export function IconAlignRight({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Justifier ». */
 export function IconAlignJustify({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -192,6 +202,7 @@ function indentBars(): ReactNode {
   );
 }
 
+/** Icône « Augmenter le retrait » (Tabulation +). */
 export function IconIndentIncrease({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -202,6 +213,7 @@ export function IconIndentIncrease({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Diminuer le retrait » (Tabulation −). */
 export function IconIndentDecrease({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -272,6 +284,7 @@ export function IconPageBreak({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Note de bas de page ». */
 export function IconFootnote({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -293,6 +306,7 @@ export function IconTable({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Séparateur horizontal ». */
 export function IconHorizontalRule({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -302,6 +316,7 @@ export function IconHorizontalRule({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Bloc de code ». */
 export function IconCodeBlock({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -356,6 +371,7 @@ export function IconHeader({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Pied de page ». */
 export function IconFooter({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -377,6 +393,7 @@ export function IconTocMarker({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Mettre à jour le sommaire ». */
 export function IconTocRefresh({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -399,6 +416,7 @@ export function IconMermaid({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Formule en ligne ». */
 export function IconMathInline({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -408,6 +426,7 @@ export function IconMathInline({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Formule en bloc ». */
 export function IconMathBlock({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -449,6 +468,7 @@ export function IconRowAbove({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Insérer une ligne en dessous ». */
 export function IconRowBelow({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -459,6 +479,7 @@ export function IconRowBelow({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Supprimer la ligne ». */
 export function IconRowDelete({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -469,6 +490,7 @@ export function IconRowDelete({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Insérer une colonne à gauche ». */
 export function IconColLeft({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -479,6 +501,7 @@ export function IconColLeft({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Insérer une colonne à droite ». */
 export function IconColRight({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -489,6 +512,7 @@ export function IconColRight({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Supprimer la colonne ». */
 export function IconColDelete({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -499,6 +523,7 @@ export function IconColDelete({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Fusionner les cellules ». */
 export function IconMergeCells({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -509,6 +534,7 @@ export function IconMergeCells({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Diviser la cellule ». */
 export function IconSplitCells({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -519,6 +545,7 @@ export function IconSplitCells({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Vider la cellule ». */
 export function IconClearCell({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -556,6 +583,7 @@ export function IconValignTop({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Alignement vertical : milieu ». */
 export function IconValignMiddle({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -565,6 +593,7 @@ export function IconValignMiddle({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Alignement vertical : bas ». */
 export function IconValignBottom({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -666,6 +695,7 @@ export function IconTrash({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Réglages » (engrenage). */
 export function IconGear({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>
@@ -675,6 +705,7 @@ export function IconGear({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Palette de symboles » (clavier). */
 export function IconKeyboard({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>

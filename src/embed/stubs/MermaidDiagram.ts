@@ -6,4 +6,6 @@
  */
 import { Extension } from "@tiptap/core";
 
+/** Nœud factice : les diagrammes restent des blocs de code Mermaid dans le
+ *  .md, sans moteur de rendu dans la version légère. */
 export const MermaidDiagram = Extension.create({ name: "mermaidDiagramAbsent" });

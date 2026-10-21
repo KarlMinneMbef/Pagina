@@ -1,3 +1,8 @@
+/*
+ * Barre de titre façon Word : boutons Nouveau/Enregistrer/Imprimer à
+ * gauche, nom du document, champ de RECHERCHE RAPIDE (porte sa requête dans
+ * le panneau Rechercher), Explorateur/Commenter et avatar à droite.
+ */
 .tbar {
   display: flex;
   align-items: center;

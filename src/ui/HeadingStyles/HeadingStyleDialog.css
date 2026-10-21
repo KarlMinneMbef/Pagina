@@ -1,3 +1,8 @@
+/*
+ * Dialogue « Régler les styles de titres » : police, taille, couleur et
+ * schéma de numérotation par niveau de titre, plus interligne/espacement
+ * par niveau (2026-10-21). Même châssis que les autres dialogues à la Word.
+ */
 .hs-overlay {
   position: fixed;
   inset: 0;

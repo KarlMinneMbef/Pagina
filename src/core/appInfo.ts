@@ -7,6 +7,8 @@
  */
 import pkg from "../../package.json";
 
+/** Identité de l'application (nom, version, éditeur, licence) — affichée dans
+ *  la barre de titre et les exports. La version vient de package.json. */
 export const APP_NAME = "Pagina";
 export const APP_VERSION: string = pkg.version;
 export const PUBLISHER = "Mon BE Fluides";

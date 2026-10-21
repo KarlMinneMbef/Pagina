@@ -11,6 +11,7 @@
  */
 import { Node } from "@tiptap/core";
 
+/** Nœud signet : ancre invisible posée au curseur, cible des renvois. */
 export const Bookmark = Node.create({
   name: "bookmark",
   group: "inline",

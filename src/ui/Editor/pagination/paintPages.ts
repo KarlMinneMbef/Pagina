@@ -39,6 +39,8 @@ const HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6";
  * exactement les mêmes types de nœuds pour chercher le bon niveau de clone. */
 export const LIST_NODE_NAMES = new Set(["bulletList", "orderedList", "taskList"]);
 
+/** Position ProseMirror du nœud source, posée sur chaque clone
+ *  (résolution clic/curseur — voir resolveClickPosition.ts). */
 export const SRC_POS_ATTR = "data-src-pos";
 /** Poignée de redimensionnement de colonne de tableau (voir `MarkdownEditor.tsx`
  * pour le glisser-déposer réel) — technique reprise de CasualOffice/docs
@@ -51,17 +53,22 @@ export const SRC_POS_ATTR = "data-src-pos";
  * fiable même avec des cellules fusionnées (`colspan`) dans d'autres
  * lignes, contrairement à mesurer juste la première ligne. */
 export const COL_RESIZE_HANDLE_CLASS = "xmd-col-resize-handle";
+/** Poignée de largeur de colonne : position de la table source. */
 export const COL_RESIZE_TABLE_POS_ATTR = "data-resize-table-pos";
+/** Poignée de largeur de colonne : index de la colonne. */
 export const COL_RESIZE_COL_INDEX_ATTR = "data-resize-col-index";
 /** Même principe pour la hauteur de LIGNE (voir `TableRowStyle.ts` pour
  * l'attribut, `applyRowHeight` dans `MarkdownEditor.tsx` pour l'écriture). */
 export const ROW_RESIZE_HANDLE_CLASS = "xmd-row-resize-handle";
+/** Poignée de hauteur de ligne : position de la table source. */
 export const ROW_RESIZE_TABLE_POS_ATTR = "data-resize-table-pos";
+/** Poignée de hauteur de ligne : index de la ligne. */
 export const ROW_RESIZE_ROW_INDEX_ATTR = "data-resize-row-index";
 /** Porte le modèle BRUT (avec variables `{{page}}` non résolues) — permet à
  * l'édition en place (voir MarkdownEditor.tsx) de retrouver le texte à
  * éditer plutôt que sa version déjà substituée pour l'affichage. */
 export const HEADER_TEMPLATE_ATTR = "data-header-template";
+/** Gabarit d'en-tête/pied peint sur chaque page. */
 export const FOOTER_TEMPLATE_ATTR = "data-footer-template";
 
 /** Réglages d'en-tête/pied de page étendus pour la peinture : `text` est
@@ -161,6 +168,7 @@ function injectRowResizeHandles(originalWrapper: HTMLElement, cloneWrapper: HTML
   }
 }
 
+/** Paramètres d'un repaint : éditeur, conteneur, mise en page, zoom, index. */
 export interface PaintPagesOptions {
   pageHeightPx: number;
   marginTopPx: number;
@@ -172,6 +180,7 @@ export interface PaintPagesOptions {
   context: Omit<HeaderFooterContext, "page" | "pages">;
 }
 
+/** Résultat d'un repaint : pages peintes, hauteur totale, index à jour. */
 export interface PaintResult {
   pageCount: number;
   /** Index des clones peints (voir cloneIndex.ts) : nœuds texte du clone

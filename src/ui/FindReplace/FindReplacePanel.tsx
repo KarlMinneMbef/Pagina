@@ -24,6 +24,9 @@ import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import { IconTrash } from "../Toolbar/icons";
 import "./FindReplacePanel.css";
 
+/** Panneau latéral Rechercher/Remplacer : résultats avec contexte,
+ *  Remplacer / Tout remplacer, casse et mots entiers — ouvert par Ctrl+F ou
+ *  le champ de la barre de titre. */
 export function FindReplacePanel({
   seed = "",
   onListMatches,

@@ -19,6 +19,8 @@ import { useState } from "react";
 import type { DocumentCustomProperty, PageLayoutSettings } from "../../core/pageLayout";
 import "./DocumentPropertiesDialog.css";
 
+/** Fenêtre Propriétés du document (titre, sujet, auteur, mots-clés, champs
+ *  personnalisés) — comme Fichier > Informations de Word. */
 export function DocumentPropertiesDialog({
   layout,
   onApply,

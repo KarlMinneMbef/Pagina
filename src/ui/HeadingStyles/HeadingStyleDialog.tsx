@@ -38,6 +38,8 @@ const FONT_FAMILIES = [
  * document » (layout.lineHeight), les autres sont des valeurs propres. */
 const LEVEL_LINE_SPACINGS = [0, 1, 1.15, 1.5, 2, 3];
 
+/** Dialogue « Régler les styles de titres » : police, taille, couleur,
+ *  numérotation, interligne et espacement par niveau. */
 export function HeadingStyleDialog({
   layout,
   onApply,
