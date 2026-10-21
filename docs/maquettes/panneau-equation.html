@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Maquette — Panneau Équation v2 (à valider avant codage)</title>
+<style>
+  :root {
+    --sapin: #003F2B;
+    --prairie: #24AC6E;
+    --charbon: #343334;
+    --gris-label: #75766f;
+    --panneau-bg: #eeefef;
+    --panneau-line: #d0d3d4;
+    --btn: #e0e2e3;
+    --btn-hover: #d0d3d4;
+    --danger: #b3261e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: Arial, sans-serif; background: #3a3a3a; padding: 24px; color: var(--charbon); }
+  h1 { color: #fff; font-size: 18px; margin-bottom: 4px; }
+  .sous { color: #b9b9b7; font-size: 12px; margin-bottom: 24px; }
+  .scene { display: flex; gap: 18px; align-items: flex-start; }
+
+  /* --- La page A4 (factice, pour situer le panneau dans l'app) --- */
+  .page {
+    width: 380px; background: #fff; border-radius: 3px; padding: 42px 36px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35); min-height: 480px; position: relative;
+  }
+  .page h2 { font-size: 15px; color: var(--sapin); }
+  .page p { font-size: 11px; line-height: 1.55; margin-top: 10px; color: var(--charbon); }
+  .page .formule-zone {
+    margin: 18px 0; padding: 14px 10px; border: 1px dashed var(--prairie); border-radius: 6px;
+    background: #f4fcf8; text-align: center; position: relative;
+  }
+  .page .formule-zone .eq { font-family: 'Cambria Math', Georgia, serif; font-size: 19px; }
+  .page .formule-zone .eq sup { font-size: 11px; }
+  .page .formule-zone .eq sub { font-size: 11px; }
+  .etiquette {
+    position: absolute; top: -9px; left: 10px; background: var(--prairie); color: #fff;
+    font-size: 9px; padding: 1px 8px; border-radius: 8px; letter-spacing: .04em;
+  }
+  .fleche-note {
+    font-size: 10px; color: var(--prairie); font-weight: bold; margin-top: 6px;
+  }
+
+  /* --- Le panneau latéral (la maquette principale) --- */
+  .panneau {
+    width: 320px; background: var(--panneau-bg); border: 1px solid #b9b9b7;
+    border-radius: 4px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .p-header {
+    display: flex; align-items: center; padding: 9px 10px 8px 12px;
+    border-bottom: 1px solid var(--panneau-line); gap: 8px;
+  }
+  .p-titre { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; padding-left: 9px; position: relative; }
+  .p-titre::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; border-radius: 2px; background: var(--sapin); }
+  .p-kind { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--gris-label); background: var(--btn); border-radius: 4px; padding: 2px 6px; letter-spacing: .05em; }
+  .p-actions { margin-left: auto; display: flex; gap: 2px; }
+  .p-icobtn {
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; border-radius: 4px; cursor: pointer;
+    font-size: 13px; color: var(--charbon);
+  }
+  .p-icobtn:hover { background: var(--btn-hover); }
+  .p-icobtn.actif { background: var(--prairie); color: #fff; }
+  .p-icobtn.danger:hover { background: #f7e5e3; color: var(--danger); }
+
+  .p-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Champ équation */
+  .champ {
+    background: #fff; border: 1px solid var(--panneau-line); border-radius: 8px;
+    min-height: 92px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Cambria Math', Georgia, serif; font-size: 24px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.045);
+  }
+  .champ:focus { outline: none; }
+  .champ .caret { display: inline-block; width: 1.5px; height: 26px; background: var(--sapin); margin-left: 3px; vertical-align: middle; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Palette de touches DANS le panneau (remplace le clavier flottant) */
+  .clavier { border: 1px solid var(--panneau-line); border-radius: 8px; background: #fff; overflow: hidden; }
+  .clavier-tabs { display: flex; border-bottom: 1px solid var(--panneau-line); }
+  .clavier-tab {
+    flex: 1; text-align: center; font-size: 10px; padding: 5px 0; cursor: pointer;
+    color: var(--gris-label); background: #f7f7f5;
+  }
+  .clavier-tab.active { color: var(--sapin); font-weight: 700; background: #fff; border-bottom: 2px solid var(--prairie); }
+  .clavier-grille { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 8px; }
+  .touche {
+    height: 32px; display: flex; align-items: center; justify-content: center;
+    background: var(--btn); border: none; border-radius: 5px; cursor: pointer;
+    font-size: 15px; font-family: 'Cambria Math', Georgia, serif; color: var(--charbon);
+  }
+  .touche:hover { background: var(--btn-hover); }
+  .touche.surbrillance { background: #dfeff8; outline: 1px solid var(--prairie); }
+
+  .p-hint { font-size: 10px; color: var(--gris-label); line-height: 1.45; }
+
+  /* --- Annotations de maquette --- */
+  .notes { width: 300px; }
+  .note {
+    background: #fff; border-left: 3px solid var(--prairie); border-radius: 3px;
+    padding: 10px 12px; font-size: 11px; line-height: 1.5; margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .note b { color: var(--sapin); }
+  .note .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--sapin);
+    color: #fff; font-size: 10px; margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Maquette — Panneau « Équation » v2</h1>
+<p class="sous">À valider avant codage. Chiffres ① ② ③ expliqués à droite. Charte MBEF, largeur réelle du panneau (~320 px).</p>
+
+<div class="scene">
+
+  <!-- La page -->
+  <div class="page">
+    <h2>7. Dimensionnement hydraulique</h2>
+    <p>Le dimensionnement vérifie l'équation de continuité ci-dessous, avec une vitesse d'écoulement comprise entre 0,5 et 1,5 m/s.</p>
+    <div class="formule-zone">
+      <span class="etiquette">ÉDITION SUR LA PAGE ①</span>
+      <span class="eq">Q&#775; = ṁ · c<sub>p</sub> · ΔT</span>
+      <span class="caret"></span>
+    </div>
+    <p>La formule se modifie directement dans la page, à sa place réelle — le champ flotte sur la zone (cadre vert), comme l'édition de l'en-tête/pied de page. Le panneau latéral reste disponible à droite pour le clavier.</p>
+    <div class="fleche-note">① Le curseur clignote DANS la page ; la zone s'agrandit automatiquement (plus de place, plus visuel)</div>
+  </div>
+
+  <!-- Le panneau -->
+  <div class="panneau">
+    <div class="p-header">
+      <span class="p-titre">Équation <span class="p-kind">En bloc</span></span>
+      <span class="p-actions">
+        <button class="p-icobtn actif" title="Afficher/masquer les symboles (cette palette ci-dessous)">⌨</button>
+        <button class="p-icobtn danger" title="Supprimer la formule">🗑</button>
+        <button class="p-icobtn" title="Fermer le panneau">✕</button>
+      </span>
+    </div>
+    <div class="p-body">
+      <div class="champ">Q&#775; = ṁ · c<sub>p</sub> · ΔT<span class="caret"></span></div>
+      <div class="clavier">
+        <div class="clavier-tabs">
+          <div class="clavier-tab active">Basique</div>
+          <div class="clavier-tab">Grec</div>
+          <div class="clavier-tab">Opérateurs</div>
+        </div>
+        <div class="clavier-grille">
+          <button class="touche">x²</button><button class="touche">x₂</button><button class="touche"><sup>a</sup>⁄<sub>b</sub></button><button class="touche">√</button><button class="touche">( )</button><button class="touche">÷</button>
+          <button class="touche">× </button><button class="touche">±</button><button class="touche">≤</button><button class="touche">≠</button><button class="touche">→</button><button class="touche">∑</button>
+          <button class="touche surbrillance">Δ</button><button class="touche">∫</button><button class="touche">∞</button><button class="touche">≈</button><button class="touche">·</button><button class="touche">±</button>
+        </div>
+      </div>
+      <p class="p-hint">La palette remplace le clavier flottant : elle vit DANS le panneau, n'envahit jamais la page, et se replie par le bouton ⌨.</p>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="notes">
+    <div class="note"><span class="num">1</span><b>Édition sur la page.</b> Le champ MathLive flotte sur la zone de formule (mécanisme déjà éprouvé pour l'en-tête/pied). Plus de place, plus visuel — la formule est modifiée là où elle s'affiche. Le panneau garde clavier + type + suppression.</div>
+    <div class="note"><span class="num">2</span><b>Clavier intégré au panneau.</b> Palette de touches à onglets (Basique / Grec / Opérateurs) DANS le panneau latéral. Fini le clavier flottant qui recouvrait le document. Repliable par le bouton ⌨ (vert = actif).</div>
+    <div class="note"><span class="num">3</span><b>Commandes en icônes, en haut.</b> ⌨ (palette), 🗑 (supprimer la formule), ✕ (fermer) — dans l'en-tête du panneau, à côté du titre. À appliquer ensuite à TOUS les panneaux latéraux.</div>
+    <div class="note"><b>Faisabilité : oui, sans refonte.</b> ① réutilise le mécanisme du champ en-tête/pied ; ② palette maison (18 touches par onglet, insertions LaTeX dans le champ) ; ③ simple reprise de l'en-tête.</div>
+  </div>
+
+</div>
+</body>
+</html>
