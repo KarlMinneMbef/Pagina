@@ -28,6 +28,9 @@ import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialo
 import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
+import { SettingsDialog } from "./ui/Settings/SettingsDialog";
+import { UserDialog } from "./ui/User/UserDialog";
+import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
@@ -88,6 +91,11 @@ function App() {
   const [documentPropertiesOpen, setDocumentPropertiesOpen] = useState(false);
   // Fenêtre « Paragraphe — Retrait et espacement » (comme Word).
   const [paragraphDialogOpen, setParagraphDialogOpen] = useState(false);
+  // Fenêtre « Paramétrage » (préférences globales, roadmap 1.4) —
+  // indépendante des documents, peut s'ouvrir sans onglet actif.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Fenêtre « Utilisateur » (prénom + nom, roadmap 1.5 V1) — idem.
+  const [userOpen, setUserOpen] = useState(false);
   // Panneau latéral contextuel de mise en forme de tableau (voir
   // TablePropertiesPanel.tsx). S'ouvre automatiquement au FRONT MONTANT de
   // `stats.insideTable` (même principe que la bascule d'onglet ruban
@@ -307,6 +315,31 @@ function App() {
     if (!activeTab) return;
     await saveTab(activeTab.path);
   };
+
+  // Réglages globaux (fenêtre Paramétrage, roadmap 1.4) et profil
+  // utilisateur (roadmap 1.5 V1) — stores localStorage, indépendants
+  // des documents ouverts.
+  const showRulers = useSettingsStore((s) => s.showRulers);
+  const autoSave = useSettingsStore((s) => s.autoSave);
+  const autoSaveIntervalSec = useSettingsStore((s) => s.autoSaveIntervalSec);
+  const firstName = useUserStore((s) => s.firstName);
+  const lastName = useUserStore((s) => s.lastName);
+
+  // Auto-sauvegarde : enregistre l'onglet actif à intervalle régulier,
+  // uniquement s'il porte des modifications non enregistrées (dirty).
+  // Les refs gardent le timer stable — il n'est reprogrammé que si les
+  // réglages changent, pas à chaque frappe.
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const saveRef = useRef(handleSave);
+  saveRef.current = handleSave;
+  useEffect(() => {
+    if (!autoSave) return;
+    const id = setInterval(() => {
+      if (activeTabRef.current?.dirty) void saveRef.current();
+    }, autoSaveIntervalSec * 1000);
+    return () => clearInterval(id);
+  }, [autoSave, autoSaveIntervalSec]);
 
   const handleNewFile = async () => {
     if (!workspaceRoot) {
@@ -529,6 +562,10 @@ function App() {
               }
             : undefined
         }
+        /* Fenêtres globales (roadmap 1.4/1.5) : ⚙ et avatar de la barre. */
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenUser={() => setUserOpen(true)}
+        userInitials={userInitials(firstName, lastName)}
       />
       <Toolbar
         actions={actions}
@@ -587,6 +624,7 @@ function App() {
                     documentTitle={activeTab.title}
                     onLayoutChange={(layout) => updateLayout(activeTab.path, layout)}
                     zoom={zoom}
+                    showRulers={showRulers}
                     onZoomChange={(z) => setZoom(clampZoom(z))}
                   />
                 </div>
@@ -771,6 +809,8 @@ function App() {
           onClose={() => setHeadingStylesOpen(false)}
         />
       )}
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {userOpen && <UserDialog onClose={() => setUserOpen(false)} />}
     </div>
   );
 }

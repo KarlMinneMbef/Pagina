@@ -981,6 +981,9 @@ interface MarkdownEditorProps {
   onLayoutChange: (layout: PageLayoutSettings) => void;
   /** Niveau de zoom (1 = 100%), purement visuel. */
   zoom?: number;
+  /** Afficher les règles graduées (paramétrage global, roadmap 1.4) —
+   * vrai par défaut ; faux les retire complètement du layout. */
+  showRulers?: boolean;
   /** Ctrl+molette : proposition d'un nouveau niveau de zoom (paliers gérés par l'appelant). */
   onZoomChange?: (zoom: number) => void;
   /** Lecture seule (document figé) : aucune saisie possible, mais mise en page et défilement inchangés. */
@@ -990,7 +993,7 @@ interface MarkdownEditorProps {
 /** Éditeur complet : ProseMirror INVISIBLE + couche peinte paginée (voir
  *  pagination/README.md) — le composant central de Pagina. */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, onZoomChange, readOnly = false }, ref) => {
+  ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
     const loadedContentRef = useRef(initialContent);
     // Menu contextuel clic-droit sur une cellule de tableau (voir
     // `onContextMenu` plus bas) — seule pièce d'UI de ce composant gérée en
@@ -3156,11 +3159,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
          * sticky en haut du wrap ; la verticale est sticky à gauche dans la
          * ligne flex .xmd-editor-row ci-dessous (calage au défilement par
          * recomputeVRuler). */}
-        <HorizontalRuler
-          layout={layout}
-          zoom={zoom}
-          onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
-        />
+        {showRulers && (
+          <HorizontalRuler
+            layout={layout}
+            zoom={zoom}
+            onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
+          />
+        )}
 
         {/* Zone RÉELLEMENT éditable — jamais visible. Curseur, sélection,
          * undo/redo, IME : tout ProseMirror natif. Largeur initialisée à une
@@ -3192,12 +3197,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
          * .xmd-page-canvas via son ancêtre positionné .xmd-canvas-frame ;
          * un ancêtre positionné de plus désynchroniserait le curseur. */}
         <div className="xmd-editor-row">
-          <VerticalRuler
-            layout={layout}
-            zoom={zoom}
-            periods={vRulerPeriods}
-            onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
-          />
+          {showRulers && (
+            <VerticalRuler
+              layout={layout}
+              zoom={zoom}
+              periods={vRulerPeriods}
+              onMarginChange={(patch) => onLayoutChangeRef.current({ ...layoutRef.current, ...patch })}
+            />
+          )}
           <div className="xmd-canvas-frame">
             <div className="xmd-page-canvas" ref={canvasRef} />
             <div className="xmd-selection-layer" ref={selectionLayerRef} />

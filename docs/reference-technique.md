@@ -71,6 +71,10 @@ Les commandes du ruban transitent par l'interface `ToolbarActions` (prop `action
 
 `src/ui/FindReplace/FindReplacePanel.tsx` : parcourt le document Tiptap (texte des nœuds + positions ProseMirror), liste des résultats avec contexte, saut à l'occurrence, Remplacer / Tout remplacer (modifie le document via les transactions), options Respecter la casse / Mots entiers. Le champ de recherche de la barre de titre (`TabBar`) porte sa requête dans le panneau en direct (prop `findSeed`) ; Ctrl+F basculé au niveau App.
 
+## Réglages globaux et utilisateur
+
+`src/core/store/settingsStore.ts` (roadmap 1.4/1.5) : tout ce qui ne dépend PAS d'un document — persistés en localStorage (`pagina.settings`, `pagina.user`), silencieux si indisponible (même garde que `pagina.defaultPageLayout`). `useSettingsStore` (règles, auto-sauvegarde + intervalle) est lu par App (effet d'interval qui n'enregistre que les onglets `dirty`) et MarkdownEditor (prop `showRulers` : rendu conditionnel des règles, recomputeVRuler déjà gardé). `useUserStore` (prénom + nom, V1 ; la V2 MBEF/Ingenerix ne passera jamais par ce store) alimente l'avatar de la barre de titre via `userInitials()`. Fenêtres : `ui/Settings/SettingsDialog.tsx` (langue/thème/correction auto verrouillés « à venir ») et `ui/User/UserDialog.tsx`.
+
 ## Propriétés du document et variables
 
 `src/ui/PageSetup/DocumentPropertiesDialog.tsx` : titre, sujet, auteur, mots-clés, commentaires + **champs personnalisés** libres — stockés dans `pagina:config` (commentaire HTML d'en-tête). `resolveHeaderFooterText` (`core/pageLayout.ts`) substitue `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` et **chaque champ personnalisé par son propre nom** dans les en-têtes/pieds.

@@ -1,0 +1,162 @@
+/*
+ * Fenêtre « Paramétrage » (roadmap 1.4) — même châssis que les autres
+ * dialogues de l'app (overlay, barre de titre sapin, actions en bas),
+ * charte MBEF. Compacte : c'est une fenêtre d'options, pas de contenu.
+ */
+.st-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.st-dialog {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  width: 460px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  color: #343334;
+}
+
+.st-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #003f2b;
+  color: #ffffff;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+}
+
+.st-close {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.st-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.st-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.st-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.st-section-title {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #003f2b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.st-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.st-check input {
+  accent-color: #24ac6e;
+  cursor: pointer;
+}
+
+.st-check input:disabled {
+  cursor: default;
+}
+
+.st-row {
+  display: flex;
+  gap: 12px;
+}
+
+.st-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.st-field span {
+  white-space: nowrap;
+}
+
+.st-field select {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #343334;
+  background: #ffffff;
+}
+
+.st-field select:disabled {
+  background: #f0f0ee;
+  color: #8a8a8a;
+  cursor: default;
+}
+
+.st-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e4e4e2;
+}
+
+.st-actions-spacer {
+  flex: 1;
+}
+
+.st-btn {
+  padding: 6px 16px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  color: #343334;
+}
+
+.st-btn:hover {
+  background: #f0f0ee;
+}
+
+.st-btn-primary {
+  background: #003f2b;
+  border-color: #003f2b;
+  color: #ffffff;
+}
+
+.st-btn-primary:hover {
+  background: #00503a;
+}

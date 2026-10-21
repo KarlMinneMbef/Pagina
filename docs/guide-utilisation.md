@@ -14,7 +14,8 @@ Guide fonctionnel complet : chaque commande de l'application, commentée. La [r�
 8. [Impression et export PDF](#impression-et-export-pdf)
 9. [Rechercher et remplacer](#rechercher-et-remplacer)
 10. [Propriétés du document](#propriétés-du-document)
-11. [Raccourcis clavier](#raccourcis-clavier)
+11. [Paramétrage et utilisateur](#paramétrage-et-utilisateur)
+12. [Raccourcis clavier](#raccourcis-clavier)
 
 ---
 
@@ -210,6 +211,15 @@ Bouton **Propriétés** du ruban Accueil (comme Fichier > Informations dans Word
 - **Titre, Sujet, Auteur, Mots-clés, Commentaires** ; dates de création/modification.
 - **Champs personnalisés** libres : chacun devient une variable utilisable dans les en-têtes/pieds par son propre nom (ex. champ `Chantier` → `{{Chantier}}`).
 - Tout est enregistré **dans le document** (commentaire de configuration invisible).
+
+---
+
+## Paramétrage et utilisateur
+
+Deux fenêtres **globales** (rien n'est enregistré dans les documents, tout reste sur ce poste) :
+
+- **Paramétrage** (bouton ⚙ de la barre de titre) : afficher/masquer les règles graduées ; auto-sauvegarde du document en cours de modification avec intervalle (30 s à 5 min) ; langue, thème et correction automatique verrouillés « à venir ».
+- **Utilisateur** (clic sur l'avatar, coin droit de la barre de titre) : votre prénom et nom — les initiales s'affichent dans l'avatar (« ? » tant que rien n'est renseigné). La connexion au serveur MBEF (Ingenerix) arrivera dans une version ultérieure.
 
 ---
 
