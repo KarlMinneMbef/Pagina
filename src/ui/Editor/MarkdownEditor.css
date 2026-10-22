@@ -972,11 +972,20 @@ math-virtual-keyboard {
  * reste du texte normal à l'impression (fond conservé : c'est du
  * CONTENU, pas un repère d'édition). */
 .xmd-docfield {
-  background: #dfeff8;
-  border-bottom: 1px dotted #2479a5;
+  /* Fond translucide + couleur héritée : lisible sur fond clair COMME sur un
+   * bandeau sombre (le bleu pâle opaque rendait un titre blanc illisible). */
+  background: rgba(127, 127, 127, 0.18);
+  border-bottom: 1px dotted currentColor;
   border-radius: 2px;
   padding: 0 2px;
-  cursor: default;
+  color: inherit;
+  cursor: text;
+}
+
+/* Champ vide : son libellé s'affiche en grisé italique, cliquable pour le saisir. */
+.xmd-docfield-empty {
+  font-style: italic;
+  opacity: 0.6;
 }
 
 @media print {
@@ -1011,6 +1020,9 @@ math-virtual-keyboard {
     background: none !important;
     border-bottom: none !important;
     padding: 0 !important;
+  }
+  .xmd-docfield-empty {
+    visibility: hidden;
   }
 
   /* Sélection de cellules / bloc : jamais imprimée. */

@@ -405,6 +405,71 @@ export function resolveHeaderFooterText(template: string, ctx: HeaderFooterConte
   return result;
 }
 
+/** Libellé lisible d'un champ de document, affiché à sa place tant qu'il est
+ *  vide (sinon le champ est invisible et on ne sait pas où cliquer). */
+export function docFieldLabel(name: string): string {
+  const labels: Record<string, string> = {
+    title: "Titre",
+    subject: "Sujet",
+    author: "Auteur",
+    version: "Version",
+    keywords: "Mots-clés",
+    date: "Date",
+    created: "Date de création",
+    modified: "Date de modification",
+    filename: "Nom du fichier",
+  };
+  return labels[name] ?? name;
+}
+
+/** Valeur ÉDITABLE d'un champ de document ({{title}}, {{author}}…), ou `null`
+ *  si le champ est calculé (date, nom de fichier…) et ne se saisit pas. Sert à
+ *  l'édition directe d'un champ en cliquant dessus sur la page. */
+export function getEditableDocField(layout: PageLayoutSettings, name: string): string | null {
+  const props = layout.documentProperties;
+  switch (name) {
+    case "title":
+      return props?.title ?? "";
+    case "subject":
+      return props?.subject ?? "";
+    case "keywords":
+      return props?.keywords ?? "";
+    case "author":
+      return layout.author ?? "";
+    case "version":
+      return layout.documentVersion ?? "";
+    default: {
+      const custom = props?.custom?.find((c) => (c.name ?? "").trim() === name);
+      return custom ? custom.value ?? "" : null;
+    }
+  }
+}
+
+/** Nouveau layout avec la valeur d'un champ modifiée, ou `null` si le champ
+ *  n'est pas éditable (voir `getEditableDocField`). */
+export function setEditableDocField(layout: PageLayoutSettings, name: string, value: string): PageLayoutSettings | null {
+  if (getEditableDocField(layout, name) === null) return null;
+  const props = layout.documentProperties;
+  switch (name) {
+    case "title":
+    case "subject":
+    case "keywords":
+      return { ...layout, documentProperties: { ...props, [name]: value } };
+    case "author":
+      return { ...layout, author: value };
+    case "version":
+      return { ...layout, documentVersion: value };
+    default:
+      return {
+        ...layout,
+        documentProperties: {
+          ...props,
+          custom: props.custom.map((c) => ((c.name ?? "").trim() === name ? { ...c, value } : c)),
+        },
+      };
+  }
+}
+
 /** Date du jour au format JJ/MM/AAAA (pas de dépendance à une locale précise
  * du navigateur : format fixe, prévisible dans tout document imprimé). */
 export function formatTodayForHeaderFooter(): string {
