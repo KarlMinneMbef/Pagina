@@ -28,7 +28,7 @@ pub fn print_window(window: tauri::WebviewWindow) -> Result<(), String> {
     #[cfg(windows)]
     {
         use webview2_com::Microsoft::Web::WebView2::Win32::{
-            ICoreWebView2_16, COREWEBVIEW2_PRINT_DIALOG_KIND_SYSTEM,
+            ICoreWebView2_16, COREWEBVIEW2_PRINT_DIALOG_KIND_BROWSER,
         };
         use windows::core::Interface;
 
@@ -47,7 +47,10 @@ pub fn print_window(window: tauri::WebviewWindow) -> Result<(), String> {
                 // sans toucher au DOM/JS de la page — c'est précisément ce
                 // qui permet d'éviter la boucle décrite plus haut.
                 unsafe {
-                    let _ = core16.ShowPrintUI(COREWEBVIEW2_PRINT_DIALOG_KIND_SYSTEM);
+                    // Boîte de dialogue d'impression du NAVIGATEUR (Edge) : elle
+                    // affiche l'APERÇU des pages, le choix des pages, du papier et
+                    // de l'échelle — la boîte système, elle, n'a aucun aperçu.
+                    let _ = core16.ShowPrintUI(COREWEBVIEW2_PRINT_DIALOG_KIND_BROWSER);
                 }
             })
             .map_err(|e| e.to_string())?;
@@ -103,10 +106,15 @@ pub fn print_window(window: tauri::WebviewWindow) -> Result<(), String> {
 /// jamais sur une seconde boucle concurrente qu'on essaierait de piloter
 /// depuis l'intérieur de la commande.
 #[tauri::command]
-pub fn export_pdf(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
+pub fn export_pdf(
+    window: tauri::WebviewWindow,
+    path: String,
+    width_mm: f64,
+    height_mm: f64,
+) -> Result<(), String> {
     #[cfg(windows)]
     {
-        use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2_7;
+        use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment6, ICoreWebView2_7};
         use webview2_com::PrintToPdfCompletedHandler;
         use windows::core::{Interface, HSTRING};
 
@@ -141,10 +149,32 @@ pub fn export_pdf(window: tauri::WebviewWindow, path: String) -> Result<(), Stri
                     let _ = handler_emit_window.emit("pdf-export-result", error);
                     Ok(())
                 }));
-                // `None` = réglages d'impression PAR DÉFAUT — la mise en page
-                // vient déjà entièrement du CSS `@page`/`@media print` de la
-                // page, pas besoin de les piloter ici.
-                if let Err(e) = unsafe { core7.PrintToPdf(&path_wide, None, &handler) } {
+                // Réglages d'impression EXPLICITES. Avec `None`, WebView2 prend
+                // ses défauts — papier LETTER, sans couleurs de fond — et
+                // ignore le `@page { size }` du CSS : un document A4 sortait
+                // en Letter, bandeaux et surlignages perdus. On pose donc le
+                // format réel du document, des marges nulles (elles sont déjà
+                // dans le padding des pages), les fonds, et pas d'en-tête/pied
+                // du navigateur.
+                let settings = webview
+                    .environment()
+                    .cast::<ICoreWebView2Environment6>()
+                    .ok()
+                    .and_then(|env| unsafe { env.CreatePrintSettings() }.ok())
+                    .map(|st| {
+                        unsafe {
+                            let _ = st.SetPageWidth(width_mm / 25.4);
+                            let _ = st.SetPageHeight(height_mm / 25.4);
+                            let _ = st.SetMarginTop(0.0);
+                            let _ = st.SetMarginBottom(0.0);
+                            let _ = st.SetMarginLeft(0.0);
+                            let _ = st.SetMarginRight(0.0);
+                            let _ = st.SetShouldPrintBackgrounds(true);
+                            let _ = st.SetShouldPrintHeaderAndFooter(false);
+                        }
+                        st
+                    });
+                if let Err(e) = unsafe { core7.PrintToPdf(&path_wide, settings.as_ref(), &handler) } {
                     let _ = emit_window.emit("pdf-export-result", Some(e.to_string()));
                 }
             })

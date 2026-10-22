@@ -163,8 +163,10 @@ export async function pickPdfSaveLocation(defaultName: string): Promise<string |
  * (`src-tauri/src/print_commands.rs`) — aucun passage par la boîte de
  * dialogue système, contrairement à "Imprimer > Enregistrer au format PDF".
  */
-export async function exportPdf(path: string): Promise<void> {
-  return invoke("export_pdf", { path });
+export async function exportPdf(path: string, widthMm: number, heightMm: number): Promise<void> {
+  // Le format papier est transmis au côté natif : sans lui, WebView2 écrit
+  // du Letter et ignore le `@page` du CSS (voir print_commands.rs).
+  return invoke("export_pdf", { path, widthMm, heightMm });
 }
 
 // --- mapping snake_case (Rust/serde) -> camelCase (TS) ---

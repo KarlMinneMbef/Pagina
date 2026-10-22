@@ -631,6 +631,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       return { pageHeightPx, marginTopPx, marginBottomPx, contentWidthPx };
     }, [layout]);
 
+    // Format papier de l'IMPRESSION : le `@page { size }` suit le format du
+    // document (A4, Letter, paysage, dimensions libres). Une règle fixe A4
+    // faisait imprimer tous les documents en A4.
+    useEffect(() => {
+      const { widthMm, heightMm } = resolvePageSizeMm(layout);
+      let style = document.getElementById("xmd-print-page-size");
+      if (!style) {
+        style = document.createElement("style");
+        style.id = "xmd-print-page-size";
+        document.head.appendChild(style);
+      }
+      style.textContent = `@page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }`;
+    }, [layout]);
+
     const editor = useEditor({
       editable: !readOnly,
       extensions: [
