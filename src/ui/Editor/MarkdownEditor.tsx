@@ -2289,6 +2289,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             FontSize,
             Color,
             TextAlign.configure({ types: ["paragraph", "tableCell", "tableHeader"] }),
+            // ParagraphMarkdown REMPLACE le paragraphe du StarterKit : son
+            // sérialiseur garde l'ALIGNEMENT (et les retraits) en repli HTML
+            // <p style="…"> — sans lui, centrer/droiter dans le champ était
+            // silencieusement PERDU à la fermeture (remonté par l'utilisateur
+            // sur la page de garde ; même bug pour l'en-tête/pied, corrigé
+            // au passage).
+            ParagraphMarkdown,
             Table,
             TableRow,
             TableCell,
@@ -2433,6 +2440,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             FontSize,
             Color,
             TextAlign.configure({ types: ["paragraph", "tableCell", "tableHeader"] }),
+            // ParagraphMarkdown REMPLACE le paragraphe du StarterKit : son
+            // sérialiseur garde l'ALIGNEMENT (et les retraits) en repli HTML
+            // <p style="…"> — sans lui, centrer/droiter dans le champ était
+            // silencieusement PERDU à la fermeture (remonté par l'utilisateur
+            // sur la page de garde ; même bug pour l'en-tête/pied, corrigé
+            // au passage).
+            ParagraphMarkdown,
             Table,
             TableRow,
             TableCell,
