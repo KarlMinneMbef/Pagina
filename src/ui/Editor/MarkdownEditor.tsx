@@ -259,6 +259,11 @@ export interface MarkdownEditorHandle {
   insertCoverPage: (source: string, withPageBreak: boolean) => void;
   /** Remplace la source de la page de garde sélectionnée. */
   updateCoverSource: (source: string) => void;
+  /** Insère une variable de document dans la page de garde ouverte en
+   *  édition EN PLACE (rien si aucune édition en cours). */
+  insertCoverVariable: (token: string) => void;
+  /** Referme l'édition en place de la page de garde (contenu déjà appliqué). */
+  closeCoverEdit: () => void;
   /** Supprime le nœud atomique sélectionné (page de garde, diagramme…). */
   deleteSelectedNode: () => void;
   /** Met à jour la source du diagramme sélectionné (panneau
@@ -1067,6 +1072,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Fonction « refermer le champ » de l'édition en cours (commit) — pour
     // le bouton ✕ du panneau latéral (`closeHeaderFooterEdit`).
     const headerFooterCommitRef = useRef<(() => void) | null>(null);
+    // Mini-éditeur d'édition EN PLACE d'une page de garde (même mécanique
+    // que l'en-tête/pied : hôte fixe sur le corps, ruban routé via cmd()).
+    const coverMiniEditorRef = useRef<TiptapEditor | null>(null);
+    const coverEditCommitRef = useRef<(() => void) | null>(null);
+    const startCoverEditRef = useRef<(target: HTMLElement, coverPos: number) => void>(() => {});
+    const insertCoverVariableRef = useRef<(token: string) => void>(() => {});
     // Pastille « langage du bloc de code » (2026-10-17, déménagée du ruban
     // Insertion) : petit sélecteur natif posé en haut à droite du BLOC
     // PEINT contenant le curseur (les pages affichées sont des clones —
@@ -1080,7 +1091,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // du contenu Markdown ordinaire, simplement dupliqué sur chaque page —
     // le ruban s'y applique donc tel quel, AUCUNE commande dédiée) ; sinon
     // l'éditeur principal. Évalué à chaque appel, pas à la définition.
-    const cmd = () => headerMiniEditorRef.current ?? editor;
+    const cmd = () => headerMiniEditorRef.current ?? coverMiniEditorRef.current ?? editor;
     // Sélectionne (NodeSelection) le nœud formule qui vient d'être inséré —
     // l'insertion laisse le curseur APRÈS l'atome ; en le sélectionnant, le
     // panneau latéral « Équation » s'ouvre (stats.math, front montant dans
@@ -1527,6 +1538,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // Referme le champ riche en validant (les modifications sont déjà
         // appliquées en direct — il ne reste qu'à refermer).
         headerFooterCommitRef.current?.();
+      },
+      /** Insère une variable de document dans la page de garde en cours
+       *  d'édition EN PLACE (panneau latéral). */
+      insertCoverVariable: (token) => insertCoverVariableRef.current(token),
+      /** Referme l'édition en place de la page de garde. */
+      closeCoverEdit: () => {
+        coverEditCommitRef.current?.();
       },
       insertTocMarker: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
       generateToc: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
@@ -2153,6 +2171,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           sel.empty ||
           sel instanceof CellSelection ||
           headerMiniEditorRef.current ||
+          coverMiniEditorRef.current ||
           editor.isActive("codeBlock") ||
           editor.isActive("mermaid")
         ) {
@@ -2380,6 +2399,145 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       if (!el) return;
       startHeaderFooterEditRef.current(el);
       headerMiniEditorRef.current?.chain().focus("end").insertContent(token).run();
+    };
+
+    // --- Édition EN PLACE d'une page de garde (2026-10-22, demande
+    // utilisateur : « la page de garde il faudrait pour l'éditer
+    // directement dans le doc ») — même mécanique que l'en-tête/pied :
+    // mini-éditeur Tiptap POSÉ sur la zone peinte, ruban routé par
+    // cmd(), variables {{...}} tapées comme du texte brut, contenu
+    // re-sérialisé en Markdown dans l'attribut du nœud à CHAQUE frappe
+    // (le rendu résolu suit en direct, repaint par transaction).
+    const startCoverEdit = (target: HTMLElement, coverPos: number) => {
+      if (!editor) return;
+      const node = editor.state.doc.nodeAt(coverPos);
+      if (!node || node.type.name !== "coverPage") return;
+      const rect = target.getBoundingClientRect();
+
+      const host = document.createElement("div");
+      host.className = "xmd-cover-edit";
+      host.style.left = `${rect.left}px`;
+      host.style.top = `${rect.top}px`;
+      host.style.width = `${rect.width}px`;
+      host.style.minHeight = `${rect.height}px`;
+      document.body.appendChild(host);
+
+      let mini: TiptapEditor;
+      try {
+        mini = new TiptapEditor({
+          element: host,
+          extensions: [
+            StarterKit.configure({ link: { openOnClick: false } }),
+            TextStyle,
+            FontFamily,
+            FontSize,
+            Color,
+            TextAlign.configure({ types: ["paragraph", "tableCell", "tableHeader"] }),
+            Table,
+            TableRow,
+            TableCell,
+            TableHeader,
+            Markdown.configure({ html: true }),
+          ],
+          content: String(node.attrs.source ?? ""),
+          editorProps: { attributes: { class: "xmd-hf-prosemirror" } },
+        });
+      } catch (e) {
+        host.remove();
+        return;
+      }
+      coverMiniEditorRef.current = mini;
+      mini.commands.focus("end");
+
+      // Mise à jour EN DIRECT : la frappe re-sérialise le contenu en
+      // Markdown et l'écrit dans l'attribut du NŒUD (pas du layout) —
+      // le NodeView (CoverPage.ts) re-rend le contenu résolu, le
+      // repaint suit par la transaction. Si le nœud a disparu (supprimé
+      // depuis le panneau), on referme.
+      mini.on("update", () => {
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const md: string = mini.storage.markdown.getMarkdown();
+        const pos = coverPos;
+        const current = editor.state.doc.nodeAt(pos);
+        if (!current || current.type.name !== "coverPage") {
+          detach();
+          return;
+        }
+        editor.view.dispatch(
+          editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, source: md }).setMeta("addToHistory", true),
+        );
+      });
+
+      // Recalage sur la zone peinte (le clone est reconstruit à chaque
+      // repaint — le repérer par data-src-pos, comme les formules).
+      const reposition = () => {
+        const el = canvasRef.current?.querySelector<HTMLElement>(`.xmd-coverpage[data-src-pos="${coverPos}"]`);
+        const anchor = el ?? (target.isConnected ? target : null);
+        if (!anchor) return;
+        const r = anchor.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return;
+        host.style.left = `${r.left}px`;
+        host.style.top = `${r.top}px`;
+        host.style.width = `${r.width}px`;
+        host.style.minHeight = `${r.height}px`;
+      };
+      const canvasEl = canvasRef.current;
+      const resizeObserver = canvasEl ? new ResizeObserver(() => reposition()) : null;
+      if (canvasEl && resizeObserver) resizeObserver.observe(canvasEl);
+      window.addEventListener("resize", reposition);
+
+      // Referme au clic extérieur (mêmes exclusions que l'en-tête/pied :
+      // le champ, le panneau latéral, le ruban et la barre de titre).
+      const onDocMouseDown = (e: MouseEvent) => {
+        const t = e.target as Node;
+        if (host.contains(t)) return;
+        if (t instanceof Element && t.closest(".ctx-host")) return;
+        if (t instanceof Element && t.closest(".tb-ribbon-stack, .tbar")) return;
+        detach();
+      };
+      document.addEventListener("mousedown", onDocMouseDown, true);
+
+      let closed = false;
+      const detach = () => {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener("mousedown", onDocMouseDown, true);
+        resizeObserver?.disconnect();
+        window.removeEventListener("resize", reposition);
+        coverEditCommitRef.current = null;
+        coverMiniEditorRef.current = null;
+        mini.destroy();
+        host.remove();
+      };
+      coverEditCommitRef.current = detach;
+
+      host.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          detach();
+        }
+      });
+    };
+    startCoverEditRef.current = startCoverEdit;
+
+    /** Insère une variable dans l'édition EN PLACE de page de garde
+     *  ouverte ; s'il n'y en a pas, ouvre celle de la page de garde
+     *  sélectionnée et insère à la fin. */
+    insertCoverVariableRef.current = (token: string) => {
+      const mini = coverMiniEditorRef.current;
+      if (mini) {
+        mini.chain().focus().insertContent(token).run();
+        return;
+      }
+      // Pas d'édition ouverte : l'ouvrir sur la page de garde
+      // sélectionnée (NodeSelection — le panneau l'impose).
+      const selNode = (editor?.state.selection as unknown as { node?: any })?.node;
+      if (!editor || !selNode || selNode.type.name !== "coverPage") return;
+      const pos = editor.state.selection.from;
+      const el = canvasRef.current?.querySelector<HTMLElement>(`.xmd-coverpage[data-src-pos="${pos}"]`);
+      if (!el) return;
+      startCoverEditRef.current(el, pos);
+      coverMiniEditorRef.current?.chain().focus("end").insertContent(token).run();
     };
 
     // --- Édition de formule DANS LA PAGE (point ① maquette, 2026-10-21) ---
@@ -2876,6 +3034,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           if (coverPos === null) return;
           editor.commands.focus(undefined, { scrollIntoView: false });
           editor.commands.setNodeSelection(coverPos);
+          // Édition EN PLACE (demande utilisateur 2026-10-22) : le mini
+          // éditeur se pose sur la zone peinte, le panneau latéral reste
+          // pour les variables/modèle.
+          if (!coverMiniEditorRef.current) {
+            startCoverEditRef.current(coverTarget, coverPos);
+          }
           return;
         }
         // Saut de section : clic → NodeSelection (sélectionnable, Suppr le

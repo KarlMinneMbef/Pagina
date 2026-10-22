@@ -1,10 +1,11 @@
 /**
- * Panneau « Page de garde » (2026-10-22) — s'ouvre au clic sur une page
- * de garde (NodeSelection sur le nœud coverPage, même cycle que les
- * panneaux Équation/Diagramme) : source Markdown éditable en direct
- * (le bloc sur la page suit à chaque frappe), variables de document
- * insérables en un clic, « Enregistrer comme modèle » (réutilisable
- * depuis la galerie, exportable), suppression.
+ * Panneau « Page de garde » (2026-10-22, refonte édition en place) — le
+ * contenu s'édite DIRECTEMENT SUR LA PAGE (mini-éditeur posé sur la zone
+ * peinte, voir startCoverEdit dans MarkdownEditor.tsx) : ce panneau ne
+ * porte PLUS de textarea. Il garde les actions autour de l'édition :
+ * variables de document insérées au curseur de l'éditeur en place,
+ * « Enregistrer comme modèle » (réutilisable depuis la galerie,
+ * exportable), suppression.
  */
 import { useState } from "react";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
@@ -12,48 +13,26 @@ import { IconTrash } from "../Toolbar/icons";
 import { COVER_VARIABLES, addUserCoverTemplate } from "../../core/coverTemplates";
 import "./CoverPagePanel.css";
 
-/** Panneau Page de garde : édition de la source + variables + modèle. */
+/** Panneau Page de garde : variables, modèle, suppression — l'édition
+ *  du contenu se fait sur la page même. */
 export function CoverPagePanel({
   source,
-  onSourceChange,
+  onInsertVariable,
   onDelete,
   onClose,
 }: {
-  /** Source Markdown ACTUELLE du nœud (à l'ouverture seulement — le
-   * panneau garde ensuite la main sur son textarea pour le curseur). */
+  /** Source Markdown COURANTE du nœud (rafraîchie à chaque frappe via
+   *  les stats — utilisée pour « Enregistrer comme modèle »). */
   source: string;
-  /** Appelé à CHAQUE frappe (mise à jour en direct du document). */
-  onSourceChange: (source: string) => void;
+  /** Insère une variable au curseur de l'éditeur en place. */
+  onInsertVariable: (token: string) => void;
   /** Supprime la page de garde du document. */
   onDelete: () => void;
-  /** Ferme le panneau (la sélection reste). */
+  /** Ferme le panneau (l'édition en place reste ouverte). */
   onClose: () => void;
 }) {
-  const [value, setValue] = useState(source);
   const [modelName, setModelName] = useState("");
   const [savedNote, setSavedNote] = useState<string | null>(null);
-
-  const onInput = (v: string) => {
-    setValue(v);
-    onSourceChange(v);
-  };
-
-  /** Insère une variable à la position du curseur du textarea. */
-  const insertVariable = (token: string) => {
-    const ta = document.querySelector<HTMLTextAreaElement>(".cvp-source");
-    if (!ta) {
-      onInput(value + token);
-      return;
-    }
-    const start = ta.selectionStart ?? value.length;
-    const end = ta.selectionEnd ?? start;
-    const next = value.slice(0, start) + token + value.slice(end);
-    onInput(next);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + token.length, start + token.length);
-    });
-  };
 
   const saveAsModel = () => {
     const name = modelName.trim();
@@ -61,7 +40,7 @@ export function CoverPagePanel({
       setSavedNote("Donnez d'abord un nom au modèle.");
       return;
     }
-    addUserCoverTemplate({ name, source: value });
+    addUserCoverTemplate({ name, source });
     setSavedNote(`Modèle « ${name} » enregistré — visible dans la galerie.`);
     setModelName("");
   };
@@ -80,26 +59,21 @@ export function CoverPagePanel({
           },
         ]}
         onClose={onClose}
-        closeTitle="Fermer le panneau (la sélection reste)"
+        closeTitle="Fermer le panneau (l'édition reste ouverte)"
       />
       <div className="cvp-body">
+        <p className="cvp-hint">
+          Le contenu s'édite <strong>directement sur la page</strong> — cliquez dans la zone,
+          tapez, le ruban s'y applique. Les variables ci-dessous s'insèrent au curseur ; la page
+          affiche leur valeur, le fichier garde la variable.
+        </p>
         <div className="cvp-variables">
           {COVER_VARIABLES.map((v) => (
-            <button key={v.token} type="button" className="cvp-var-btn" title={v.label} onClick={() => insertVariable(v.token)}>
+            <button key={v.token} type="button" className="cvp-var-btn" title={v.label} onClick={() => onInsertVariable(v.token)}>
               {v.token}
             </button>
           ))}
         </div>
-        <textarea
-          className="cvp-source"
-          spellCheck={false}
-          value={value}
-          onChange={(e) => onInput(e.target.value)}
-          placeholder="Contenu de la page de garde (Markdown + variables)…"
-        />
-        <p className="cvp-hint">
-          Le contenu suit les variables du document (propriétés) et se met à jour sur la page à chaque frappe.
-        </p>
         <div className="cvp-model">
           <input
             type="text"
