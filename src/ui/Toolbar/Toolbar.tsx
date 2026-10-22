@@ -27,7 +27,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
-import type { GridLine } from "../Editor/MarkdownEditor";
+import type { GridLine } from "../Editor/editorTableOps";
 import { FONT_SIZE_STEPS } from "../Editor/MarkdownEditor";
 import { TableSizePicker } from "./TableSizePicker";
 import {
