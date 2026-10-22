@@ -1,6 +1,6 @@
 [package]
 name = "xmd-editor"
-version = "0.4.9"
+version = "0.4.10"
 description = "Pagina - Editeur Markdown WYSIWYG, par Mon BE Fluides"
 authors = ["Mon BE Fluides"]
 license = "MIT"
