@@ -13,7 +13,7 @@
 import { useState } from "react";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import { IconTrash } from "../Toolbar/icons";
-import { COVER_VARIABLES } from "../../core/coverTemplates";
+import { COVER_VARIABLES, COVER_THEMES } from "../../core/coverTemplates";
 import "./CoverPagePanel.css";
 
 /** Nom de variable sans accolades : "{{title}}" → "title" (DocField). */
@@ -25,6 +25,8 @@ function tokenToName(token: string): string {
 export function CoverPagePanel({
   zoneStart,
   headerFooter,
+  theme,
+  onChangeTheme,
   customVariables,
   onToggleHeaderFooter,
   onInsertField,
@@ -37,6 +39,10 @@ export function CoverPagePanel({
   zoneStart: number;
   /** En-tête/pied actuellement AFFICHÉS sur les pages de la zone ? */
   headerFooter: boolean;
+  /** Thème visuel de la zone (« » = style libre). */
+  theme: string;
+  /** Change le thème visuel de la zone. */
+  onChangeTheme: (theme: string) => void;
   /** Champs personnalisés du document (Propriétés) — même liste que le
    *  panneau En-tête/Pied. */
   customVariables: { token: string; label: string }[];
@@ -90,6 +96,16 @@ export function CoverPagePanel({
           directement sur la page avec tout l'éditeur. Les deux repères pointillés en
           marquent le début et la fin ; invisibles à l'impression.
         </p>
+        <label className="cvp-theme">
+          <span>Apparence :</span>
+          <select value={theme} onChange={(e) => onChangeTheme(e.target.value)} title="Thème visuel de la page de garde — le fichier reste du Markdown simple">
+            {COVER_THEMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="cvp-check">
           <input
             type="checkbox"

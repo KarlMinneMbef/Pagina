@@ -32,6 +32,46 @@ export interface CoverZoneInfo {
   start: number;
   end: number;
   headerFooter: boolean;
+  /** Thème visuel de la zone (« chantier »…), « » = style libre. */
+  theme: string;
+}
+
+/** Marqueur de DÉBUT : `<!-- coverzone-start[ header][ theme=nom] -->`. */
+const COVER_START_RE = /^<!--\s*coverzone-start((?:\s+header)?)(?:\s+theme=([\w-]+))?\s*-->$/i;
+
+/** Lit un marqueur de début ; `null` si la ligne n'en est pas un. Exporté
+ *  pour les tests (le parseur markdown-it l'utilise tel quel). */
+export function parseCoverZoneStartMarker(line: string): { headerFooter: boolean; theme: string } | null {
+  const m = line.trim().match(COVER_START_RE);
+  if (!m) return null;
+  return { headerFooter: !!m[1], theme: m[2] ?? "" };
+}
+
+/** Écrit un marqueur de début (inverse de `parseCoverZoneStartMarker`). */
+export function formatCoverZoneStartMarker(headerFooter: boolean, theme: string): string {
+  return `<!-- coverzone-start${headerFooter ? " header" : ""}${theme ? ` theme=${theme}` : ""} -->`;
+}
+
+/** Positions (blocs de premier niveau) du CONTENU des zones page de garde —
+ *  marqueurs exclus. Sert à écarter les titres de page de garde du sommaire
+ *  et de la numérotation (un titre de couverture n'est pas un chapitre). */
+export function coverZoneContentOffsets(doc: ProseMirrorNode): Set<number> {
+  const offsets = new Set<number>();
+  let inside = false;
+  doc.forEach((node, offset) => {
+    if (node.type.name === "coverZoneStart") inside = true;
+    else if (node.type.name === "coverZoneEnd") inside = false;
+    else if (inside) offsets.add(offset);
+  });
+  return offsets;
+}
+
+/** Le nœud à `pos` (ou son ancêtre de premier niveau) est-il dans le contenu
+ *  d'une zone page de garde ? `offsets` vient de `coverZoneContentOffsets`. */
+export function isInCoverZoneContent(doc: ProseMirrorNode, pos: number, offsets: Set<number>): boolean {
+  if (offsets.size === 0) return false;
+  const $pos = doc.resolve(pos);
+  return offsets.has($pos.depth === 0 ? pos : $pos.before(1));
 }
 
 /** Zone page de garde qui contient `pos` (curseur, ou marqueur
@@ -44,7 +84,7 @@ export function findCoverZoneAround(doc: ProseMirrorNode, pos: number): CoverZon
   let found: CoverZoneInfo | null = null;
   doc.forEach((node, offset) => {
     if (node.type.name === "coverZoneStart") {
-      open.zone = { start: offset, end: -1, headerFooter: !!node.attrs.headerFooter };
+      open.zone = { start: offset, end: -1, headerFooter: !!node.attrs.headerFooter, theme: String(node.attrs.theme ?? "") };
     } else if (node.type.name === "coverZoneEnd") {
       const zone = open.zone;
       if (zone && zone.end < 0) {
@@ -91,12 +131,12 @@ export function coverZoneIndexAt(doc: ProseMirrorNode, pos: number): number {
  *  Markdown déjà sérialisé — c'est ce qui est enregistré comme « type »
  *  réutilisable depuis le panneau latéral. Retourne "" si introuvable. */
 export function extractCoverZoneMarkdown(markdown: string, zoneIndex: number): string {
-  const re = /<!--\s*coverzone-start( header)?\s*-->[\s\S]*?<!--\s*coverzone-end\s*-->/gi;
+  const re = /<!--\s*coverzone-start[^>]*?-->[\s\S]*?<!--\s*coverzone-end\s*-->/gi;
   let m: RegExpExecArray | null;
   let i = 0;
   while ((m = re.exec(markdown)) !== null) {
     if (i === zoneIndex) {
-      const inner = m[0].replace(/<!--\s*coverzone-start( header)?\s*-->/i, "").replace(/<!--\s*coverzone-end\s*-->/i, "");
+      const inner = m[0].replace(/<!--\s*coverzone-start[^>]*?-->/i, "").replace(/<!--\s*coverzone-end\s*-->/i, "");
       return inner.trim();
     }
     i++;
@@ -156,6 +196,8 @@ export const CoverZoneStart = Node.create({
     return {
       /** false (défaut) = en-tête/pied MASQUÉS sur les pages couvertes. */
       headerFooter: { default: false },
+      /** Thème visuel (CoverTheme.ts + coverThemes.css) ; « » = aucun. */
+      theme: { default: "", renderHTML: () => ({}) },
     };
   },
 
@@ -163,7 +205,10 @@ export const CoverZoneStart = Node.create({
     return [
       {
         tag: 'div[data-type="cover-zone-start"]',
-        getAttrs: (el) => ({ headerFooter: (el as HTMLElement).getAttribute("data-header-footer") === "true" }),
+        getAttrs: (el) => ({
+          headerFooter: (el as HTMLElement).getAttribute("data-header-footer") === "true",
+          theme: (el as HTMLElement).getAttribute("data-theme") ?? "",
+        }),
       },
     ];
   },
@@ -174,6 +219,7 @@ export const CoverZoneStart = Node.create({
       mergeAttributes(HTMLAttributes, {
         "data-type": "cover-zone-start",
         "data-header-footer": node.attrs.headerFooter ? "true" : "false",
+        "data-theme": node.attrs.theme || null,
         class: "xmd-coverzone xmd-coverzone-start",
       }),
     ];
@@ -192,8 +238,7 @@ export const CoverZoneStart = Node.create({
     return {
       markdown: {
         serialize(state: any, node: any) {
-          const hf = node.attrs.headerFooter ? " header" : "";
-          state.write(`<!-- coverzone-start${hf} -->`);
+          state.write(formatCoverZoneStartMarker(!!node.attrs.headerFooter, String(node.attrs.theme ?? "")));
           state.closeBlock(node);
         },
         parse: {
@@ -204,13 +249,14 @@ export const CoverZoneStart = Node.create({
               (state: any, startLine: number, _endLine: number, silent: boolean) => {
                 const pos = state.bMarks[startLine] + state.tShift[startLine];
                 const line = state.src.slice(pos, state.eMarks[startLine]).trim();
-                const m = line.match(/^<!--\s*coverzone-start( header)?\s*-->$/i);
+                const m = parseCoverZoneStartMarker(line);
                 if (!m) return false;
                 if (silent) return true;
                 const token = state.push("coverzonestart", "div", 0);
                 token.map = [startLine, startLine + 1];
                 token.attrSet("data-type", "cover-zone-start");
-                token.attrSet("data-header-footer", m[1] ? "true" : "false");
+                token.attrSet("data-header-footer", m.headerFooter ? "true" : "false");
+                token.attrSet("data-theme", m.theme);
                 token.attrSet("class", "xmd-coverzone xmd-coverzone-start");
                 state.line = startLine + 1;
                 return true;
@@ -218,7 +264,8 @@ export const CoverZoneStart = Node.create({
             );
             markdownit.renderer.rules.coverzonestart = (tokens: any, idx: number) => {
               const token = tokens[idx];
-              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}" class="xmd-coverzone xmd-coverzone-start"></div>`;
+              const theme = token.attrGet("data-theme") ?? "";
+              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}"${theme ? ` data-theme="${theme}"` : ""} class="xmd-coverzone xmd-coverzone-start"></div>`;
             };
           },
         },

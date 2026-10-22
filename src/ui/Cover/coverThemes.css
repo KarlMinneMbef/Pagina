@@ -1,0 +1,133 @@
+/* Thèmes visuels des pages de garde (2026-10-22).
+ *
+ * Le fichier .md contient du Markdown PUR dans la zone :
+ *     # {{title}}          titre          (h1)
+ *     ## {{subject}}       sous-titre     (h2)
+ *     ### … / texte        repère / lignes de texte (h3 / p)
+ * et le MARQUEUR de début porte le thème :
+ *     <!-- coverzone-start theme=chantier -->
+ * CoverTheme.ts pose `data-cover-theme` sur chaque bloc de la zone (éditeur
+ * invisible ET clones peints) ; ces règles donnent le style PAR TYPE DE
+ * BLOC — donc stable quand on ajoute/supprime des lignes (un style par
+ * position se décalerait). Sélecteurs sans parent : valables aussi dans
+ * l'aperçu de la galerie. Couleurs : nuancier MBEF (CLAUDE.md). */
+
+/* ---------- Classique : tout centré, sobre ---------- */
+h1[data-cover-theme="classique"] {
+  text-align: center;
+  margin-top: 60px;
+  font-size: 26pt;
+  font-weight: bold;
+  color: #003f2b;
+}
+h2[data-cover-theme="classique"] {
+  text-align: center;
+  font-size: 13pt;
+  font-weight: normal;
+  color: #343334;
+}
+p[data-cover-theme="classique"] {
+  text-align: center;
+  font-size: 11pt;
+}
+h2[data-cover-theme="classique"] + p[data-cover-theme="classique"] {
+  margin-top: 100px;
+}
+
+/* ---------- Moderne : titre à gauche, filet vert, infos à droite ---------- */
+h1[data-cover-theme="moderne"] {
+  margin-top: 70px;
+  border-bottom: 3px solid #24ac6e;
+  padding-bottom: 14px;
+  font-size: 28pt;
+  font-weight: bold;
+  color: #003f2b;
+}
+h2[data-cover-theme="moderne"] {
+  font-size: 12pt;
+  font-weight: normal;
+  color: #24ac6e;
+}
+p[data-cover-theme="moderne"] {
+  text-align: right;
+  font-size: 11pt;
+  color: #75766f;
+}
+h2[data-cover-theme="moderne"] + p[data-cover-theme="moderne"] {
+  margin-top: 90px;
+  font-weight: bold;
+  color: inherit;
+}
+
+/* ---------- Technique : titre encadré de deux filets ---------- */
+h3[data-cover-theme="technique"] {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 10pt;
+  font-weight: normal;
+  color: #75766f;
+}
+h1[data-cover-theme="technique"] {
+  text-align: center;
+  border-top: 2px solid #003f2b;
+  border-bottom: 2px solid #003f2b;
+  padding: 18px 0;
+  font-size: 22pt;
+  font-weight: bold;
+  color: #003f2b;
+}
+h2[data-cover-theme="technique"] {
+  text-align: center;
+  font-size: 12pt;
+  font-weight: normal;
+  color: #343334;
+}
+p[data-cover-theme="technique"] {
+  text-align: center;
+  font-size: 11pt;
+}
+h2[data-cover-theme="technique"] + p[data-cover-theme="technique"] {
+  margin-top: 80px;
+}
+
+/* ---------- Minimal : titre seul, très aéré ---------- */
+h1[data-cover-theme="minimal"] {
+  text-align: center;
+  margin-top: 120px;
+  font-size: 20pt;
+  font-weight: normal;
+  color: #343334;
+}
+p[data-cover-theme="minimal"] {
+  text-align: center;
+  font-size: 10pt;
+  color: #75766f;
+}
+h1[data-cover-theme="minimal"] + p[data-cover-theme="minimal"] {
+  margin-top: 130px;
+}
+
+/* ---------- Chantier : bandeau vert, barre grise ---------- */
+h1[data-cover-theme="chantier"] {
+  background: #003f2b;
+  color: #ffffff;
+  padding: 18px 24px;
+  font-size: 24pt;
+  font-weight: bold;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+h2[data-cover-theme="chantier"] {
+  background: #f0f0ee;
+  color: #343334;
+  padding: 10px 24px;
+  font-size: 12pt;
+  font-weight: normal;
+  margin-top: 8px;
+}
+p[data-cover-theme="chantier"] {
+  font-size: 11pt;
+}
+h2[data-cover-theme="chantier"] + p[data-cover-theme="chantier"] {
+  margin-top: 70px;
+}

@@ -66,6 +66,7 @@ import {
   type CoverZoneInfo,
 } from "./extensions/CoverZone";
 import { DocField, setDocFieldContext, refreshAllDocFields } from "./extensions/DocField";
+import { CoverTheme } from "./extensions/CoverTheme";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { InlineMath, BlockMath } from "./extensions/Math";
@@ -91,6 +92,9 @@ import { SelectionBar } from "./SelectionBar";
 import { resolvePageSizeMm, formatTodayForHeaderFooter, type PageLayoutSettings } from "../../core/pageLayout";
 import "katex/dist/katex.min.css";
 import "./MarkdownEditor.css";
+// Après MarkdownEditor.css : à spécificité égale, les thèmes de page de garde
+// doivent l'emporter sur le style générique des titres.
+import "../Cover/coverThemes.css";
 import { keepEditorFocus } from "../focusGuard";
 import {
   getActiveBlockStyle,
@@ -309,13 +313,15 @@ export interface MarkdownEditorHandle {
    *  transparents encadrant le CONTENU NORMAL dérivé de la source du
    *  modèle (Markdown/HTML + variables {{…}} — parseur de l'éditeur),
    *  avec un saut de page optionnel juste après (voir CoverZone.ts). */
-  insertCoverZone: (source: string, withPageBreak: boolean) => void;
+  insertCoverZone: (source: string, withPageBreak: boolean, theme?: string) => void;
   /** Supprime la zone page de garde qui contient le curseur (marqueurs
    *  ET contenu). */
   deleteCoverZone: () => void;
   /** Affiche/masque l'en-tête et le pied sur les pages couvertes par la
    *  zone qui contient le curseur (propriété du marqueur de début). */
   setCoverZoneHeaderFooter: (show: boolean) => void;
+  /** Change le thème visuel de la zone au curseur (« » = style libre). */
+  setCoverZoneTheme: (theme: string) => void;
   /** Contenu Markdown COURANT de la zone qui contient le curseur — pour
    *  « Enregistrer comme type » dans le panneau latéral ; `null` si le
    *  curseur n'est dans aucune zone. */
@@ -696,6 +702,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // fonctionne (ruban, tableaux, champs de document inline).
         CoverZoneStart,
         CoverZoneEnd,
+        CoverTheme,
         // Champ de document {{variable}} inline — valeur résolue affichée
         // (comme les en-têtes/pieds), variable gardée dans le .md.
         DocField,
@@ -1078,7 +1085,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // deviennent des nœuds docField) + marqueur fin, en UNE transaction,
       // avec un saut de page optionnel juste après. Le curseur finit DANS
       // la zone (premier bloc de contenu) : le panneau latéral s'ouvre.
-      insertCoverZone: (source, withPageBreak) => {
+      insertCoverZone: (source, withPageBreak, theme = "") => {
         if (!editor) return;
         // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
         const html: string = editor.storage.markdown.parser.parse(source ?? "");
@@ -1092,7 +1099,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if (contentFrag.size > 0) contentFrag.forEach((n) => inner.push(n));
         else inner.push(schema.nodes.paragraph.create());
         const nodes = [
-          schema.nodes.coverZoneStart.create(),
+          schema.nodes.coverZoneStart.create({ theme }),
           ...inner,
           schema.nodes.coverZoneEnd.create(),
           ...(withPageBreak ? [schema.nodes.pageBreak.create()] : []),
@@ -1135,7 +1142,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if (!editor) return;
         const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
         if (!zone) return;
-        const tr = editor.state.tr.setNodeMarkup(zone.start, undefined, { headerFooter: show });
+        const startNode = editor.state.doc.nodeAt(zone.start);
+        const tr = editor.state.tr.setNodeMarkup(zone.start, undefined, { ...startNode?.attrs, headerFooter: show });
+        tr.setMeta("addToHistory", true);
+        editor.view.dispatch(tr);
+      },
+      // Thème visuel de la zone au curseur (propriété du marqueur de début).
+      setCoverZoneTheme: (theme) => {
+        if (!editor) return;
+        const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
+        if (!zone) return;
+        const startNode = editor.state.doc.nodeAt(zone.start);
+        const tr = editor.state.tr.setNodeMarkup(zone.start, undefined, { ...startNode?.attrs, theme });
         tr.setMeta("addToHistory", true);
         editor.view.dispatch(tr);
       },

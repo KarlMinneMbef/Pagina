@@ -48,6 +48,7 @@
  */
 import type { EditorView } from "@tiptap/pm/view";
 import { formatCounter, type HeadingLevel, type HeadingLevelStyle } from "../../../core/pageLayout";
+import { coverZoneContentOffsets, isInCoverZoneContent } from "./CoverZone";
 
 const PREFIX_RE = /^(?:[0-9]+|[A-Za-z]+)(?:\.(?:[0-9]+|[A-Za-z]+))*\.\s+/;
 
@@ -80,6 +81,8 @@ export function applyHeadingNumbering(view: EditorView, headingStyles: Record<He
   const counters = [0, 0, 0, 0, 0, 0];
   const tr = state.tr;
   let modified = false;
+  // Titres de page de garde : jamais numérotés (voir TocMarker.ts).
+  const coverOffsets = coverZoneContentOffsets(state.doc);
 
   state.doc.descendants((node, pos) => {
     // Saut de section avec reprise de numérotation (voir SectionBreak.ts) :
@@ -92,6 +95,7 @@ export function applyHeadingNumbering(view: EditorView, headingStyles: Record<He
       return true;
     }
     if (node.type.name !== "heading") return true;
+    if (isInCoverZoneContent(state.doc, pos, coverOffsets)) return false;
     const level = (node.attrs.level as HeadingLevel) ?? 1;
     counters[level - 1] += 1;
     for (let i = level; i < 6; i++) counters[i] = 0;

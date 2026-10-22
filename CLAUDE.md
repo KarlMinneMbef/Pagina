@@ -231,6 +231,36 @@ blocs de code.
   dans le DOM ; ne pas lui envoyer de touches système (`SendKeys`) sans accord de
   l'utilisateur, qui peut avoir la main sur sa machine.
 
+## Pages de garde (refonte du 2026-10-22, en deux temps)
+
+Retour utilisateur : « je ne peux pas bien éditer, je génère du HTML bizarre ».
+Constats (mesurés dans l'app) : le fichier contenait des `<p style="background:
+rgb(…)…">` ; les champs `{{title}}` vides étaient invisibles (bandeau vert « vide »
+impossible à remplir) et illisibles sur fond sombre ; Entrée en fin de paragraphe
+clonait le style (un bandeau de plus) ; `<strong>` + `font-weight` doublés.
+
+- **Étape 1** : champ vide = son libellé en grisé ; fond de champ translucide (couleur
+  héritée) ; clic sur un champ éditable = saisie directe (`docFieldEdit.ts`, écrit dans
+  les propriétés via `setEditableDocField`) ; Entrée en fin de paragraphe à `htmlStyle`
+  = paragraphe normal ; gras/italique/souligné de `<p style>` lus par les marques seulement.
+- **Étape 2** : le .md est du Markdown PUR (`# {{title}}`, `## {{subject}}`, lignes de
+  texte). Le marqueur de début porte `theme=nom` ; `CoverTheme.ts` pose
+  `data-cover-theme` sur chaque bloc de la zone EN DÉCORATION (l'éditeur invisible mesure
+  donc les vraies hauteurs, les clones peints l'héritent) ; `ui/Cover/coverThemes.css`
+  style PAR TYPE DE BLOC (pas par position : insérer une ligne ne décale rien). Les titres
+  de couverture sont exclus du sommaire, de la numérotation et des ancres peintes
+  (`coverZoneContentOffsets`/`isInCoverZoneContent`, appliqués dans `TocMarker.ts`,
+  `HeadingAutoNumber.ts`, `paintPages.ts` — les trois doivent rester d'accord, sinon les
+  liens du sommaire visent le mauvais `id`). Menu « Apparence » dans le panneau Page de
+  garde ; la galerie rend son aperçu avec les mêmes règles CSS. Anciens fichiers à HTML
+  inline : inchangés, en style libre. Voir `docs/format-fichier.md` §5.4.
+- Piège : `coverThemes.css` doit être importé APRÈS `MarkdownEditor.css`
+  (spécificité égale avec `.xmd-prosemirror h1` : le dernier gagne).
+- Piège de méthode : un clic Playwright à `x: 20` sur un titre de couverture tombe sur le
+  champ (qui ouvre sa saisie) — viser à droite du champ pour placer le curseur.
+- Piège de méthode : appuyer sur `End` puis `Enter` sans pause ne suffit pas, PM lit la
+  sélection native de façon asynchrone — attendre ~300 ms entre les deux dans un script.
+
 ## Audit de code (2026-10-22)
 
 Inventaire par `knip` (code mort) et `jscpd` (doublons) : `tsc` propre,
