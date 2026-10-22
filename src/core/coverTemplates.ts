@@ -34,9 +34,7 @@ export const BUILTIN_COVER_TEMPLATES: CoverTemplate[] = [
   {
     name: "Moderne",
     source: [
-      "---",
-      "",
-      '<p style="font-size: 28pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
+      '<p style="margin-top: 70px; border-bottom: 3px solid #24ac6e; padding-bottom: 14px; font-size: 28pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
       "",
       '<p style="font-size: 12pt; color: #24ac6e;">{{subject}}</p>',
       "",
@@ -50,11 +48,7 @@ export const BUILTIN_COVER_TEMPLATES: CoverTemplate[] = [
     source: [
       '<p style="text-align: center; margin-top: 40px; font-size: 10pt; color: #75766f;">MON BE FLUIDES — ÉTUDES</p>',
       "",
-      "---",
-      "",
-      '<p style="text-align: center; font-size: 22pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
-      "",
-      "---",
+      '<p style="text-align: center; border-top: 2px solid #003f2b; border-bottom: 2px solid #003f2b; padding: 18px 0; font-size: 22pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
       "",
       '<p style="text-align: center; font-size: 12pt;">{{subject}}</p>',
       "",
