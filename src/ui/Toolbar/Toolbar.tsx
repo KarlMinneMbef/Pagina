@@ -28,7 +28,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import type { GridLine } from "../Editor/editorTableOps";
-import { FONT_SIZE_STEPS } from "../Editor/MarkdownEditor";
+import { FONT_SIZE_STEPS } from "../Editor/editorUtils";
 import { TableSizePicker } from "./TableSizePicker";
 import {
   IconAlignCenter,
