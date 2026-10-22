@@ -1704,7 +1704,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       mini.on("update", () => {
         const current = layoutRef.current;
         // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
-        const md: string = mini.storage.markdown.getMarkdown();
+        const rawMd: string = mini.storage.markdown.getMarkdown();
+        // Champ vidé : le sérialiseur écrit le marqueur de paragraphe vide —
+        // inutile ici (et il contient `-->`), on stocke une chaîne vide.
+        const md = rawMd.trim() === "<!-- empty-line -->" ? "" : rawMd;
         onLayoutChangeRef.current({ ...current, [field]: { ...current[field], text: md } });
       });
 

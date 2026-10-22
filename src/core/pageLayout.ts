@@ -456,7 +456,14 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
   for (let i = 0; i < 2; i++) {
     const match = content.match(LEADING_PAGINA_COMMENT_RE);
     if (!match) break;
-    const [full, kind, payload] = match;
+    let [full, kind, payload] = match;
+    if (kind === "config") {
+      const repaired = repairTruncatedConfig(content, payload);
+      if (repaired) {
+        full = repaired.full;
+        payload = repaired.payload;
+      }
+    }
     content = content.slice(full.length);
     if (kind !== "config") continue; // "generator" est purement informatif, jamais reparsé
     try {
@@ -500,6 +507,46 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
   return { layout, content };
 }
 
+/**
+ * Répare un commentaire de config COUPÉ trop tôt : d'anciennes versions
+ * écrivaient le JSON tel quel, or un texte d'en-tête/pied de page contenant
+ * `-->` (typiquement `<!-- empty-line -->` après avoir vidé le champ) fermait
+ * le commentaire HTML au milieu du JSON — le reste fuyait dans le document
+ * comme du texte visible. On cherche le premier `-->` suivant qui donne un
+ * JSON valide. Retourne `null` si le JSON lu tel quel est déjà valide.
+ */
+function repairTruncatedConfig(content: string, firstPayload: string): { full: string; payload: string } | null {
+  try {
+    JSON.parse(firstPayload);
+    return null;
+  } catch {
+    // coupé ou corrompu : on tente d'étendre ci-dessous
+  }
+  const prefix = content.match(/^<!--\s*pagina:config\s+/);
+  if (!prefix) return null;
+  let from = prefix[0].length;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const end = content.indexOf("-->", from);
+    if (end < 0) return null;
+    const payload = content.slice(prefix[0].length, end).trim();
+    try {
+      JSON.parse(payload);
+      const trailing = content.slice(end + 3).match(/^\s*\n?/)?.[0] ?? "";
+      return { full: content.slice(0, end + 3) + trailing, payload };
+    } catch {
+      from = end + 3;
+    }
+  }
+  return null;
+}
+
+/** Rend un JSON sûr dans un commentaire HTML : `-->` à l'intérieur d'une
+ * chaîne fermerait le commentaire. L'échappement JSON de `>` (u003e) est
+ * valide et `JSON.parse` le restitue tel quel à la lecture. */
+function escapeForHtmlComment(json: string): string {
+  return json.replace(/-->/g, "--\\u003e");
+}
+
 /** Date du jour au format AAAA-MM-JJ (propriétés du document). */
 function dateDuJourISO(): string {
   const d = new Date();
@@ -510,7 +557,7 @@ function dateDuJourISO(): string {
 /** Construit le commentaire de config à écrire en tête de fichier. */
 function serializeDocumentConfig(layout: PageLayoutSettings): string {
   const stored: StoredDocumentConfig = { configVersion: CONFIG_SCHEMA_VERSION, layout };
-  return `${CONFIG_COMMENT_PREFIX}${JSON.stringify(stored)}${CONFIG_COMMENT_SUFFIX}`;
+  return `${CONFIG_COMMENT_PREFIX}${escapeForHtmlComment(JSON.stringify(stored))}${CONFIG_COMMENT_SUFFIX}`;
 }
 
 /** Construit le commentaire d'identité de l'outil (voir `appInfo.ts`),
@@ -523,7 +570,7 @@ function serializeGeneratorComment(): string {
     website: PUBLISHER_WEBSITE,
     license: LICENSE_NOTE,
   };
-  return `${GENERATOR_COMMENT_PREFIX}${JSON.stringify(info)}${GENERATOR_COMMENT_SUFFIX}`;
+  return `${GENERATOR_COMMENT_PREFIX}${escapeForHtmlComment(JSON.stringify(info))}${GENERATOR_COMMENT_SUFFIX}`;
 }
 
 /** Réassemble le contenu complet du fichier (generator + config + corps)
