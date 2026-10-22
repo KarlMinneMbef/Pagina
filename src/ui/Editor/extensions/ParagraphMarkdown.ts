@@ -141,6 +141,10 @@ export const ParagraphMarkdown = ParagraphBase.extend({
     const clampCm = (v: number) =>
       Math.max(0, Math.min(INDENT_MAX_CM, Math.round((Number.isFinite(v) ? v : 0) * 100) / 100));
     return {
+      // Commandes de base de Paragraph (setParagraph…) : `addCommands`
+      // d'une extension étendue REMPLACE celui du parent — sans ce spread,
+      // le bouton « Normal » du ruban ne faisait plus rien.
+      ...this.parent?.(),
       increaseParagraphIndent:
         () =>
         ({ commands, editor }: { commands: any; editor: any }) =>
@@ -160,6 +164,7 @@ export const ParagraphMarkdown = ParagraphBase.extend({
     // Raccourcis de Word : Ctrl+M augmente le retrait, Ctrl+Shift+M le
     // diminue (Cmd/Ctrl selon la plateforme via « Mod »).
     return {
+      ...this.parent?.(),
       "Mod-Shift-m": () => this.editor.commands.decreaseParagraphIndent(),
       "Mod-m": () => this.editor.commands.increaseParagraphIndent(),
     };
