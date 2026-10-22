@@ -8,8 +8,9 @@
  * Le contenu d'un modèle est du Markdown normal avec du HTML inline pour
  * la mise en forme (centrage, tailles — rendu par le parseur de l'éditeur,
  * `html: true`) et les VARIABLES de document (`{{title}}`, `{{author}}`,
- * `{{date}}`… substituées à l'affichage comme les en-têtes/pieds, voir
- * CoverPage.ts). VOLONTAIREMENT PAS D'IMAGES pour l'instant (décision
+ * `{{date}}`… insérées comme CHAMPS résolus — voir DocField.ts ; la
+ * galerie insère le contenu dans une ZONE page de garde, voir
+ * CoverZone.ts). VOLONTAIREMENT PAS D'IMAGES pour l'instant (décision
  * utilisateur 2026-10-22 : avec le format .xmd).
  */
 

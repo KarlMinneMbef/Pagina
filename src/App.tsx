@@ -29,6 +29,7 @@ import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { SectionBreakDialog } from "./ui/Section/SectionBreakDialog";
 import { CoverGalleryDialog } from "./ui/Cover/CoverGalleryDialog";
+import { addUserCoverTemplate } from "./core/coverTemplates";
 import { CoverPagePanel } from "./ui/Cover/CoverPagePanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { SettingsDialog } from "./ui/Settings/SettingsDialog";
@@ -59,7 +60,7 @@ const EMPTY_STATS: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
-  cover: null,
+  coverZone: null,
 };
 
 function App() {
@@ -128,8 +129,9 @@ function App() {
   // — ouvertes depuis l'onglet Insertion du ruban.
   const [sectionBreakDialogOpen, setSectionBreakDialogOpen] = useState(false);
   const [coverGalleryOpen, setCoverGalleryOpen] = useState(false);
-  // Panneau « Page de garde » : même front montant que le panneau
-  // Diagramme, piloté par stats.cover (NodeSelection sur le bloc).
+  // Panneau « Page de garde » : front montant piloté par stats.coverZone
+  // (le curseur entre dans la zone transparente, voir CoverZone.ts) —
+  // même cycle que le panneau Tableau.
   const [coverPanelOpen, setCoverPanelOpen] = useState(false);
   const wasCoverSelRef = useRef(false);
   const wasMermaidSelRef = useRef(false);
@@ -145,14 +147,14 @@ function App() {
   }, [stats.mermaid]);
   useEffect(() => {
     const was = wasCoverSelRef.current;
-    wasCoverSelRef.current = !!stats.cover;
-    if (stats.cover && !was) {
+    wasCoverSelRef.current = !!stats.coverZone;
+    if (stats.coverZone && !was) {
       setCoverPanelOpen(true);
       setCtxTab("page-de-garde");
-    } else if (!stats.cover && was) {
+    } else if (!stats.coverZone && was) {
       setCoverPanelOpen(false);
     }
-  }, [stats.cover]);
+  }, [stats.coverZone]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -696,7 +698,7 @@ function App() {
                 ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
                 ...(findReplaceOpen ? [{ id: "rechercher", label: "Rechercher" }] : []),
                 ...(mermaidPanelOpen && stats.mermaid ? [{ id: "diagramme", label: "Diagramme" }] : []),
-                ...(coverPanelOpen && stats.cover ? [{ id: "page-de-garde", label: "Page de garde" }] : []),
+                ...(coverPanelOpen && stats.coverZone ? [{ id: "page-de-garde", label: "Page de garde" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
@@ -796,13 +798,22 @@ function App() {
               )}
             {ctxTab === "page-de-garde" &&
               coverPanelOpen &&
-              stats.cover &&
+              stats.coverZone &&
               editorRef.current && (
                 <CoverPagePanel
-                  key={stats.cover.pos}
-                  source={stats.cover.source}
-                  onInsertVariable={(token) => editorRef.current?.insertCoverVariable(token)}
-                  onDelete={() => editorRef.current?.deleteSelectedNode()}
+                  key={stats.coverZone.start}
+                  zoneStart={stats.coverZone.start}
+                  headerFooter={stats.coverZone.headerFooter}
+                  customVariables={(activeTab?.layout.documentProperties?.custom ?? [])
+                    .filter((c) => c.name.trim() !== "")
+                    .map((c) => ({ token: `{{${c.name.trim()}}}`, label: c.name.trim() }))}
+                  onToggleHeaderFooter={(show) => editorRef.current?.setCoverZoneHeaderFooter(show)}
+                  onInsertField={(name) => editorRef.current?.insertDocField(name)}
+                  onSaveAsType={(name) => {
+                    const source = editorRef.current?.getCoverZoneSource();
+                    if (source != null) addUserCoverTemplate({ name, source });
+                  }}
+                  onDelete={() => editorRef.current?.deleteCoverZone()}
                   onClose={() => setCoverPanelOpen(false)}
                 />
               )}
@@ -856,7 +867,7 @@ function App() {
       )}
       {coverGalleryOpen && activeTab && (
         <CoverGalleryDialog
-          onInsert={(source, withPageBreak) => editorRef.current?.insertCoverPage(source, withPageBreak)}
+          onInsert={(source, withPageBreak) => editorRef.current?.insertCoverZone(source, withPageBreak)}
           onClose={() => setCoverGalleryOpen(false)}
         />
       )}

@@ -190,6 +190,15 @@ export const ParagraphMarkdown = ParagraphBase.extend({
           if (node.attrs.textAlign || node.attrs.htmlStyle || node.attrs.indentCm > 0 || node.attrs.indentRightCm > 0) {
             const div = document.createElement("div");
             div.appendChild(DOMSerializer.fromSchema(this.editor.schema).serializeNode(node));
+            // Champs de document {{…}} (DocField.ts) : le repli HTML rend le
+            // nœud comme un <span> vide — remplacé par la VARIABLE LISIBLE
+            // {{name}}, ce que l'analyseur reconvertit en champ à la
+            // réouverture (round-trip). Sans ça, les pages de garde — dont
+            // les paragraphes ont presque TOUS un style (centrage, tailles)
+            // — perdaient leurs variables au premier enregistrement.
+            div.querySelectorAll("span[data-type='doc-field']").forEach((span) => {
+              span.replaceWith(document.createTextNode(`{{${span.getAttribute("data-name") ?? ""}}}`));
+            });
             state.write(div.innerHTML);
             state.closeBlock(node);
             return;

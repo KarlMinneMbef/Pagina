@@ -155,22 +155,44 @@ projets"). Constats et actions :
     saut de section sauvegardé ne se RELISAIT PAS (silencieusement
     supprimé au prochain enregistrement) ; le décodeur accepte
     maintenant les deux formes.
-  - **Pages de garde** : extension `CoverPage.ts` — nœud atome avec
-    `source` Markdown en attribut (`<!-- coverpage: <URI> -->`),
-    rendu RÉSOLU par NodeView : les variables ({{title}}, {{author}},
-    {{date}}…) sont substituées à l'affichage comme les en-têtes/pieds
-    (fournisseurs `setCoverRenderProviders` + `refreshAllCoverPages`
-    posés par MarkdownEditor, re-résolution à chaque changement de
-    propriétés). Galerie (`ui/Cover/CoverGalleryDialog.tsx`) : 5
-    modèles intégrés charte MBEF (Classique/Moderne/Technique/Minimal/
-    Chantier), aperçu papier, saut de page optionnel après. Panneau
-    contextuel (CoverPagePanel) au clic sur la page : source + variables
-    insérables + « Enregistrer comme modèle » (localStorage
-    `pagina.coverTemplates`) ; export/import JSON par dialogues natifs
-    (fileService). PAS D'IMAGES pour l'instant (décision utilisateur —
-    avec le format .xmd). Le clic sur les blocs atomes cover/section
-    pose un NodeSelection (cas du mousedown, comme Mermaid — un atome
-    ne passe pas posFromEvent).
+  - **Pages de garde — ZONE TRANSPARENTE** (refonte 2026-10-22, demande
+    utilisateur : « une page comme les autres, traitée comme une zone code,
+    début et fin de zone, transparente ») : extension `CoverZone.ts` — deux
+    marqueurs atomes `coverZoneStart`/`coverZoneEnd` encadrant du CONTENU
+    NORMAL (`<!-- coverzone-start -->` / `<!-- coverzone-end -->` dans le
+    .md, commentaire HTML invisible ailleurs). TOUT l'éditeur fonctionne
+    dans la zone (ruban, tableaux, curseur — plus de mini-éditeur ni de
+    nœud spécial). Le marqueur de début porte `headerFooter` (false =
+    en-tête/pied MASQUÉS sur les pages couvertes — géré dans
+    `paintPages.ts` via un Set de pages calculé pendant la répartition ;
+    sérialisé `<!-- coverzone-start header -->`). Panneau contextuel
+    (CoverPagePanel, front montant sur `stats.coverZone` comme le panneau
+    Tableau) : case en-tête/pied, champs insérables, « Enregistrer comme
+    type » (extrait le Markdown de la zone via
+    `extractCoverZoneMarkdown`), suppression.
+  - **Champs de document `{{variable}}`** : extension `DocField.ts` —
+    nœud INLINE atomique (`{{name}}` dans le .md), valeur RÉSOLUE par
+    NodeView au rendu (même contexte que les en-têtes/pieds —
+    `setDocFieldContext`/`refreshAllDocFields`), utilisable PARTOUT.
+    **PIÈGE** : les variables vivent DANS des blocs HTML (`<p style=…>`)
+    que markdown-it ne tokenise PAS — le hook `updateDOM` de
+    tiptap-markdown transforme le DOM rendu (le span garde le texte
+    `{{name}}` pour que les gabarits d'en-tête/pied, qui passent par le
+    MÊME parseur puis par `resolveHeaderFooterText`, continuent de
+    substituer). **PIÈGE** : `ParagraphMarkdown` sérialise les
+    paragraphes stylés (centrage…) en HTML brut — les spans docField y
+    sont remplacés par `{{name}}` avant écriture, sinon les variables
+    des pages de garde étaient PERDUES au premier enregistrement.
+  - **Migration** : `migrateCoverMarkdown` (CoverZone.ts) convertit à
+    l'ouverture l'ancien bloc atomique `coverPage` (`<!-- coverpage … -->`
+    multi-lignes ou URI-encodé) en zone + contenu normal ; l'extension
+    `CoverPage.ts` reste enregistrée comme repli de lecture.
+  - Galerie (`ui/Cover/CoverGalleryDialog.tsx`) : 5 modèles intégrés
+    charte MBEF (Classique/Moderne/Technique/Minimal/Chantier), aperçu
+    papier, saut de page optionnel après ; les types utilisateur
+    (localStorage `pagina.coverTemplates`) ; export/import JSON par
+    dialogues natifs (fileService). PAS D'IMAGES pour l'instant
+    (décision utilisateur — avec le format .xmd).
   - Vérifié dans l'app (fichier de test dédié zz-test-sections.md,
     créé puis supprimé) : numérotation 1,2 puis REPRISE 1,2 après le
     saut de section ; sommaire global = [Partie B] ; sommaire de

@@ -56,6 +56,18 @@ import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
 import { MermaidDiagram, setMermaidRenderedCallback } from "./extensions/MermaidDiagram";
 import { SectionBreak } from "./extensions/SectionBreak";
 import { CoverPage, setCoverRenderProviders, refreshAllCoverPages } from "./extensions/CoverPage";
+import {
+  CoverZoneStart,
+  CoverZoneEnd,
+  migrateCoverMarkdown,
+  findCoverZoneAround,
+  coverZoneIndexAt,
+  extractCoverZoneMarkdown,
+  type CoverZoneInfo,
+} from "./extensions/CoverZone";
+import { DocField, setDocFieldContext, refreshAllDocFields } from "./extensions/DocField";
+import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
 import { InlineMath, BlockMath } from "./extensions/Math";
 import { applyHeadingNumbering } from "./extensions/HeadingAutoNumber";
 import {
@@ -254,16 +266,24 @@ export interface MarkdownEditorHandle {
   insertMermaidDiagram: () => void;
   /** Insère un saut de section (titre affiché + reprise de numérotation). */
   insertSectionBreak: (title: string, restart: boolean) => void;
-  /** Insère une page de garde (source Markdown + variables), avec saut
-   *  de page optionnel juste après. */
-  insertCoverPage: (source: string, withPageBreak: boolean) => void;
-  /** Remplace la source de la page de garde sélectionnée. */
-  updateCoverSource: (source: string) => void;
-  /** Insère une variable de document dans la page de garde ouverte en
-   *  édition EN PLACE (rien si aucune édition en cours). */
-  insertCoverVariable: (token: string) => void;
-  /** Referme l'édition en place de la page de garde (contenu déjà appliqué). */
-  closeCoverEdit: () => void;
+  /** Insère une zone « Page de garde » au curseur : deux marqueurs
+   *  transparents encadrant le CONTENU NORMAL dérivé de la source du
+   *  modèle (Markdown/HTML + variables {{…}} — parseur de l'éditeur),
+   *  avec un saut de page optionnel juste après (voir CoverZone.ts). */
+  insertCoverZone: (source: string, withPageBreak: boolean) => void;
+  /** Supprime la zone page de garde qui contient le curseur (marqueurs
+   *  ET contenu). */
+  deleteCoverZone: () => void;
+  /** Affiche/masque l'en-tête et le pied sur les pages couvertes par la
+   *  zone qui contient le curseur (propriété du marqueur de début). */
+  setCoverZoneHeaderFooter: (show: boolean) => void;
+  /** Contenu Markdown COURANT de la zone qui contient le curseur — pour
+   *  « Enregistrer comme type » dans le panneau latéral ; `null` si le
+   *  curseur n'est dans aucune zone. */
+  getCoverZoneSource: () => string | null;
+  /** Insère un champ de document `{{name}}` au curseur (valeur résolue
+   *  affichée, variable gardée dans le .md — voir DocField.ts). */
+  insertDocField: (name: string) => void;
   /** Supprime le nœud atomique sélectionné (page de garde, diagramme…). */
   deleteSelectedNode: () => void;
   /** Met à jour la source du diagramme sélectionné (panneau
@@ -584,13 +604,11 @@ function getMermaidAtSelection(editor: Editor): EditorStats["mermaid"] {
   return null;
 }
 
-function getCoverAtSelection(editor: Editor): EditorStats["cover"] {
-  const sel = editor.state.selection;
-  const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
-  if (selNode && selNode.type.name === "coverPage") {
-    return { pos: sel.from, source: String(selNode.attrs.source ?? "") };
-  }
-  return null;
+/** Zone page de garde contenant le curseur (ou un marqueur sélectionné) —
+ *  pilote le panneau latéral « Page de garde » (front montant dans
+ *  App.tsx, comme le panneau Tableau avec insideTable). */
+function getCoverZoneAtSelection(editor: Editor): EditorStats["coverZone"] {
+  return findCoverZoneAround(editor.state.doc, editor.state.selection.from);
 }
 
 function getMathAtSelection(editor: Editor): EditorStats["math"] {
@@ -981,9 +999,10 @@ export interface EditorStats {
    * `pos` sert de CLÉ d'identité (le panneau se remonte au changement de
    * diagramme, jamais à la frappe). */
   mermaid: { pos: number; source: string } | null;
-  /** Page de garde sous le curseur (NodeSelection sur un bloc
-   *  coverPage) — pilote le panneau latéral « Page de garde ». */
-  cover: { pos: number; source: string } | null;
+  /** Zone page de garde contenant le curseur (marqueurs transparents,
+   *  contenu NORMAL — voir CoverZone.ts) — pilote le panneau latéral
+   *  « Page de garde » ; `start` sert de clé de remontage du panneau. */
+  coverZone: CoverZoneInfo | null;
   /** Formule mathématique sélectionnée (`inlineMath`/`blockMath` — nœud
    * atomique désigné par NodeSelection, posée à l'insertion ou au clic sur
    * la formule peinte) — pilote le panneau latéral « Équation » (éditeur
@@ -1022,7 +1041,15 @@ interface MarkdownEditorProps {
  *  pagination/README.md) — le composant central de Pagina. */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
   ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
-    const loadedContentRef = useRef(initialContent);
+    // Contenu initial MIGRÉ (CoverZone.ts) : un document écrit avec
+    // l'ancien bloc atomique `coverPage` s'ouvre directement en zone
+    // transparente + contenu normal. Idempotent sur les documents
+    // récents. `loadedContentRef` doit pointer sur la MÊME chaîne que
+    // celle posée dans l'éditeur, sinon l'effet de synchronisation
+    // ci-dessous rappellerait `setContent` avec le contenu BRUT et
+    // détruirait la migration.
+    const initialContentMigrated = useMemo(() => migrateCoverMarkdown(initialContent), [initialContent]);
+    const loadedContentRef = useRef(initialContentMigrated);
     // Menu contextuel clic-droit sur une cellule de tableau (voir
     // `onContextMenu` plus bas) — seule pièce d'UI de ce composant gérée en
     // état React classique plutôt qu'en impératif/DOM direct : c'est un
@@ -1072,12 +1099,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Fonction « refermer le champ » de l'édition en cours (commit) — pour
     // le bouton ✕ du panneau latéral (`closeHeaderFooterEdit`).
     const headerFooterCommitRef = useRef<(() => void) | null>(null);
-    // Mini-éditeur d'édition EN PLACE d'une page de garde (même mécanique
-    // que l'en-tête/pied : hôte fixe sur le corps, ruban routé via cmd()).
-    const coverMiniEditorRef = useRef<TiptapEditor | null>(null);
-    const coverEditCommitRef = useRef<(() => void) | null>(null);
-    const startCoverEditRef = useRef<(target: HTMLElement, coverPos: number) => void>(() => {});
-    const insertCoverVariableRef = useRef<(token: string) => void>(() => {});
     // Pastille « langage du bloc de code » (2026-10-17, déménagée du ruban
     // Insertion) : petit sélecteur natif posé en haut à droite du BLOC
     // PEINT contenant le curseur (les pages affichées sont des clones —
@@ -1091,7 +1112,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // du contenu Markdown ordinaire, simplement dupliqué sur chaque page —
     // le ruban s'y applique donc tel quel, AUCUNE commande dédiée) ; sinon
     // l'éditeur principal. Évalué à chaque appel, pas à la définition.
-    const cmd = () => headerMiniEditorRef.current ?? coverMiniEditorRef.current ?? editor;
+    const cmd = () => headerMiniEditorRef.current ?? editor;
     // Sélectionne (NodeSelection) le nœud formule qui vient d'être inséré —
     // l'insertion laisse le curseur APRÈS l'atome ; en le sélectionnant, le
     // panneau latéral « Équation » s'ouvre (stats.math, front montant dans
@@ -1219,6 +1240,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         MermaidDiagram,
         SectionBreak,
         CoverPage,
+        // Zone « Page de garde » transparente (refonte 2026-10-22) : deux
+        // marqueurs encadrent du contenu NORMAL — tout l'éditeur y
+        // fonctionne (ruban, tableaux, champs de document inline).
+        CoverZoneStart,
+        CoverZoneEnd,
+        // Champ de document {{variable}} inline — valeur résolue affichée
+        // (comme les en-têtes/pieds), variable gardée dans le .md.
+        DocField,
         InlineMath,
         BlockMath,
         Markdown.configure({
@@ -1327,7 +1356,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
-          cover: getCoverAtSelection(editor),
+          coverZone: getCoverZoneAtSelection(editor),
           tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1523,7 +1552,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         currentPage: currentPageRef.current,
         headerFooterEditMode: headerFooterModeRef.current,
         mermaid: editor ? getMermaidAtSelection(editor) : null,
-        cover: editor ? getCoverAtSelection(editor) : null,
+        coverZone: editor ? getCoverZoneAtSelection(editor) : null,
       }),
       editHeader: () => {
         const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
@@ -1539,13 +1568,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // appliquées en direct — il ne reste qu'à refermer).
         headerFooterCommitRef.current?.();
       },
-      /** Insère une variable de document dans la page de garde en cours
-       *  d'édition EN PLACE (panneau latéral). */
-      insertCoverVariable: (token) => insertCoverVariableRef.current(token),
-      /** Referme l'édition en place de la page de garde. */
-      closeCoverEdit: () => {
-        coverEditCommitRef.current?.();
-      },
+      /** Insère un champ de document {{name}} au curseur (DocField.ts). */
+      insertDocField: (name) => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertDocField(name).run(),
       insertTocMarker: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertTocMarker().run(),
       generateToc: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).generateToc().run(),
       updateTocAtCursor: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).updateTocAtCursor().run(),
@@ -1593,24 +1617,82 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       insertSectionBreak: (title, restart) => {
         cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertSectionBreak({ title, restart }).run();
       },
-      // Page de garde (CoverPage.ts) : le bloc + un saut de page EN UNE
-      // transaction (insertContent d'un TABLEAU de nœuds) — l'insertion
-      // après un NodeSelection remplacerait la sélection, d'où le
-      // regroupement ; le curseur finit après le saut de page.
-      insertCoverPage: (source, withPageBreak) => {
-        const nodes: any[] = [{ type: "coverPage", attrs: { source } }];
-        if (withPageBreak) nodes.push({ type: "pageBreak" });
-        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent(nodes).run();
+      // Zone « Page de garde » (CoverZone.ts) : insère marqueur début +
+      // CONTENU NORMAL (source du modèle parseée par le parseur Markdown de
+      // l'éditeur — HTML inline et variables {{…}} compris, celles-ci
+      // deviennent des nœuds docField) + marqueur fin, en UNE transaction,
+      // avec un saut de page optionnel juste après. Le curseur finit DANS
+      // la zone (premier bloc de contenu) : le panneau latéral s'ouvre.
+      insertCoverZone: (source, withPageBreak) => {
+        if (!editor) return;
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const html: string = editor.storage.markdown.parser.parse(source ?? "");
+        const dom = new DOMParser().parseFromString(html, "text/html");
+        const contentFrag = ProseMirrorDOMParser.fromSchema(editor.state.schema).parse(dom.body).content;
+        const schema = editor.state.schema;
+        // Contenu de la zone : blocs du modèle, ou un paragraphe prêt à
+        // taper si le modèle est vide (sinon le curseur ne peut pas se
+        // poser entre les deux marqueurs atomes).
+        const inner: ProseMirrorNode[] = [];
+        if (contentFrag.size > 0) contentFrag.forEach((n) => inner.push(n));
+        else inner.push(schema.nodes.paragraph.create());
+        const nodes = [
+          schema.nodes.coverZoneStart.create(),
+          ...inner,
+          schema.nodes.coverZoneEnd.create(),
+          ...(withPageBreak ? [schema.nodes.pageBreak.create()] : []),
+        ];
+        // UNE SEULE insertion (Fragment complet) : une insertion au
+        // milieu d'un paragraphe le SCINDE, et la taille réellement
+        // insérée n'est PAS la somme des tailles de nœuds — les positions
+        // suivantes doivent passer par tr.mapping, pas par arithmétique
+        // manuelle (bug remonté au test : le marqueur de début atterrissait
+        // après tout le contenu).
+        const tr = editor.state.tr;
+        if (!tr.selection.empty) tr.deleteSelection();
+        const at = tr.selection.from;
+        tr.insert(at, Fragment.fromArray(nodes));
+        // Curseur DANS la zone, juste après le marqueur de début : assoc
+        // -1 → position AVANT le contenu inséré (celle du marqueur de
+        // début), +1 → juste après lui.
+        const zoneStart = tr.mapping.map(at, -1) + 1;
+        tr.setSelection(TextSelection.near(tr.doc.resolve(zoneStart), 1));
+        tr.setMeta("addToHistory", true);
+        editor.view.dispatch(tr);
+        editor.commands.focus(undefined, { scrollIntoView: false });
       },
-      // Mise à jour de la source de la page de garde SÉLECTIONNÉE
-      // (NodeSelection posé par le clic sur le bloc peint).
-      updateCoverSource: (source) => {
-        const selNode = (editor?.state.selection as unknown as { node?: any })?.node;
-        if (!editor || !selNode || selNode.type.name !== "coverPage") return;
-        editor.chain().focus(undefined, { scrollIntoView: false }).command(({ tr, state }: any) => {
-          tr.setNodeMarkup(state.selection.from, undefined, { ...selNode.attrs, source });
-          return true;
-        }).run();
+      // Supprime la zone page de garde qui contient le curseur (marqueurs
+      // + contenu), en une seule transaction (une seule entrée d'historique).
+      deleteCoverZone: () => {
+        if (!editor) return;
+        const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
+        if (!zone) return;
+        const endNode = editor.state.doc.nodeAt(zone.end);
+        const end = zone.end + (endNode?.nodeSize ?? 1);
+        const tr = editor.state.tr.delete(zone.start, end);
+        tr.setMeta("addToHistory", true);
+        editor.view.dispatch(tr);
+        editor.commands.focus(undefined, { scrollIntoView: false });
+      },
+      // En-tête/pied affichés ou masqués sur les pages couvertes par la
+      // zone au curseur (propriété portée par le marqueur de DÉBUT).
+      setCoverZoneHeaderFooter: (show) => {
+        if (!editor) return;
+        const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
+        if (!zone) return;
+        const tr = editor.state.tr.setNodeMarkup(zone.start, undefined, { headerFooter: show });
+        tr.setMeta("addToHistory", true);
+        editor.view.dispatch(tr);
+      },
+      // Contenu Markdown COURANT de la zone au curseur — sert
+      // « Enregistrer comme type » dans le panneau latéral.
+      getCoverZoneSource: () => {
+        if (!editor) return null;
+        const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
+        if (!zone) return null;
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const md: string = editor.storage.markdown.getMarkdown();
+        return extractCoverZoneMarkdown(md, coverZoneIndexAt(editor.state.doc, editor.state.selection.from));
       },
       // Supprime le nœud sélectionné (page de garde sous NodeSelection).
       deleteSelectedNode: () => {
@@ -1798,11 +1880,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
 
     // Si le contenu initial change (changement d'onglet actif), recharger l'éditeur.
     useEffect(() => {
-      if (editor && initialContent !== loadedContentRef.current) {
-        editor.commands.setContent(initialContent);
-        loadedContentRef.current = initialContent;
+      if (editor && initialContentMigrated !== loadedContentRef.current) {
+        editor.commands.setContent(initialContentMigrated);
+        loadedContentRef.current = initialContentMigrated;
       }
-    }, [initialContent, editor]);
+    }, [initialContentMigrated, editor]);
 
     // repaint() reconstruit entièrement la couche peinte (répartition en
     // pages + clones, voir paintPages.ts) et replace le curseur dessiné à la
@@ -1899,6 +1981,27 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         }),
       });
       refreshAllCoverPages();
+
+      // Champs de document {{…}} (DocField.ts) : MÊME contexte que les
+      // en-têtes/pieds et l'ancien bloc page de garde — les NodeViews
+      // résolvent la valeur avec, et le re-push à chaque changement de
+      // layout (propriétés du document modifiées) met à jour tous les
+      // champs affichés.
+      setDocFieldContext(() => ({
+        page: 1,
+        pages: 1,
+        date: formatTodayForHeaderFooter(),
+        filename: documentTitleRef.current,
+        version: layout.documentVersion,
+        author: layout.author,
+        title: layout.documentProperties?.title ?? "",
+        subject: layout.documentProperties?.subject ?? "",
+        keywords: layout.documentProperties?.keywords ?? "",
+        created: layout.documentProperties?.createdDate ?? "",
+        modified: layout.documentProperties?.modifiedDate ?? "",
+        custom: layout.documentProperties?.custom ?? [],
+      }));
+      refreshAllDocFields();
 
       const repaint = () => {
         const canvas = canvasRef.current;
@@ -2016,7 +2119,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
-          cover: getCoverAtSelection(editor),
+          coverZone: getCoverZoneAtSelection(editor),
           tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -2171,7 +2274,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           sel.empty ||
           sel instanceof CellSelection ||
           headerMiniEditorRef.current ||
-          coverMiniEditorRef.current ||
           editor.isActive("codeBlock") ||
           editor.isActive("mermaid")
         ) {
@@ -2254,7 +2356,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
-          cover: getCoverAtSelection(editor),
+          coverZone: getCoverZoneAtSelection(editor),
           tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: mode,
         });
@@ -2406,183 +2508,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       if (!el) return;
       startHeaderFooterEditRef.current(el);
       headerMiniEditorRef.current?.chain().focus("end").insertContent(token).run();
-    };
-
-    // --- Édition EN PLACE d'une page de garde (2026-10-22, demande
-    // utilisateur : « la page de garde il faudrait pour l'éditer
-    // directement dans le doc ») — même mécanique que l'en-tête/pied :
-    // mini-éditeur Tiptap POSÉ sur la zone peinte, ruban routé par
-    // cmd(), variables {{...}} tapées comme du texte brut, contenu
-    // re-sérialisé en Markdown dans l'attribut du nœud à CHAQUE frappe
-    // (le rendu résolu suit en direct, repaint par transaction).
-    const startCoverEdit = (target: HTMLElement, coverPos: number) => {
-      if (!editor) return;
-      const node = editor.state.doc.nodeAt(coverPos);
-      if (!node || node.type.name !== "coverPage") return;
-      const rect = target.getBoundingClientRect();
-
-      const host = document.createElement("div");
-      host.className = "xmd-cover-edit";
-      host.style.left = `${rect.left}px`;
-      host.style.top = `${rect.top}px`;
-      host.style.width = `${rect.width}px`;
-      host.style.minHeight = `${rect.height}px`;
-      document.body.appendChild(host);
-
-      let mini: TiptapEditor;
-      try {
-        mini = new TiptapEditor({
-          element: host,
-          extensions: [
-            StarterKit.configure({ link: { openOnClick: false } }),
-            TextStyle,
-            FontFamily,
-            FontSize,
-            Color,
-            TextAlign.configure({ types: ["paragraph", "tableCell", "tableHeader"] }),
-            // ParagraphMarkdown REMPLACE le paragraphe du StarterKit : son
-            // sérialiseur garde l'ALIGNEMENT (et les retraits) en repli HTML
-            // <p style="…"> — sans lui, centrer/droiter dans le champ était
-            // silencieusement PERDU à la fermeture (remonté par l'utilisateur
-            // sur la page de garde ; même bug pour l'en-tête/pied, corrigé
-            // au passage).
-            ParagraphMarkdown,
-            Table,
-            TableRow,
-            TableCell,
-            TableHeader,
-            Markdown.configure({ html: true }),
-          ],
-          content: String(node.attrs.source ?? ""),
-          // "xmd-prosemirror" en PLUS : le champ de page de garde doit rendre
-          // comme la PAGE (tableaux stylés, marges, titres — le rendu du
-          // résultat, retour utilisateur 2026-10-22), pas comme un champ de
-          // formulaire brut. L'en-tête/pied garde sa classe compacte.
-          editorProps: { attributes: { class: "xmd-hf-prosemirror xmd-prosemirror" } },
-        });
-      } catch (e) {
-        host.remove();
-        return;
-      }
-      coverMiniEditorRef.current = mini;
-      mini.commands.focus("end");
-
-      // Mise à jour EN DIRECT : la frappe re-sérialise le contenu en
-      // Markdown et l'écrit dans l'attribut du NŒUD (pas du layout) —
-      // le NodeView (CoverPage.ts) re-rend le contenu résolu, le
-      // repaint suit par la transaction. Si le nœud a disparu (supprimé
-      // depuis le panneau), on referme.
-      mini.on("update", () => {
-        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
-        const md: string = mini.storage.markdown.getMarkdown();
-        const pos = coverPos;
-        const current = editor.state.doc.nodeAt(pos);
-        if (!current || current.type.name !== "coverPage") {
-          detach();
-          return;
-        }
-        editor.view.dispatch(
-          editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, source: md }).setMeta("addToHistory", true),
-        );
-      });
-
-      // Recalage sur la zone peinte (le clone est reconstruit à chaque
-      // repaint — le repérer par data-src-pos, comme les formules).
-      const reposition = () => {
-        const el = canvasRef.current?.querySelector<HTMLElement>(`.xmd-coverpage[data-src-pos="${coverPos}"]`);
-        const anchor = el ?? (target.isConnected ? target : null);
-        if (!anchor) return;
-        const r = anchor.getBoundingClientRect();
-        if (r.width === 0 && r.height === 0) return;
-        host.style.left = `${r.left}px`;
-        host.style.top = `${r.top}px`;
-        host.style.width = `${r.width}px`;
-        host.style.minHeight = `${r.height}px`;
-      };
-      const canvasEl = canvasRef.current;
-      const resizeObserver = canvasEl ? new ResizeObserver(() => reposition()) : null;
-      if (canvasEl && resizeObserver) resizeObserver.observe(canvasEl);
-      window.addEventListener("resize", reposition);
-
-      // Referme au clic extérieur (mêmes exclusions que l'en-tête/pied :
-      // le champ, le panneau latéral, le ruban et la barre de titre).
-      const onDocMouseDown = (e: MouseEvent) => {
-        const t = e.target as Node;
-        if (host.contains(t)) return;
-        if (t instanceof Element && t.closest(".ctx-host")) return;
-        if (t instanceof Element && t.closest(".tb-ribbon-stack, .tbar")) return;
-        detach();
-      };
-      document.addEventListener("mousedown", onDocMouseDown, true);
-
-      let closed = false;
-      const detach = () => {
-        if (closed) return;
-        closed = true;
-        document.removeEventListener("mousedown", onDocMouseDown, true);
-        resizeObserver?.disconnect();
-        window.removeEventListener("resize", reposition);
-        coverEditCommitRef.current = null;
-        coverMiniEditorRef.current = null;
-        mini.destroy();
-        host.remove();
-      };
-      coverEditCommitRef.current = detach;
-
-      host.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          detach();
-        }
-      });
-
-      // Re-émet les stats du ruban au SIMPLE DÉPLACEMENT du curseur dans le
-      // champ : une frappe le fait déjà (transaction setNodeMarkup → onUpdate),
-      // mais un clic dans un tableau du champ doit AUSSI ouvrir le panneau
-      // « Tableau » (stats.insideTable sur l'éditeur ACTIF — voir cmd()).
-      mini.on("selectionUpdate", () => {
-        onStatsRef.current?.({
-          words: editor.storage.characterCount.words(),
-          characters: editor.storage.characterCount.characters(),
-          pageCount: pageCountRef.current,
-          currentPage: currentPageRef.current,
-          activeBlockStyle: getActiveBlockStyle(cmd()),
-          activeMarks: getActiveMarks(cmd()),
-          activeAlign: getActiveAlign(cmd()),
-          activeList: getActiveListType(cmd()),
-          activeFontFamily: currentFontFamily(cmd()),
-          activeColor: currentTextColor(cmd()),
-          activeFontSizePt: currentFontSizePt(cmd()),
-          insideTable: cmd().isActive("table"),
-          insideToc: getInsideToc(editor),
-          math: getMathAtSelection(editor),
-          mermaid: getMermaidAtSelection(editor),
-          cover: getCoverAtSelection(editor),
-          tableSelectionShape: getSelectionShape(cmd()),
-          headerFooterEditMode: headerFooterModeRef.current,
-        });
-      });
-    };
-    startCoverEditRef.current = startCoverEdit;
-
-    /** Insère une variable dans l'édition EN PLACE de page de garde
-     *  ouverte ; s'il n'y en a pas, ouvre celle de la page de garde
-     *  sélectionnée et insère à la fin. */
-    insertCoverVariableRef.current = (token: string) => {
-      const mini = coverMiniEditorRef.current;
-      if (mini) {
-        mini.chain().focus().insertContent(token).run();
-        return;
-      }
-      // Pas d'édition ouverte : l'ouvrir sur la page de garde
-      // sélectionnée (NodeSelection — le panneau l'impose).
-      const selNode = (editor?.state.selection as unknown as { node?: any })?.node;
-      if (!editor || !selNode || selNode.type.name !== "coverPage") return;
-      const pos = editor.state.selection.from;
-      const el = canvasRef.current?.querySelector<HTMLElement>(`.xmd-coverpage[data-src-pos="${pos}"]`);
-      if (!el) return;
-      startCoverEditRef.current(el, pos);
-      coverMiniEditorRef.current?.chain().focus("end").insertContent(token).run();
     };
 
     // --- Édition de formule DANS LA PAGE (point ① maquette, 2026-10-21) ---
@@ -3055,38 +2980,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           return;
         }
         const mathTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-math");
-        // Page de garde (2026-10-22) : clic sur le bloc rendu → NodeSelection
-        // → panneau latéral « Page de garde ». Même mécanique que Mermaid :
-        // un atome ne passe pas toujours bien posFromEvent, le clone peint
-        // porte data-src-pos = position exacte du nœud.
-        const coverTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-coverpage");
-        if (coverTarget) {
-          e.preventDefault();
-          const isCoverNode = (n: any) => n && n.type.name === "coverPage";
-          let coverPos: number | null = null;
-          const blockPosAttr = coverTarget.closest<HTMLElement>("[data-src-pos]")?.getAttribute("data-src-pos");
-          if (blockPosAttr != null) {
-            const p = parseInt(blockPosAttr, 10);
-            if (isCoverNode(editor.state.doc.nodeAt(p))) coverPos = p;
-          }
-          if (coverPos === null) {
-            const clickPos = posFromEvent(e);
-            if (clickPos !== null) {
-              if (isCoverNode(editor.state.doc.nodeAt(clickPos))) coverPos = clickPos;
-              else if (isCoverNode(editor.state.doc.nodeAt(clickPos - 1))) coverPos = clickPos - 1;
-            }
-          }
-          if (coverPos === null) return;
-          editor.commands.focus(undefined, { scrollIntoView: false });
-          editor.commands.setNodeSelection(coverPos);
-          // Édition EN PLACE (demande utilisateur 2026-10-22) : le mini
-          // éditeur se pose sur la zone peinte, le panneau latéral reste
-          // pour les variables/modèle.
-          if (!coverMiniEditorRef.current) {
-            startCoverEditRef.current(coverTarget, coverPos);
-          }
-          return;
-        }
         // Saut de section : clic → NodeSelection (sélectionnable, Suppr le
         // retire — même confort que le saut de page).
         const sectionTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-sectionbreak");
@@ -3350,7 +3243,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
-          cover: getCoverAtSelection(editor),
+          coverZone: getCoverZoneAtSelection(editor),
             tableSelectionShape: getSelectionShape(cmd()),
             headerFooterEditMode: headerFooterModeRef.current,
           });

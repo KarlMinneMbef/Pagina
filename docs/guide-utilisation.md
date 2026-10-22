@@ -104,8 +104,10 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 
 ### Pages de garde
 - **Page de garde** (onglet Insertion) : galerie de 5 modèles (Classique, Moderne, Technique, Minimal, Chantier) avec aperçu, insérés au curseur avec saut de page optionnel.
-- Le contenu accepte les **variables de document** (`{{title}}`, `{{author}}`, `{{date}}`…) — résolues à l'affichage, le fichier garde la variable.
-- Cliquez sur la page de garde pour l'éditer (panneau latéral) : source, variables en un clic, et **« Enregistrer comme modèle »** pour la retrouver dans la galerie ; les modèles s'exportent/s'importent en fichiers JSON pour un autre poste.
+- Une page de garde est une **page normale du document** : deux repères pointillés discrets (invisible à l'impression) marquent son début et sa fin, et le contenu s'édite **directement sur la page** avec tout l'éditeur — texte, ruban, tableaux…
+- Les pages d'une page de garde n'affichent **ni en-tête ni pied de page** (décochable dans le panneau).
+- Les **variables de document** (`{{title}}`, `{{author}}`, `{{date}}`…) y sont des champs résolus à l'affichage (le fichier garde la variable) — utilisables aussi partout dans le document.
+- Le panneau **Page de garde** s'ouvre dès que le curseur est dans la zone : en-tête/pied on/off, insertion de champs, **« Enregistrer comme type »** pour la retrouver dans la galerie ; les types s'exportent/s'importent en fichiers JSON pour un autre poste.
 
 ### Diagrammes et formules
 - **Mermaid** : diagramme (la source reste éditable directement dans le bloc).
