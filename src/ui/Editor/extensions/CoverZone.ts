@@ -132,10 +132,8 @@ export function migrateCoverMarkdown(md: string): string {
   return out;
 }
 
-/** Commentaire d'ouverture de zone page de garde. */
-export const COVER_ZONE_START = /^<!--\s*coverzone-start\s*-->$/i;
 /** Commentaire de fermeture de zone page de garde. */
-export const COVER_ZONE_END = /^<!--\s*coverzone-end\s*-->$/i;
+const COVER_ZONE_END = /^<!--\s*coverzone-end\s*-->$/i;
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {

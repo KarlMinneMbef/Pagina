@@ -12,7 +12,7 @@
 // de chercher après coup où couper dans un flux déjà rendu, on avance un
 // curseur bloc par bloc, comme le ferait un vrai moteur de mise en page.
 
-export interface PageMargins {
+interface PageMargins {
   top: number;
   bottom: number;
 }

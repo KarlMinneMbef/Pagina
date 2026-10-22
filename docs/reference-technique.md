@@ -99,7 +99,7 @@ Contenu Markdown ordinaire dupliqué à chaque page (`layout.header/footer.text`
 
 ## Couleurs : charte MBEF
 
-Source unique : `src/ui/theme/tokens.ts` (`mbefColors`). Sapin `#003F2B` (primaire, en-têtes), prairie `#24AC6E` (accents, actions), ocean `#2F52A0` (liens), charbon `#343334` (texte), carotte `#EB5B1F` (erreurs), sable `#F7AE37` (avertissements), azur `#DFEFF8` (fonds informatifs). Toute nouvelle UI doit s'y conformer.
+Nuancier de référence (les couleurs sont écrites dans les feuilles CSS). Sapin `#003F2B` (primaire, en-têtes), prairie `#24AC6E` (accents, actions), ocean `#2F52A0` (liens), charbon `#343334` (texte), carotte `#EB5B1F` (erreurs), sable `#F7AE37` (avertissements), azur `#DFEFF8` (fonds informatifs). Toute nouvelle UI doit s'y conformer.
 
 ## Tests
 

@@ -18,7 +18,7 @@ import { useSyncExternalStore } from "react";
 export type DiagramThemeId = "pagina" | "clair" | "sombre" | "foret" | "neutre";
 
 /** Couleurs personnalisées — chaîne vide = pas de surcharge. */
-export interface DiagramColors {
+interface DiagramColors {
   /** Fond des nœuds principaux (primaryColor et alias par type). */
   primary: string;
   /** Fonds secondaires (notes, sections, boîtes de label…). */
@@ -89,7 +89,7 @@ function persistSettings(value: DiagramThemeSettings): void {
 }
 
 /** Lit le thème courant des diagrammes (API isolée pour la phase .xmd). */
-export function getDiagramTheme(): DiagramThemeSettings {
+function getDiagramTheme(): DiagramThemeSettings {
   return settings;
 }
 
