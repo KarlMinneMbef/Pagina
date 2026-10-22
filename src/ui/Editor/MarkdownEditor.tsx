@@ -1316,19 +1316,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           characters,
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
-          activeBlockStyle: getActiveBlockStyle(editor),
-          activeMarks: getActiveMarks(editor),
-          activeAlign: getActiveAlign(editor),
-          activeList: getActiveListType(editor),
-          activeFontFamily: currentFontFamily(editor),
-          activeColor: currentTextColor(editor),
-          activeFontSizePt: currentFontSizePt(editor),
-          insideTable: editor.isActive("table"),
+          activeBlockStyle: getActiveBlockStyle(cmd()),
+          activeMarks: getActiveMarks(cmd()),
+          activeAlign: getActiveAlign(cmd()),
+          activeList: getActiveListType(cmd()),
+          activeFontFamily: currentFontFamily(cmd()),
+          activeColor: currentTextColor(cmd()),
+          activeFontSizePt: currentFontSizePt(cmd()),
+          insideTable: cmd().isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
           cover: getCoverAtSelection(editor),
-          tableSelectionShape: getSelectionShape(editor),
+          tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,
         });
       },
@@ -1506,19 +1506,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       getStats: () => ({
         words: editor?.storage.characterCount.words() ?? 0,
         characters: editor?.storage.characterCount.characters() ?? 0,
-        activeBlockStyle: editor ? getActiveBlockStyle(editor) : "paragraph",
+        activeBlockStyle: editor ? getActiveBlockStyle(cmd()) : "paragraph",
         activeMarks: editor
-          ? getActiveMarks(editor)
+          ? getActiveMarks(cmd())
           : { bold: false, italic: false, underline: false, strike: false, code: false, subscript: false, superscript: false, highlight: false },
-        activeAlign: editor ? getActiveAlign(editor) : null,
-        activeList: editor ? getActiveListType(editor) : null,
-        activeFontFamily: editor ? currentFontFamily(editor) : null,
-        activeColor: editor ? currentTextColor(editor) : null,
-        activeFontSizePt: editor ? currentFontSizePt(editor) : 12,
-        insideTable: editor?.isActive("table") ?? false,
+        activeAlign: editor ? getActiveAlign(cmd()) : null,
+        activeList: editor ? getActiveListType(cmd()) : null,
+        activeFontFamily: editor ? currentFontFamily(cmd()) : null,
+        activeColor: editor ? currentTextColor(cmd()) : null,
+        activeFontSizePt: editor ? currentFontSizePt(cmd()) : 12,
+        insideTable: !!cmd()?.isActive("table"),
         insideToc: editor ? getInsideToc(editor) : false,
         math: editor ? getMathAtSelection(editor) : null,
-        tableSelectionShape: editor ? getSelectionShape(editor) : null,
+        tableSelectionShape: editor ? getSelectionShape(cmd()) : null,
         pageCount: pageCountRef.current,
         currentPage: currentPageRef.current,
         headerFooterEditMode: headerFooterModeRef.current,
@@ -2005,19 +2005,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           characters,
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
-          activeBlockStyle: getActiveBlockStyle(editor),
-          activeMarks: getActiveMarks(editor),
-          activeAlign: getActiveAlign(editor),
-          activeList: getActiveListType(editor),
-          activeFontFamily: currentFontFamily(editor),
-          activeColor: currentTextColor(editor),
-          activeFontSizePt: currentFontSizePt(editor),
-          insideTable: editor.isActive("table"),
+          activeBlockStyle: getActiveBlockStyle(cmd()),
+          activeMarks: getActiveMarks(cmd()),
+          activeAlign: getActiveAlign(cmd()),
+          activeList: getActiveListType(cmd()),
+          activeFontFamily: currentFontFamily(cmd()),
+          activeColor: currentTextColor(cmd()),
+          activeFontSizePt: currentFontSizePt(cmd()),
+          insideTable: cmd().isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
           cover: getCoverAtSelection(editor),
-          tableSelectionShape: getSelectionShape(editor),
+          tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,
         });
       };
@@ -2243,19 +2243,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           characters: editor.storage.characterCount.characters(),
           pageCount: pageCountRef.current,
           currentPage: currentPageRef.current,
-          activeBlockStyle: getActiveBlockStyle(editor),
-          activeMarks: getActiveMarks(editor),
-          activeAlign: getActiveAlign(editor),
-          activeList: getActiveListType(editor),
-          activeFontFamily: currentFontFamily(editor),
-          activeColor: currentTextColor(editor),
-          activeFontSizePt: currentFontSizePt(editor),
-          insideTable: editor.isActive("table"),
+          activeBlockStyle: getActiveBlockStyle(cmd()),
+          activeMarks: getActiveMarks(cmd()),
+          activeAlign: getActiveAlign(cmd()),
+          activeList: getActiveListType(cmd()),
+          activeFontFamily: currentFontFamily(cmd()),
+          activeColor: currentTextColor(cmd()),
+          activeFontSizePt: currentFontSizePt(cmd()),
+          insideTable: cmd().isActive("table"),
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
           cover: getCoverAtSelection(editor),
-          tableSelectionShape: getSelectionShape(editor),
+          tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: mode,
         });
       };
@@ -2454,7 +2454,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             Markdown.configure({ html: true }),
           ],
           content: String(node.attrs.source ?? ""),
-          editorProps: { attributes: { class: "xmd-hf-prosemirror" } },
+          // "xmd-prosemirror" en PLUS : le champ de page de garde doit rendre
+          // comme la PAGE (tableaux stylés, marges, titres — le rendu du
+          // résultat, retour utilisateur 2026-10-22), pas comme un champ de
+          // formulaire brut. L'en-tête/pied garde sa classe compacte.
+          editorProps: { attributes: { class: "xmd-hf-prosemirror xmd-prosemirror" } },
         });
       } catch (e) {
         host.remove();
@@ -2530,6 +2534,33 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           e.preventDefault();
           detach();
         }
+      });
+
+      // Re-émet les stats du ruban au SIMPLE DÉPLACEMENT du curseur dans le
+      // champ : une frappe le fait déjà (transaction setNodeMarkup → onUpdate),
+      // mais un clic dans un tableau du champ doit AUSSI ouvrir le panneau
+      // « Tableau » (stats.insideTable sur l'éditeur ACTIF — voir cmd()).
+      mini.on("selectionUpdate", () => {
+        onStatsRef.current?.({
+          words: editor.storage.characterCount.words(),
+          characters: editor.storage.characterCount.characters(),
+          pageCount: pageCountRef.current,
+          currentPage: currentPageRef.current,
+          activeBlockStyle: getActiveBlockStyle(cmd()),
+          activeMarks: getActiveMarks(cmd()),
+          activeAlign: getActiveAlign(cmd()),
+          activeList: getActiveListType(cmd()),
+          activeFontFamily: currentFontFamily(cmd()),
+          activeColor: currentTextColor(cmd()),
+          activeFontSizePt: currentFontSizePt(cmd()),
+          insideTable: cmd().isActive("table"),
+          insideToc: getInsideToc(editor),
+          math: getMathAtSelection(editor),
+          mermaid: getMermaidAtSelection(editor),
+          cover: getCoverAtSelection(editor),
+          tableSelectionShape: getSelectionShape(cmd()),
+          headerFooterEditMode: headerFooterModeRef.current,
+        });
       });
     };
     startCoverEditRef.current = startCoverEdit;
@@ -3308,19 +3339,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             characters,
             pageCount: pageCountRef.current,
             currentPage: page,
-            activeBlockStyle: getActiveBlockStyle(editor),
-            activeMarks: getActiveMarks(editor),
-            activeAlign: getActiveAlign(editor),
-            activeList: getActiveListType(editor),
-            activeFontFamily: currentFontFamily(editor),
-          activeColor: currentTextColor(editor),
-            activeFontSizePt: currentFontSizePt(editor),
-            insideTable: editor.isActive("table"),
+            activeBlockStyle: getActiveBlockStyle(cmd()),
+            activeMarks: getActiveMarks(cmd()),
+            activeAlign: getActiveAlign(cmd()),
+            activeList: getActiveListType(cmd()),
+            activeFontFamily: currentFontFamily(cmd()),
+          activeColor: currentTextColor(cmd()),
+            activeFontSizePt: currentFontSizePt(cmd()),
+            insideTable: cmd().isActive("table"),
             insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
           cover: getCoverAtSelection(editor),
-            tableSelectionShape: getSelectionShape(editor),
+            tableSelectionShape: getSelectionShape(cmd()),
             headerFooterEditMode: headerFooterModeRef.current,
           });
         }
