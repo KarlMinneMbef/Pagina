@@ -162,15 +162,46 @@ vertical, menu clic-droit, glisser-sélectionner correctement reconnu comme
 - ⬜ Plan du document / navigateur de titres (`DocumentOutline.tsx`) —
   s'appuierait sur les mêmes titres déjà numérotés/sommaire existants côté
   Pagina (`HeadingAutoNumber.ts`, `TocMarker.ts`).
-- ⬜ Règles horizontale/verticale glissables pour ajuster les marges —
-  affordance classique WYSIWYG, à brancher sur `PageLayoutSettings` déjà
-  existant.
+- ✅ **Règles horizontale/verticale glissables (2026-10-21)** —
+  `pagination/Ruler.tsx` : triangles de marge tirables à la souris, document
+  mis à jour en direct, règle verticale calée sur les pages. Réimplémenté sur
+  `PageLayoutSettings`, aucun code copié. Vérifié par un vrai glisser (marge
+  gauche 3 cm → 4 cm → retour).
 - ⬜ Numérotation de page dans un format autre que brut (i, ii, 1, 2...) —
   déjà noté comme "pas commencé" dans `CLAUDE.md` indépendamment de ce fork.
 - ⬜ Traduction de sélection/document — le fork a déjà un chemin
   **Markdown-aware** (`translateMarkdown.ts`) à étudier en premier, pourrait
   se porter presque tel quel vu que Pagina est déjà 100% Markdown.
 - ⬜ Nombre de mots / statistiques enrichies (au-delà du compteur actuel).
+
+## Impression et export PDF (évalué le 2026-10-22)
+
+Comparaison demandée par l'utilisateur (« l'impression marche moyen, regarde
+ce qui est fait dans Casual »). Fichiers du fork lus : `usePrintFlow.ts`,
+`PrintPreview.tsx`, `DocxEditor.tsx` (câblage), tests e2e d'export PDF.
+
+- ✅ **Constat sur Casual** : pas d'aperçu intégré non plus
+  (`openPrintPreview` appelle simplement l'impression). Sur bureau, leur
+  « Imprimer » est routé vers l'export PDF natif de l'hôte (même chemin que
+  « Exporter en PDF »), parce que l'impression directe est peu fiable dans la
+  webview — l'utilisateur imprime ensuite le PDF. Ils épinglent aussi le
+  format de page (`@page size`) sur celui du document.
+- ✅ **Repris (2026-10-22), sur notre modèle** : `@page` dynamique suivant le
+  format du document (`MarkdownEditor.tsx`) ; export natif avec réglages
+  explicites (`print_commands.rs` : format réel, fonds, sans en-tête du
+  navigateur) — avant, WebView2 écrivait du Letter sans couleurs ; CSS
+  d'impression (`print-color-adjust: exact`, repères d'édition masqués).
+- ✅ **Aperçu avant impression** : plutôt qu'un composant maison, « Imprimer »
+  ouvre la boîte d'impression du NAVIGATEUR (`COREWEBVIEW2_PRINT_DIALOG_KIND_BROWSER`)
+  qui montre l'aperçu des pages, le choix des pages, l'imprimante, les copies
+  et la couleur — la boîte système utilisée avant n'a aucun aperçu.
+- ❌ **Non repris** : leur fenêtre d'impression `window.open` + clone des
+  pages (inutile : on imprime la couche peinte directement) ; leurs
+  `PrintOptions`/`parsePageRange` (la boîte du navigateur fournit déjà ces
+  réglages).
+- ⬜ **À évaluer plus tard** : un aperçu INTÉGRÉ dans l'application (vignettes
+  des pages, choix de plage dans une fenêtre Pagina) — seulement si la boîte
+  du navigateur ne suffit pas à l'usage.
 
 ## Phase 4 — Collaboration (exploratoire, pas de décision prise)
 

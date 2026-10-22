@@ -16,7 +16,14 @@ Voir aussi `README.md` pour la présentation du projet côté utilisateur/dépô
   généré trop dense (pas de style par niveau) ? ou panneau latéral
   « Sommaire » peu pratique ? Détail dans le journal.
 - Suite de l'audit du 2026-10-22 : découpage du corps de `MarkdownEditor.tsx`
-  en hooks et remplacement de `window.prompt/alert` (voir sections plus bas).
+  en hooks (un par commit, test réel dans l'app à chaque étape) et
+  remplacement de `window.prompt/alert` — voir `ROADMAP-PAGINA.md`, priorité 0.
+- **Impression/export refaits le 2026-10-22 mais à valider à l'usage** : section
+  « Impression et export PDF » plus bas. Non testés ici : l'enregistrement par
+  le vrai bouton (dialogue « Enregistrer sous » natif) et l'impression sur une
+  vraie imprimante.
+- Feuilles de route : `ROADMAP-PAGINA.md` (produit, priorités 0 à 5) et
+  `ROADMAP-CASUALOFFICE.md` (ce qui est repris du fork de référence).
 
 ## Tester l'app directement (sans dépendre de captures d'écran de l'utilisateur)
 
@@ -115,8 +122,10 @@ par fonctionnalité — à consulter pour le détail d'un bug précis).
   bouton « qui ne fait rien », lire les logs `tauri dev`.
 - **API COM asynchrone** (ex. `PrintToPdf`) : jamais d'attente bloquante dans
   une commande Tauri — lancer, puis renvoyer le résultat par évènement.
-- **`@media print`** (`App.css`) : après toute refonte du chrome de l'app,
-  vérifier que toutes les classes racines visibles (ex. `.tbar`) y sont masquées.
+- **`@media print`** (`App.css` pour le chrome, fin de `MarkdownEditor.css` pour
+  le contenu) : après toute refonte du chrome de l'app, vérifier que toutes les
+  classes racines visibles (ex. `.tbar`) y sont masquées ; tout nouveau repère
+  d'édition (pastille, étiquette, fond de sélection) doit y être masqué aussi.
 - **Contrat `EditorStats`** : tout nouveau champ doit être émis aux 5 points
   d'émission de `MarkdownEditor.tsx` (onUpdate, getStats, onSelectionUpdate et
   les deux émissions liées au repaint), sinon le ruban est « en retard ».
@@ -185,10 +194,47 @@ court) : viser `position: {x: 20, y: 8}` ; (4) pour revenir à l'état initial, 
 focus doit être dans l'éditeur (cliquer dans le document puis ~80 × Ctrl+Z) ;
 (5) restaurer le zoom (barre de statut) et fermer les dialogues avant de relancer.
 
+## Impression et export PDF (refonte du 2026-10-22)
+
+Retour utilisateur : « l'impression marche moyen, l'export aussi, regarde ce
+que fait Casual — on n'a pas l'aperçu ». Comparaison détaillée dans
+`ROADMAP-CASUALOFFICE.md`. Mesuré en analysant le PDF natif page par page
+(`pymupdf`) : papier **Letter** au lieu d'A4, **fonds perdus** (bandeaux,
+surlignages), repère « Saut de page » imprimé, barres de défilement dans les
+blocs de code.
+
+- **`PrintToPdf` avec `None` = défauts WebView2** : Letter, sans fonds, et le
+  `@page { size }` du CSS est IGNORÉ. `export_pdf` (`print_commands.rs`) prend
+  donc `width_mm`/`height_mm` (calculés par `resolvePageSizeMm` dans
+  `App.tsx`) et construit des `ICoreWebView2PrintSettings` via
+  `ICoreWebView2Environment6::CreatePrintSettings` : format du document, marges
+  0 (déjà dans le padding des pages), fonds oui, en-tête/pied du navigateur non.
+- **Aperçu** : `print_window` ouvre `COREWEBVIEW2_PRINT_DIALOG_KIND_BROWSER`
+  (boîte d'impression d'Edge : aperçu des pages, plages, imprimante, copies,
+  couleur) au lieu de `..._SYSTEM` (boîte Windows sans aperçu).
+- **`@page` dynamique** : `MarkdownEditor.tsx` injecte
+  `<style id="xmd-print-page-size">` selon le format/orientation du document ;
+  la règle fixe `A4` de `App.css` a été retirée.
+- **CSS d'impression** (fin de `MarkdownEditor.css`) : `print-color-adjust:
+  exact` sur les pages ; repères d'édition (`.xmd-pagebreak`, `.xmd-sectionbreak`,
+  `.xmd-toc-marker`) en `visibility: hidden` (l'espace reste réservé, la
+  pagination ne bouge pas) ; `.xmd-docfield` sans fond ; `pre`/`.tableWrapper`
+  sans défilement.
+- **Tester l'export sans dialogue** : depuis CDP, `window.__TAURI_INTERNALS__`
+  est toujours disponible — `invoke('plugin:event|listen', …)` puis
+  `invoke('export_pdf', { path, widthMm: 210, heightMm: 297 })`, attendre
+  l'évènement `pdf-export-result` (payload `null` = succès), puis analyser le
+  fichier avec `pymupdf` (taille de page, texte, `get_pixmap` pour voir).
+  `page.pdf()` de Playwright n'est PAS représentatif de l'export natif (c'est
+  un autre chemin Chromium, qui respecte le CSS).
+- **Dialogue d'impression à fermer à la main** : la boîte du navigateur n'est pas
+  dans le DOM ; ne pas lui envoyer de touches système (`SendKeys`) sans accord de
+  l'utilisateur, qui peut avoir la main sur sa machine.
+
 ## Audit de code (2026-10-22)
 
 Inventaire par `knip` (code mort) et `jscpd` (doublons) : `tsc` propre,
-48 tests verts, 1,6 % de lignes dupliquées. Retirés : 3 dépendances inutiles,
+51 tests verts (48 + 3 sur le commentaire de config), 1,6 % de lignes dupliquées. Retirés : 3 dépendances inutiles,
 `tokens.ts`, constantes mortes, exports superflus. Faux positifs de knip à
 connaître : `src/embed/*`, `harness-embed/`, `vite.lib.config.ts` sont la
 version légère (`npm run build:embed`), pas du code mort. `npm audit` signale
@@ -218,7 +264,8 @@ renvoi, nouveau fichier) par un vrai composant de dialogue.
 ## Feuille de route de développement (ordre proposé)
 
 1. ~~Diagnostiquer et corriger l'aperçu avant impression~~ **Fait
-   (2026-09-13)** — voir section "Impression / export PDF" plus haut.
+   (2026-09-13)**, refondu le 2026-10-22 (format réel, fonds, aperçu du
+   navigateur) — voir « Impression et export PDF » plus haut.
 2. ~~En-têtes/pieds de page + marges/format papier/orientation
    configurables~~ **Fait (2026-09-13)** — voir section "Mise en page
    configurable par document" plus haut.
@@ -231,6 +278,9 @@ renvoi, nouveau fichier) par un vrai composant de dialogue.
    menu contextuel, badge modifié, tri, tooltip, rafraîchissement
    robuste, ergonomie clavier. Reste le déplacement (drag & drop).
 8. Thème sombre.
+
+La feuille de route À JOUR est `ROADMAP-PAGINA.md` (priorités 0 à 5) : cette
+liste n'est conservée que pour mémoire de l'ordre historique.
 
 ## Feuille de route produit (hors périmètre V1, ne pas développer maintenant)
 

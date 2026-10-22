@@ -135,6 +135,13 @@ projets"). Constats et actions :
   - Voir aussi la section "Panneau latéral « Sommaire »" plus bas pour
     l'état actuel exact de ce qui existe déjà.
 
+### Entrées plus récentes que ce journal
+
+Depuis le 2026-10-22 le détail vit dans `CLAUDE.md` (sections « Passe de test
+fonction par fonction », « Impression et export PDF », « Audit de code ») et
+dans `ROADMAP-PAGINA.md` / `ROADMAP-CASUALOFFICE.md`. Ce journal reste
+l'historique des sessions précédentes (non réécrit).
+
 ### Fait et fonctionnel
 
 - **Sections + Pages de garde (2026-10-22)** — les deux chantiers
