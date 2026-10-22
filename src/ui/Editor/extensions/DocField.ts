@@ -18,7 +18,7 @@
  */
 import { Node, mergeAttributes } from "@tiptap/core";
 import type { HeaderFooterContext } from "../../../core/pageLayout";
-import { resolveHeaderFooterText } from "../../../core/pageLayout";
+import { resolveHeaderFooterText, docFieldLabel } from "../../../core/pageLayout";
 
 /** Lecture d'un champ : {{nom}} — lettres (accents compris), chiffres,
  *  espaces, tirets/underscores (ex. {{NomDuChamp}}, {{date}}). Recherche
@@ -147,7 +147,12 @@ export const DocField = Node.create({
       // `refresh` n'ajoute jamais deux fois la même vue).
       let currentName: string = node.attrs.name;
       const render = () => {
-        span.textContent = renderFieldValue(currentName);
+        const value = renderFieldValue(currentName);
+        // Champ vide : on montre son LIBELLÉ (« Titre », « Auteur »…) en grisé
+        // — un champ vide était un liseré invisible, impossible à repérer.
+        const empty = value.trim() === "";
+        span.textContent = empty ? docFieldLabel(currentName) : value;
+        span.classList.toggle("xmd-docfield-empty", empty);
         span.setAttribute("data-name", currentName);
       };
       render();

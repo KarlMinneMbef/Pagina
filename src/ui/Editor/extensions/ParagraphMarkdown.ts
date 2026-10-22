@@ -119,6 +119,12 @@ export const ParagraphMarkdown = ParagraphBase.extend({
             .replace(/text-align\s*:\s*[^;]*;?/gi, "")
             .replace(/margin-left\s*:\s*[^;]*;?/gi, "")
             .replace(/margin-right\s*:\s*[^;]*;?/gi, "")
+            // Gras / italique / souligné du <p style> sont lus PAR LES MARQUES
+            // (<strong>, <em>, <u>) : les garder aussi dans htmlStyle les
+            // doublait (le bouton Gras ne pouvait plus retirer le gras).
+            .replace(/font-weight\s*:\s*[^;]*;?/gi, "")
+            .replace(/font-style\s*:\s*[^;]*;?/gi, "")
+            .replace(/text-decoration(-line)?\s*:\s*[^;]*;?/gi, "")
             .replace(/\s*;\s*(?=;)/g, "")
             .replace(/^;\s*|;\s*$/g, "")
             .replace(/\s{2,}/g, " ")
@@ -165,6 +171,16 @@ export const ParagraphMarkdown = ParagraphBase.extend({
     // diminue (Cmd/Ctrl selon la plateforme via « Mod »).
     return {
       ...this.parent?.(),
+      // Entrée en FIN d'un paragraphe porteur d'un style HTML brut (bandeau de
+      // page de garde, marge…) : le nouveau paragraphe est NORMAL. Sans ça, le
+      // style était cloné (un bandeau vert de plus à chaque Entrée).
+      Enter: () => {
+        const { $from, empty } = this.editor.state.selection;
+        const node = $from.parent;
+        if (!empty || node.type.name !== "paragraph" || $from.depth !== 1) return false;
+        if (!node.attrs.htmlStyle || $from.parentOffset !== node.content.size) return false;
+        return this.editor.chain().splitBlock().updateAttributes("paragraph", { htmlStyle: null }).run();
+      },
       "Mod-Shift-m": () => this.editor.commands.decreaseParagraphIndent(),
       "Mod-m": () => this.editor.commands.increaseParagraphIndent(),
     };

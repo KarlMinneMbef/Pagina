@@ -129,6 +129,7 @@ import {
   revealInViewport,
   mmToPx,
 } from "./editorUtils";
+import { openDocFieldEditor } from "./docFieldEdit";
 import { useCodeLangChip } from "./hooks/useCodeLangChip";
 import { useSelectionBarSync } from "./hooks/useSelectionBarSync";
 
@@ -2301,6 +2302,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           editor.commands.focus(undefined, { scrollIntoView: false });
           editor.commands.setNodeSelection(sectionPos);
           return;
+        }
+        // Champ de document ({{title}}…) : un clic ouvre sa saisie directe
+        // (propriétés du document) au lieu de le sélectionner comme un
+        // atome muet. Les champs calculés (date…) gardent le clic normal.
+        const docFieldTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-docfield");
+        if (docFieldTarget && !readOnly) {
+          const fieldName = docFieldTarget.getAttribute("data-name") ?? "";
+          if (openDocFieldEditor(docFieldTarget, fieldName, layoutRef.current, (l) => onLayoutChangeRef.current(l))) {
+            e.preventDefault();
+            return;
+          }
         }
         if (mathTarget) {
           e.preventDefault();
