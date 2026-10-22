@@ -14,7 +14,7 @@
  */
 import { useEffect, useState } from "react";
 import type { ToolbarActions } from "../Toolbar/Toolbar";
-import type { GridLine } from "../Editor/MarkdownEditor";
+import type { GridLine } from "../Editor/editorTableOps";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import {
   IconClearCell,
