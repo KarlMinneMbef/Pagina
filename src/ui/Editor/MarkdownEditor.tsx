@@ -81,7 +81,6 @@ import {
   ROW_RESIZE_TABLE_POS_ATTR,
   ROW_RESIZE_ROW_INDEX_ATTR,
 } from "./pagination/paintPages";
-import { CODE_BLOCK_LANGUAGE_OPTIONS } from "./codeBlockLanguages";
 import { HorizontalRuler, VerticalRuler, PAGE_GAP_PX } from "./pagination/Ruler";
 import type { MathfieldElement } from "mathlive";
 import { resolveClickPosition, findClonedBlock } from "./pagination/resolveClickPosition";
@@ -129,6 +128,8 @@ import {
   headerFooterTargetNearViewport,
   mmToPx,
 } from "./editorUtils";
+import { useCodeLangChip } from "./hooks/useCodeLangChip";
+import { useSelectionBarSync } from "./hooks/useSelectionBarSync";
 
 /** Options de recherche du panneau « Rechercher / Remplacer » (roadmap
  * 2.4) — mêmes sémantiques que Word. */
@@ -540,7 +541,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // même mécanisme que le champ d'en-tête/pied). Visible uniquement
     // quand la sélection est dans un bloc de code ; resynchronisée à
     // chaque repaint/curseur/scroll/resize via `codeLangSyncRef`.
-    const codeLangChipRef = useRef<HTMLDivElement | null>(null);
     const codeLangSyncRef = useRef<() => void>(() => {});
     // Éditeur ciblé par les commandes du RUBAN : tant qu'un champ
     // d'en-tête/pied de page est ouvert, c'est LUI (l'en-tête/le pied est
@@ -1596,168 +1596,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       repaintRef.current();
     }, [zoom]);
 
-    // Pastille « langage du bloc de code » (2026-10-17, retirée du ruban
-    // Insertion) : un petit sélecteur natif collé en haut à droite du
-    // BLOC PEINT contenant le curseur. Les pages affichées sont des
-    // clones (data-src-pos = position ProseMirror du bloc d'origine) :
-    // on retrouve celui de la sélection, on s'y cale en position fixe,
-    // et on se resynchronise à chaque repaint (codeLangSyncRef, appelé
-    // par repaint/repaintCaretOnly), scroll du wrapper et resize.
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!canvas || !editor) return;
+    useCodeLangChip(editor, readOnly, canvasRef, codeLangSyncRef);
 
-      const chip = document.createElement("div");
-      chip.className = "xmd-code-lang-chip";
-      chip.style.display = "none";
-      const select = document.createElement("select");
-      select.title = "Langage du bloc de code";
-      const plainOption = document.createElement("option");
-      plainOption.value = "";
-      plainOption.textContent = "Texte";
-      select.appendChild(plainOption);
-      for (const lang of CODE_BLOCK_LANGUAGE_OPTIONS) {
-        const o = document.createElement("option");
-        o.value = lang;
-        o.textContent = lang;
-        select.appendChild(o);
-      }
-      select.addEventListener("change", () => {
-        // « Texte » (valeur vide) → langue par défaut de CodeBlockLowlight.
-        editor.chain().focus().updateAttributes("codeBlock", { language: select.value || "text" }).run();
-      });
-      chip.appendChild(select);
-      document.body.appendChild(chip);
-      codeLangChipRef.current = chip;
-
-      const sync = () => {
-        const { selection } = editor.state;
-        // Remonte les niveaux jusqu'au bloc de code englobant la sélection.
-        let cbNode: { attrs: Record<string, unknown> } | null = null;
-        let cbStart = -1;
-        for (let d = selection.$from.depth; d >= 1; d--) {
-          const node = selection.$from.node(d);
-          if (node.type.name === "codeBlock") {
-            cbNode = node;
-            cbStart = selection.$from.before(d);
-            break;
-          }
-        }
-        if (readOnly || !cbNode || cbStart < 0) {
-          chip.style.display = "none";
-          return;
-        }
-        // Le bloc peut être cloné sur plusieurs pages (bloc long) : prend
-        // le fragment visible, sinon le premier.
-        const clones = Array.from(canvas.querySelectorAll<HTMLElement>(`[data-src-pos="${cbStart}"]`));
-        let rect: DOMRect | null = null;
-        for (const c of clones) {
-          const r = c.getBoundingClientRect();
-          if (r.bottom > 120 && r.top < window.innerHeight - 16) {
-            rect = r;
-            break;
-          }
-        }
-        if (!rect && clones.length > 0) rect = clones[0].getBoundingClientRect();
-        if (!rect) {
-          chip.style.display = "none";
-          return;
-        }
-        const lang = String(cbNode.attrs.language ?? "");
-        select.value = (CODE_BLOCK_LANGUAGE_OPTIONS as readonly string[]).includes(lang) ? lang : "";
-        chip.style.display = "";
-        chip.style.top = `${Math.max(rect.top, 0) + 4}px`;
-        chip.style.left = `${rect.right - chip.offsetWidth - 6}px`;
-      };
-      codeLangSyncRef.current = sync;
-
-      const wrap = canvas.closest(".xmd-page-wrap") ?? canvas;
-      wrap.addEventListener("scroll", sync);
-      window.addEventListener("resize", sync);
-      sync();
-
-      return () => {
-        wrap.removeEventListener("scroll", sync);
-        window.removeEventListener("resize", sync);
-        chip.remove();
-        codeLangChipRef.current = null;
-        codeLangSyncRef.current = () => {};
-      };
-    }, [editor, readOnly]);
-
-    // Mini-barre de mise en forme à la sélection : calcule où la sélection est
-    // PEINTE (mêmes rectangles que la surbrillance) et place la barre juste
-    // au-dessus de la première ligne visible (en dessous si elle sortirait de
-    // la zone visible). Masquée : pendant un glisser de souris (affichée au
-    // relâchement), sélection vide, sélection de cellules, bloc de code,
-    // lecture seule, édition d'en-tête/pied de page.
-    useEffect(() => {
-      const canvas = canvasRef.current;
-      if (!editor || !canvas) return;
-      const wrap = (canvas.closest(".xmd-page-wrap") ?? canvas) as HTMLElement;
-      let selecting = false;
-      const BAR_WIDTH = 330;
-      const BAR_HEIGHT = 40;
-
-      const hide = () => setSelBar((cur) => (cur === null ? cur : null));
-
-      const sync = () => {
-        const sel = editor.state.selection;
-        if (
-          readOnly ||
-          selecting ||
-          sel.empty ||
-          sel instanceof CellSelection ||
-          headerMiniEditorRef.current ||
-          editor.isActive("codeBlock") ||
-          editor.isActive("mermaid")
-        ) {
-          hide();
-          return;
-        }
-        const rects = computeSelectionRects(editor.view, canvas, sel, zoomRef.current);
-        const frame = (canvas.parentElement as HTMLElement).getBoundingClientRect();
-        const wrapRect = wrap.getBoundingClientRect();
-        const screen = rects
-          .map((r) => ({ left: frame.left + r.left, top: frame.top + r.top, width: r.width, height: r.height }))
-          .filter((r) => r.top + r.height > wrapRect.top && r.top < wrapRect.bottom);
-        if (screen.length === 0) {
-          hide();
-          return;
-        }
-        const first = screen[0];
-        const last = screen[screen.length - 1];
-        let top = first.top - BAR_HEIGHT - 8;
-        if (top < wrapRect.top + 4) top = last.top + last.height + 8;
-        const center = first.left + first.width / 2;
-        const left = Math.max(wrapRect.left + 4, Math.min(center - BAR_WIDTH / 2, wrapRect.right - BAR_WIDTH - 4));
-        setSelBar((cur) => ({ left: Math.round(left), top: Math.round(top), rev: (cur?.rev ?? 0) + 1 }));
-      };
-      selBarSyncRef.current = sync;
-
-      const onDown = (e: MouseEvent) => {
-        if (e.button !== 0) return;
-        selecting = true;
-        hide();
-      };
-      const onUp = () => {
-        if (!selecting) return;
-        selecting = false;
-        // Après le traitement du mouseup de l'éditeur (sélection finale).
-        setTimeout(sync, 0);
-      };
-      canvas.addEventListener("mousedown", onDown);
-      window.addEventListener("mouseup", onUp);
-      wrap.addEventListener("scroll", sync);
-      window.addEventListener("resize", sync);
-      return () => {
-        canvas.removeEventListener("mousedown", onDown);
-        window.removeEventListener("mouseup", onUp);
-        wrap.removeEventListener("scroll", sync);
-        window.removeEventListener("resize", sync);
-        selBarSyncRef.current = () => {};
-      };
-    }, [editor, readOnly]);
+    useSelectionBarSync(editor, readOnly, canvasRef, zoomRef, headerMiniEditorRef, selBarSyncRef, setSelBar);
 
     // Édition en place de l'en-tête/pied de page : un clic sur l'un ou
     // l'autre (sur N'IMPORTE QUELLE page — le texte est le même partout,
