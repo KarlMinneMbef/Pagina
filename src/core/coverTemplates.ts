@@ -5,81 +5,68 @@
  * (localStorage `pagina.coverTemplates`), plus export/import de fichiers
  * `.mdcover.json` pour les réutiliser sur un autre poste.
  *
- * Le contenu d'un modèle est du Markdown normal avec du HTML inline pour
- * la mise en forme (centrage, tailles — rendu par le parseur de l'éditeur,
- * `html: true`) et les VARIABLES de document (`{{title}}`, `{{author}}`,
+ * Le contenu d'un modèle est du Markdown PUR (les modèles intégrés) ou, pour
+ * les anciens modèles utilisateur, du HTML inline ; l'apparence vient d'un
+ * THÈME (`theme`, voir CoverTheme.ts) et les VARIABLES de document (`{{title}}`, `{{author}}`,
  * `{{date}}`… insérées comme CHAMPS résolus — voir DocField.ts ; la
  * galerie insère le contenu dans une ZONE page de garde, voir
  * CoverZone.ts). VOLONTAIREMENT PAS D'IMAGES pour l'instant (décision
  * utilisateur 2026-10-22 : avec le format .xmd).
  */
 
-/** Un modèle de page de garde : nom affiché + source Markdown. */
+/** Un modèle de page de garde : nom affiché + source Markdown + thème visuel
+ *  (« » = style libre, anciens modèles à HTML inline). */
 export interface CoverTemplate {
   name: string;
   source: string;
+  theme?: string;
 }
 
-/** Modèles intégrés, disponibles pour tous les documents. */
+/** Thèmes visuels disponibles (feuille `ui/Cover/coverThemes.css`). */
+export const COVER_THEMES: { id: string; label: string }[] = [
+  { id: "", label: "Aucun (style libre)" },
+  { id: "classique", label: "Classique" },
+  { id: "moderne", label: "Moderne" },
+  { id: "technique", label: "Technique" },
+  { id: "minimal", label: "Minimal" },
+  { id: "chantier", label: "Chantier" },
+];
+
+/** Modèles intégrés, disponibles pour tous les documents. Le contenu est du
+ *  Markdown PUR (titre `#`, sous-titre `##`, lignes de texte, variables
+ *  `{{…}}`) : l'apparence vient du THÈME, pas de HTML dans le fichier. */
 export const BUILTIN_COVER_TEMPLATES: CoverTemplate[] = [
   {
     name: "Classique",
-    source: [
-      '<p style="text-align: center; margin-top: 60px; font-size: 26pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
-      '<p style="text-align: center; font-size: 13pt; color: #343334;">{{subject}}</p>',
-      '<p style="text-align: center; margin-top: 100px; font-size: 11pt;">{{author}}</p>',
-      '<p style="text-align: center; font-size: 11pt;">Le {{date}}</p>',
-      '<p style="text-align: center; font-size: 10pt; color: #75766f;">{{version}}</p>',
-    ].join("\n\n"),
+    theme: "classique",
+    source: ["# {{title}}", "## {{subject}}", "{{author}}", "Le {{date}}", "{{version}}"].join("\n\n"),
   },
   {
     name: "Moderne",
-    source: [
-      '<p style="margin-top: 70px; border-bottom: 3px solid #24ac6e; padding-bottom: 14px; font-size: 28pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
-      "",
-      '<p style="font-size: 12pt; color: #24ac6e;">{{subject}}</p>',
-      "",
-      '<p style="text-align: right; margin-top: 90px; font-size: 11pt; font-weight: bold;">{{author}}</p>',
-      "",
-      '<p style="text-align: right; font-size: 11pt; color: #75766f;">{{date}}</p>',
-    ].join("\n"),
+    theme: "moderne",
+    source: ["# {{title}}", "## {{subject}}", "{{author}}", "{{date}}"].join("\n\n"),
   },
   {
     name: "Technique",
+    theme: "technique",
     source: [
-      '<p style="text-align: center; margin-top: 40px; font-size: 10pt; color: #75766f;">MON BE FLUIDES — ÉTUDES</p>',
-      "",
-      '<p style="text-align: center; border-top: 2px solid #003f2b; border-bottom: 2px solid #003f2b; padding: 18px 0; font-size: 22pt; font-weight: bold; color: #003f2b;">{{title}}</p>',
-      "",
-      '<p style="text-align: center; font-size: 12pt;">{{subject}}</p>',
-      "",
-      '<p style="text-align: center; margin-top: 80px; font-size: 11pt;">Affaire : {{title}}</p>',
-      "",
-      '<p style="text-align: center; font-size: 11pt;">Indice : {{version}}</p>',
-      "",
-      '<p style="text-align: center; margin-top: 60px; font-size: 11pt;">{{author}} — {{date}}</p>',
-    ].join("\n"),
-  },
-  {
-    name: "Minimal",
-    source: [
-      '<p style="text-align: center; margin-top: 120px; font-size: 20pt; color: #343334;">{{title}}</p>',
-      '<p style="text-align: center; margin-top: 130px; font-size: 10pt; color: #75766f;">{{author}} · {{date}}</p>',
+      "### MON BE FLUIDES — ÉTUDES",
+      "# {{title}}",
+      "## {{subject}}",
+      "Affaire : {{title}}",
+      "Indice : {{version}}",
+      "{{author}} — {{date}}",
     ].join("\n\n"),
   },
   {
+    name: "Minimal",
+    theme: "minimal",
+    source: ["# {{title}}", "{{author}} · {{date}}"].join("\n\n"),
+  },
+  {
     name: "Chantier",
-    source: [
-      '<p style="background: #003f2b; color: #ffffff; padding: 18px 24px; font-size: 24pt; font-weight: bold;">{{title}}</p>',
-      "",
-      '<p style="background: #f0f0ee; color: #343334; padding: 10px 24px; font-size: 12pt;">{{subject}}</p>',
-      "",
-      '<p style="margin-top: 70px; font-size: 11pt;">Rédigé par : {{author}}</p>',
-      "",
-      '<p style="font-size: 11pt;">Émis le : {{date}}</p>',
-      "",
-      '<p style="font-size: 11pt;">Révision : {{version}}</p>',
-    ].join("\n"),
+    theme: "chantier",
+    source: ["# {{title}}", "## {{subject}}", "Rédigé par : {{author}}", "Émis le : {{date}}", "Révision : {{version}}"].join("\n\n"),
   },
 ];
 
@@ -94,7 +81,7 @@ export function loadUserCoverTemplates(): CoverTemplate[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((t): t is CoverTemplate => !!t && typeof (t as CoverTemplate).name === "string" && typeof (t as CoverTemplate).source === "string")
-      .map((t) => ({ name: t.name, source: t.source }));
+      .map((t) => ({ name: t.name, source: t.source, theme: typeof t.theme === "string" ? t.theme : "" }));
   } catch {
     return [];
   }
@@ -133,7 +120,7 @@ export function parseCoverTemplateFile(raw: string): CoverTemplate | null {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (parsed.kind !== "pagina-cover-template") return null;
     if (typeof parsed.name !== "string" || typeof parsed.source !== "string") return null;
-    return { name: parsed.name, source: parsed.source };
+    return { name: parsed.name, source: parsed.source, theme: typeof parsed.theme === "string" ? parsed.theme : "" };
   } catch {
     return null;
   }

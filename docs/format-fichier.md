@@ -42,6 +42,7 @@ Le fichier enregistré est un **Markdown 100 % standard** (GFM). Tout ce qui n'e
 |---|---|---|
 | `<!-- pagebreak -->` | Saut de page manuel | N'importe où dans le texte |
 | `<!-- toc -->` | Emplacement du sommaire (remplacé par la liste réelle à la génération) | Généralement après le titre |
+| `<!-- coverzone-start [header] [theme=nom] -->` … `<!-- coverzone-end -->` | Page de garde : deux marqueurs encadrent du contenu NORMAL (voir §5.4) | En général en tête de document |
 
 ---
 
@@ -169,6 +170,39 @@ Substituées **au moment de la peinture** (et à l'impression) — jamais écrit
 | Renvoi | `[texte](#signet)` | Lien Markdown standard |
 | Saut de page | `<!-- pagebreak -->` | Commentaire HTML, invisible |
 | Marqueur sommaire | `<!-- toc -->` | Commentaire HTML, invisible |
+| Page de garde | `<!-- coverzone-start theme=chantier -->` … `<!-- coverzone-end -->` | Commentaires HTML invisibles ; le contenu s'affiche comme du Markdown ordinaire |
+
+### 5.4 Pages de garde
+
+Une page de garde est une page NORMALE : le contenu entre les deux marqueurs est du
+Markdown pur — aucun HTML dans le fichier. Le marqueur de début porte les propriétés :
+`header` (afficher l'en-tête/pied sur la page ; absent = masqués) et `theme=nom`
+(apparence). Exemple :
+
+```
+<!-- coverzone-start theme=chantier -->
+
+# {{title}}
+
+## {{subject}}
+
+Rédigé par : {{author}}
+
+Émis le : {{date}}
+
+<!-- coverzone-end -->
+
+<!-- pagebreak -->
+```
+
+- `{{title}}`, `{{author}}`… sont des champs : l'application affiche la valeur des propriétés
+  du document (on peut la saisir en cliquant sur le champ) ; le fichier garde la variable.
+- Le thème (`classique`, `moderne`, `technique`, `minimal`, `chantier`) ne change QUE
+  l'apparence, par type de bloc (`#` titre, `##` sous-titre, `###` repère, texte) — il
+  n'est jamais écrit dans le contenu. Sans `theme`, la page est en style libre.
+- Les titres d'une page de garde n'entrent ni dans le sommaire ni dans la numérotation.
+- Anciens fichiers : une page de garde écrite en paragraphes `<p style="…">` reste lisible et
+  éditable (style libre) ; elle n'est pas convertie automatiquement.
 
 ---
 

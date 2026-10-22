@@ -23,11 +23,42 @@ import {
 } from "../../core/coverTemplates";
 import { pickCoverTemplateFile, pickCoverTemplateSaveLocation, readTextFile, writeTextFile } from "../../persistence/fileService";
 import "./CoverGalleryDialog.css";
+import "./coverThemes.css";
+
+const PREVIEW_VALUES: Record<string, string> = {
+  title: "Titre du document",
+  subject: "Sujet du document",
+  author: "Auteur",
+  date: "JJ/MM/AAAA",
+  version: "Version A",
+  created: "JJ/MM/AAAA",
+  modified: "JJ/MM/AAAA",
+  filename: "document.md",
+};
+
+const escapeHtml = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Aperçu d'un modèle : variables remplacées par des valeurs d'exemple, blocs
+ *  `#`/`##`/`###`/texte rendus avec le THÈME (mêmes règles CSS que la page).
+ *  Un ancien modèle à HTML inline (ligne commençant par `<`) est gardé tel quel. */
+function coverPreviewHtml(source: string, theme: string): string {
+  const attr = theme ? ` data-cover-theme="${theme}"` : "";
+  return source
+    .split(/\n{2,}/)
+    .map((raw) => {
+      const block = raw.replace(/{{(\w+)}}/g, (_m, name: string) => PREVIEW_VALUES[name] ?? name);
+      if (block.trimStart().startsWith("<")) return block;
+      const heading = block.match(/^(#{1,3})\s+([\s\S]*)$/);
+      if (heading) return `<h${heading[1].length}${attr}>${escapeHtml(heading[2])}</h${heading[1].length}>`;
+      return `<p${attr}>${escapeHtml(block)}</p>`;
+    })
+    .join("");
+}
 
 /** Galerie de pages de garde : modèles intégrés + utilisateur. */
-export function CoverGalleryDialog({ onInsert, onClose }: { onInsert: (source: string, addPageBreak: boolean) => void; onClose: () => void }) {
+export function CoverGalleryDialog({ onInsert, onClose }: { onInsert: (source: string, addPageBreak: boolean, theme: string) => void; onClose: () => void }) {
   const [userTemplates, setUserTemplates] = useState<CoverTemplate[]>(() => loadUserCoverTemplates());
-  const [selected, setSelected] = useState<{ name: string; source: string } | null>(null);
+  const [selected, setSelected] = useState<CoverTemplate | null>(null);
   const [addPageBreak, setAddPageBreak] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -68,7 +99,7 @@ export function CoverGalleryDialog({ onInsert, onClose }: { onInsert: (source: s
 
   const insert = () => {
     if (!selected) return;
-    onInsert(selected.source, addPageBreak);
+    onInsert(selected.source, addPageBreak, selected.theme ?? "");
     onClose();
   };
 
@@ -118,25 +149,7 @@ export function CoverGalleryDialog({ onInsert, onClose }: { onInsert: (source: s
               <div className="cvg-preview-title">Aperçu du modèle</div>
               <div className="cvg-preview-paper">
                 {selected ? (
-                  <div
-                    className="cvg-preview-html"
-                    dangerouslySetInnerHTML={{
-                      __html: selected.source
-                        .split("\n\n")
-                        .map((line) =>
-                          line
-                            .replace(/{{title}}/g, "Titre du document")
-                            .replace(/{{subject}}/g, "Sujet du document")
-                            .replace(/{{author}}/g, "Auteur")
-                            .replace(/{{date}}/g, "JJ/MM/AAAA")
-                            .replace(/{{version}}/g, "Version A")
-                            .replace(/{{created}}/g, "JJ/MM/AAAA")
-                            .replace(/{{modified}}/g, "JJ/MM/AAAA")
-                            .replace(/{{filename}}/g, "document.md"),
-                        )
-                        .join(""),
-                    }}
-                  />
+                  <div className="cvg-preview-html" dangerouslySetInnerHTML={{ __html: coverPreviewHtml(selected.source, selected.theme ?? "") }} />
                 ) : (
                   <p className="cvg-empty">Choisissez un modèle à gauche.</p>
                 )}

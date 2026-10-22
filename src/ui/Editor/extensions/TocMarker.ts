@@ -21,6 +21,7 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { uniqueHeadingSlug } from "../pagination/slug";
 import { sectionDisplayTitle } from "./SectionBreak";
+import { coverZoneContentOffsets, isInCoverZoneContent } from "./CoverZone";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -53,13 +54,17 @@ function collectAllTargets(doc: any): (TocTarget & { pos: number })[] {
   const targets: (TocTarget & { pos: number })[] = [];
   const usedSlugs = new Set<string>();
   let sectionIndex = 0;
+  // Les titres d'une page de garde (CoverZone.ts) ne sont pas des chapitres :
+  // absents du sommaire ET de la séquence de slugs (paintPages.ts applique
+  // la même exclusion, sinon les ancres seraient décalées).
+  const coverOffsets = coverZoneContentOffsets(doc);
   doc.descendants((node: any, pos: number) => {
     if (node.type.name === "sectionBreak") {
       const text = sectionDisplayTitle(node.attrs.title ?? "", ++sectionIndex);
       targets.push({ level: 1, text, slug: uniqueHeadingSlug(text, usedSlugs), pos });
       return true;
     }
-    if (node.type.name === "heading") {
+    if (node.type.name === "heading" && !isInCoverZoneContent(doc, pos, coverOffsets)) {
       targets.push({ level: node.attrs.level, text: node.textContent, slug: uniqueHeadingSlug(node.textContent, usedSlugs), pos });
     }
     return true;

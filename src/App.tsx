@@ -742,6 +742,8 @@ function App() {
                   key={stats.coverZone.start}
                   zoneStart={stats.coverZone.start}
                   headerFooter={stats.coverZone.headerFooter}
+                  theme={stats.coverZone.theme}
+                  onChangeTheme={(theme) => editorRef.current?.setCoverZoneTheme(theme)}
                   customVariables={(activeTab?.layout.documentProperties?.custom ?? [])
                     .filter((c) => c.name.trim() !== "")
                     .map((c) => ({ token: `{{${c.name.trim()}}}`, label: c.name.trim() }))}
@@ -749,7 +751,7 @@ function App() {
                   onInsertField={(name) => editorRef.current?.insertDocField(name)}
                   onSaveAsType={(name) => {
                     const source = editorRef.current?.getCoverZoneSource();
-                    if (source != null) addUserCoverTemplate({ name, source });
+                    if (source != null) addUserCoverTemplate({ name, source, theme: stats.coverZone?.theme ?? "" });
                   }}
                   onDelete={() => editorRef.current?.deleteCoverZone()}
                   onClose={() => setCoverPanelOpen(false)}
@@ -805,7 +807,7 @@ function App() {
       )}
       {coverGalleryOpen && activeTab && (
         <CoverGalleryDialog
-          onInsert={(source, withPageBreak) => editorRef.current?.insertCoverZone(source, withPageBreak)}
+          onInsert={(source, withPageBreak, theme) => editorRef.current?.insertCoverZone(source, withPageBreak, theme)}
           onClose={() => setCoverGalleryOpen(false)}
         />
       )}

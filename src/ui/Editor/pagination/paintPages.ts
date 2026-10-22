@@ -22,6 +22,7 @@ import { createPaginator } from "./paginator";
 import { resolveHeaderFooterText, type HeaderFooterSettings, type HeaderFooterContext } from "../../../core/pageLayout";
 import { uniqueHeadingSlug } from "./slug";
 import { sectionDisplayTitle } from "../extensions/SectionBreak";
+import { coverZoneContentOffsets } from "../extensions/CoverZone";
 import { createCloneIndex, indexCloneBlock, type CloneIndex } from "./cloneIndex";
 
 const HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6";
@@ -540,6 +541,8 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
   // calculés dans le même ordre que `TocMarker.ts` (`collectHeadings`) pour
   // que les liens du sommaire pointent vers le bon `id`.
   const usedSlugs = new Set<string>();
+  // Titres de page de garde : pas d'ancre (exclus du sommaire, voir TocMarker.ts).
+  const coverOffsets = coverZoneContentOffsets(view.state.doc);
   // Compteur de sections partagé sur toute la boucle, comme usedSlugs :
   // le libellé de repli « Section n » (SectionBreak.ts) doit être calculé
   // dans le MÊME ordre que TocMarker.ts (collectAllTargets) pour que
@@ -599,7 +602,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
           // (voir TocMarker.ts, `generateToc`) puissent y sauter — voir
           // slug.ts pour l'algorithme, partagé entre les deux fichiers.
           const headingEl = clone.matches(HEADING_SELECTOR) ? clone : clone.querySelector(HEADING_SELECTOR);
-          if (headingEl) {
+          if (headingEl && !coverOffsets.has(pos)) {
             headingEl.id = uniqueHeadingSlug(headingEl.textContent ?? "", usedSlugs);
           }
           // Saut de section : `id` posé pour les liens du sommaire GLOBAL
