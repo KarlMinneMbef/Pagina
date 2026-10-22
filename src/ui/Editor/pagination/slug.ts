@@ -4,7 +4,7 @@
 // (`paintPages.ts`). Les deux DOIVENT utiliser exactement cet algorithme
 // (et parcourir les titres dans le même ordre) pour que les liens générés
 // pointent vers le bon `id` — voir CLAUDE.md pour le contexte complet.
-export function slugifyHeading(text: string): string {
+function slugifyHeading(text: string): string {
   return text
     .toLowerCase()
     .trim()

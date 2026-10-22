@@ -42,9 +42,9 @@ const EMPTY_LINE_COMMENT = /^<!--\s*empty-line\s*-->$/i;
  * avec le modèle « nombre de pas » restent lisibles : leur HTML de repli
  * contenait déjà des cm (margin-left: 1.25cm), relus ici tels quels.
  */
-export const INDENT_STEP_CM = 1.25;
+const INDENT_STEP_CM = 1.25;
 /** Plafond : 12,5 cm — au-delà le texte sortirait de la page A4. */
-export const INDENT_MAX_CM = 12.5;
+const INDENT_MAX_CM = 12.5;
 
 const INDENT_LEFT_RE = /margin-left:\s*([\d.]+)cm/;
 const INDENT_RIGHT_RE = /margin-right:\s*([\d.]+)cm/;

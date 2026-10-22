@@ -119,7 +119,7 @@ export interface DocumentCustomProperty {
  * autre outil Markdown). L'AUTEUR et la VERSION restent dans
  * `layout.author`/`layout.documentVersion` (variables {{author}}/
  * {{version}} des en-têtes/pieds) — la fenêtre les édite au même endroit. */
-export interface DocumentProperties {
+interface DocumentProperties {
   title: string;
   subject: string;
   /** Date de création (AAAA-MM-JJ) — établie au premier enregistrement
@@ -186,7 +186,7 @@ function defaultHeadingStyle(level: HeadingLevel): HeadingLevelStyle {
 }
 
 /** Styles de titres par défaut des nouveaux documents. */
-export const DEFAULT_HEADING_STYLES: Record<HeadingLevel, HeadingLevelStyle> = {
+const DEFAULT_HEADING_STYLES: Record<HeadingLevel, HeadingLevelStyle> = {
   1: defaultHeadingStyle(1),
   2: defaultHeadingStyle(2),
   3: defaultHeadingStyle(3),
@@ -202,7 +202,7 @@ const ROMAN_VALUES: [number, string][] = [
 ];
 
 /** Chiffres romains (I, II, III, IV...) — pas de zéro, `n` doit être >= 1. */
-export function toRoman(n: number): string {
+function toRoman(n: number): string {
   let remaining = n;
   let result = "";
   for (const [value, symbol] of ROMAN_VALUES) {
@@ -216,7 +216,7 @@ export function toRoman(n: number): string {
 
 /** Numérotation alphabétique (A, B, ..., Z, AA, AB...) — comme les colonnes
  * d'un tableur, jamais de retour à vide même après 26. */
-export function toAlpha(n: number): string {
+function toAlpha(n: number): string {
   let remaining = n;
   let result = "";
   while (remaining > 0) {
@@ -250,7 +250,7 @@ export function formatCounter(n: number, scheme: NumberingScheme): string {
 
 /** Mise en page par défaut des nouveaux documents — base du « Définir par
  *  défaut » des dialogues Mise en page et Paragraphe. */
-export const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
+const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   fontFamily: "Arial, sans-serif",
   fontSize: "10pt",
   lineHeight: 1.15,
@@ -501,21 +501,21 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
 }
 
 /** Date du jour au format AAAA-MM-JJ (propriétés du document). */
-export function dateDuJourISO(): string {
+function dateDuJourISO(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /** Construit le commentaire de config à écrire en tête de fichier. */
-export function serializeDocumentConfig(layout: PageLayoutSettings): string {
+function serializeDocumentConfig(layout: PageLayoutSettings): string {
   const stored: StoredDocumentConfig = { configVersion: CONFIG_SCHEMA_VERSION, layout };
   return `${CONFIG_COMMENT_PREFIX}${JSON.stringify(stored)}${CONFIG_COMMENT_SUFFIX}`;
 }
 
 /** Construit le commentaire d'identité de l'outil (voir `appInfo.ts`),
  * réécrit à neuf à chaque sauvegarde avec la version actuelle de l'app. */
-export function serializeGeneratorComment(): string {
+function serializeGeneratorComment(): string {
   const info = {
     app: APP_NAME,
     appVersion: APP_VERSION,

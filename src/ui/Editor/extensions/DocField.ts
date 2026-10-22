@@ -21,10 +21,8 @@ import type { HeaderFooterContext } from "../../../core/pageLayout";
 import { resolveHeaderFooterText } from "../../../core/pageLayout";
 
 /** Lecture d'un champ : {{nom}} — lettres (accents compris), chiffres,
- *  espaces, tirets/underscores (ex. {{NomDuChamp}}, {{date}}). */
-export const DOC_FIELD_RE = /\{\{([A-Za-zÀ-ÖØ-öø-ÿ0-9 _-]+)\}\}/;
-/** Même regex, recherche globale — pour le remplacement dans le DOM
- *  (updateDOM ci-dessous). */
+ *  espaces, tirets/underscores (ex. {{NomDuChamp}}, {{date}}). Recherche
+ *  globale, pour le remplacement dans le DOM (updateDOM ci-dessous). */
 const DOC_FIELD_GLOBAL_RE = /\{\{([A-Za-zÀ-ÖØ-öø-ÿ0-9 _-]+)\}\}/g;
 
 /** Remplace CHAQUE `{{nom}}` d'un nœud texte par l'élément

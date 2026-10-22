@@ -65,8 +65,8 @@ l'éditeur) :
   autorisé à appeler `invoke` côté frontend), backend Rust dans
   `src-tauri/src/fs_commands.rs` (lecture/écriture/CRUD fichiers) et
   `src-tauri/src/watcher.rs` (watch du dossier de travail).
-- **Couleurs UI** : `src/ui/theme/tokens.ts` — nuancier officiel MBEF
-  (Mon BE Fluides, `mbefColors`), source unique de vérité : `sapin`
+- **Couleurs UI** : nuancier officiel MBEF (anciennement `src/ui/theme/tokens.ts`, supprimé : jamais importé, les couleurs vivent dans les CSS)
+  (Mon BE Fluides), référence de couleurs : `sapin`
   #003F2B (primaire : ruban, en-têtes de panneaux, éléments actifs),
   `prairie` #24AC6E (accents : onglet actif, cases cochées, boutons
   d'action), `ocean` #2F52A0 (liens, sommaire, titres), `charbon`
@@ -1178,7 +1178,7 @@ projets"). Constats et actions :
     rien d'autre »)** — bandeau de titre SAPIN, légendes de sections
     sapin, onglet actif souligné prairie, cases à cocher prairie,
     orientation active sapin sur fond teinté prairie, saisie focalisée
-    azur, texte charbon, OK prairie (voir tokens.ts ci-dessus).
+    azur, texte charbon, OK prairie (voir le nuancier ci-dessus).
   - SUPPRIMÉS de ce dialogue : onglets Page/En-tête-pied (ancienne
     organisation), champs TEXTE d'en-tête/pied (s'éditent sur la page
     même), onglet Titres et sommaire (styles de titres restent

@@ -342,9 +342,6 @@ export interface MarkdownEditorHandle {
 // plus courants (JS/TS, Python, C/C++/C#, Java, HTML/CSS, JSON, Bash, SQL,
 // YAML...) sans alourdir le bundle avec les ~190 langages disponibles.
 const lowlight = createLowlight(common);
-/** Langues de coloration syntaxique proposées par la pastille de langage
- *  des blocs de code. */
-export const CODE_BLOCK_LANGUAGES = Object.keys(common).sort();
 
 /** Échelle de tailles de police (en pt) — partagée entre le menu "Taille"
  * du ruban et les boutons Agrandir/Réduire (un pas = la valeur suivante de

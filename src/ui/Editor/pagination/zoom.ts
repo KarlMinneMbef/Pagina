@@ -3,12 +3,12 @@
 // Contrairement à eux, on n'importe pas leur hook (417 lignes, gestion fine
 // de la molette/trackpad) : notre propre gestion Ctrl+molette dans
 // MarkdownEditor.tsx suffit pour nos besoins actuels.
-export const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
+const ZOOM_PRESETS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
 
 /** Zoom minimal (plus petit préréglage). */
-export const MIN_ZOOM = ZOOM_PRESETS[0];
+const MIN_ZOOM = ZOOM_PRESETS[0];
 /** Zoom maximal (plus grand préréglage). */
-export const MAX_ZOOM = ZOOM_PRESETS[ZOOM_PRESETS.length - 1];
+const MAX_ZOOM = ZOOM_PRESETS[ZOOM_PRESETS.length - 1];
 
 /** Ramène une valeur de zoom dans les bornes. */
 export function clampZoom(zoom: number): number {

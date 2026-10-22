@@ -180,7 +180,7 @@ function isTocLinkParagraph(node: any): boolean {
  * le panneau latéral. Une liste normale de simples liens internes (cas
  * rarissime, jamais généré par l'app) matcherait aussi — limite acceptée,
  * bien moins grave qu'exiger un attribut non persistant. */
-export function isTocList(node: any): boolean {
+function isTocList(node: any): boolean {
   if (!node || node.type.name !== "bulletList" || node.childCount === 0) return false;
   let allMatch = true;
   node.forEach((item: any) => {

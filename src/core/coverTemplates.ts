@@ -101,7 +101,7 @@ export function loadUserCoverTemplates(): CoverTemplate[] {
 }
 
 /** Remplace toute la liste des modèles utilisateur (persisté). */
-export function saveUserCoverTemplates(templates: CoverTemplate[]): void {
+function saveUserCoverTemplates(templates: CoverTemplate[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
   } catch {
