@@ -53,7 +53,7 @@ import { Bookmark } from "./extensions/Bookmark";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
 import { TocMarker, isInsideToc } from "./extensions/TocMarker";
 import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
-import { MermaidDiagram } from "./extensions/MermaidDiagram";
+import { MermaidDiagram, setMermaidRenderedCallback } from "./extensions/MermaidDiagram";
 import { InlineMath, BlockMath } from "./extensions/Math";
 import { applyHeadingNumbering } from "./extensions/HeadingAutoNumber";
 import {
@@ -1924,6 +1924,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         });
       };
       repaintRef.current = repaint;
+      // Diagrammes Mermaid : leur re-rendu (thème/couleurs via le panneau
+      // Diagramme, ou montage) est ASYNCHRONE — le rappel débouncé relance
+      // le repaint pour que les CLONES de la couche peinte suivent (sans
+      // lui, un changement de thème ne se verrait sur la page qu'à la
+      // prochaine frappe).
+      setMermaidRenderedCallback(() => repaintRef.current());
 
       repaint();
       // Un changement de fenêtre (redimensionnement) peut changer la mise en
@@ -1941,6 +1947,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       const roFrame = new ResizeObserver(() => repaintCaretRef.current());
       if (frame) roFrame.observe(frame);
       return () => {
+        setMermaidRenderedCallback(null);
         ro.disconnect();
         roFrame.disconnect();
       };

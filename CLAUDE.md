@@ -137,6 +137,54 @@ projets"). Constats et actions :
 
 ### Fait et fonctionnel
 
+- **Diagrammes Mermaid : exemples métier BTP + couleurs configurables
+  (2026-10-22)** — deux évolutions de l'éditeur de diagrammes :
+  - **Les 7 onglets de modèles remplacés par des scripts métier BTP**
+    (tels quels, demandés par l'utilisateur) : organigramme de visa
+    (dossier d'études → DCE → DIUO/DOE), séquence MOA/BE/MOE/entreprise,
+    planning Gantt « Lot 2 CVC », camembert de chiffrage, classes
+    Dossier/Plan/Réserves, états de visa, relations AFFAIRE/DOSSIER/PLAN.
+  - **Nouveau module `src/core/diagramTheme.ts`** — la persistance est
+    isolée derrière `getDiagramTheme`/`setDiagramTheme` + hook
+    `useDiagramTheme` (useSyncExternalStore) + `buildMermaidConfig()` :
+    la phase .xmd pourra déplacer ces réglages dans les métadonnées du
+    conteneur en ne réécrivant QUE ce fichier. localStorage
+    `pagina.diagramTheme`, RÈGLE ABSOLUE : les couleurs ne JAMAIS dans
+    la source `.md` — uniquement au rendu (mermaid.initialize,
+    themeVariables), pour TOUS les diagrammes.
+  - **Panneau Diagramme** : rangée « Thème ▾ » (Pagina — socle neutral
+    teinté charte MBEF, palette camembert en tons moyen-foncés pour le
+    texte blanc —, Clair, Sombre, Forêt, Neutre) + « Personnaliser… »
+    (3 nuanciers Principale/Secondaire/Accent + Réinitialiser). Mapping
+    des couleurs perso par TYPE (mainBkg/actorBkg/taskBkgColor/pie1-12/
+    gradientStop…) car chaque type lit des variables différentes ; le
+    TEXTE est choisi par luminance (blanc/charbon) comme Word.
+  - **MermaidDiagram.ts** : registre des NodeViews vivantes +
+    `refreshAllMermaidDiagrams()` (au changement de thème, la page doit
+    RE-RENDRE ses SVG — le repaint ne fait que CLONER l'existant) +
+    rappel débouncé `setMermaidRenderedCallback` branché sur
+    `repaintRef` par MarkdownEditor : le re-rendu mermaid est
+    ASYNCHRONE, la couche peinte ne peut être rafraîchie qu'APRÈS.
+  - Vérifié : 70/70 rendus (7 types × 5 thèmes + 7×5 avec couleurs
+    perso) dans un Edge headless isolé contre le même serveur Vite (une
+    page de test dans public/, supprimée ensuite ; PIÈGE : les pages
+    publiques statiques ne résolvent PAS les imports nus — charger
+    `/node_modules/.vite/deps/mermaid.js` ; et Edge headless ouvre un
+    dialogue de profil → naviguer par CDP après le lancement) ;
+    couleurs perso présentes dans le SVG brut sur les 35 combinaisons
+    (les couleurs de flowchart/gantt/séquence vivent dans le <style> CSS
+    du SVG, PAS dans des attributs fill — ne pas "prouver" en lisant
+    les attributs) ; dans l'app réelle : page peinte suit le thème et
+    les couleurs en direct, persistance vérifiée à travers un reload
+    (thème forêt conservé puis remis par défaut).
+  - **INCIDENT de test (à retenir)** : l'utilisateur travaillait EN
+    MÊME TEMPS que les tests ; sa sauvegarde de 08:08 a capturé mon
+    diagramme de test dans son document démo. Nettoyage chirurgical :
+    retrait du bloc ```mermaid en tête via la vue Code + enregistrement
+    — TOUJOURS vérifier le dirty AVANT de manipuler, et stasher le
+    contenu réel si un reload est inévitable pendant que l'utilisateur
+    est susceptible de travailler.
+
 - **Fenêtres « Paramétrage » (roadmap 1.4) et « Utilisateur » V1
   (roadmap 1.5), 2026-10-22** — les préférences GLOBALES de l'app et le
   profil local, toutes deux indépendantes des documents (contrairement

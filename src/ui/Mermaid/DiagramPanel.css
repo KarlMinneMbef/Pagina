@@ -120,3 +120,103 @@
   color: var(--dm-label);
   line-height: 1.45;
 }
+
+/* Rangée « Thème ▾ + Personnaliser… » (couleurs des diagrammes, 2026-10-22)
+ * — réglage GLOBAL de rendu, jamais écrit dans la source Mermaid. */
+.dm-theme-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dm-theme-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--dm-label);
+}
+
+.dm-theme-field select {
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #343334;
+  padding: 3px 6px;
+}
+
+.dm-theme-btn {
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #343334;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.dm-theme-btn:hover,
+.dm-colors-reset:hover,
+.dm-color-clear:hover {
+  background: #f0f0ee;
+}
+
+/* Rangée des nuanciers personnalisés (ouvre via « Personnaliser… »). */
+.dm-colors {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.dm-color-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--dm-label);
+}
+
+.dm-color-field input[type="color"] {
+  width: 26px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--dm-line);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.dm-color-none {
+  font-size: 9px;
+  font-style: italic;
+  color: #8a8a8a;
+  width: 12px;
+}
+
+.dm-color-clear {
+  border: none;
+  background: none;
+  font-size: 9px;
+  color: var(--dm-danger);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.dm-colors-reset {
+  margin-left: auto;
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #343334;
+  padding: 3px 8px;
+  cursor: pointer;
+}
