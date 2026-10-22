@@ -151,6 +151,40 @@ Reste à découper : le corps du composant (~2 300 lignes d'effets : souris,
 repaint, en-tête/pied, menus) en hooks, un par commit, avec test réel dans
 l'app à chaque étape.
 
+## Passe de test fonction par fonction (2026-10-22)
+
+Menée par CDP sur l'app réelle avec un document jetable (créé puis supprimé).
+**Corrigés** (un commit chacun) : bouton « Normal » mort (`ParagraphMarkdown`
+écrasait `setParagraph`/Ctrl+Alt+0 — `addCommands`/`addKeyboardShortcuts` d'une
+extension étendue REMPLACENT ceux du parent : toujours `...this.parent?.()`) ;
+panneaux contextuels qui volaient le focus (Ctrl+Z mort après un clic) ;
+« Pied de page » depuis le haut de la page 1 ouvrait un champ hors écran ;
+**en-tête/pied vidé = fichier corrompu** (`<!-- empty-line -->` dans le JSON
+`pagina:config` fermait le commentaire HTML, le reste du JSON fuyait dans le
+corps) — le JSON est désormais échappé (`-->` → `>`) et les fichiers déjà
+corrompus sont réparés à la lecture (`repairTruncatedConfig`, 3 tests).
+**Vérifiés OK** : marques inline, styles de bloc, listes, alignements, tailles,
+couleurs, tableaux (lignes/colonnes/fusion/bordures/menu contextuel), insertions
+(saut de page, note, grille de tableau, emoji, lien, signet, renvoi, sommaire,
+Mermaid, formule), en-tête/pied + variables, Rechercher/Remplacer, 8 dialogues,
+format papier, règles glissantes, paramétrage, vues Markdown/Code, sauvegarde
+(disque relu), explorateur (créer/renommer/dupliquer/supprimer), PDF d'impression,
+mini-barre, pastille de langage, raccourcis.
+**Non testés** : Imprimer et Exporter PDF natifs (dialogues système), Ouvrir un
+fichier/dossier (dialogue système), fenêtre minimisée/déplacement, thème sombre.
+**Constats sans correction** : l'onglet reste « modifié » après annulation
+jusqu'au retour exact du texte brut du disque (comparaison de chaînes sérialisées,
+pas de pile d'annulation) ; l'équation s'édite maintenant SUR la page (`math-field`
+flottant), le panneau ne porte que la palette.
+**Pièges de méthode** : (1) l'**auto-sauvegarde est active (60 s)** — un test sur
+un document réel l'écrit sur disque : toujours un fichier jetable ; (2) après
+beaucoup d'éditions HMR la session peut devenir « zombie » (couche peinte figée,
+frappes perdues) : `page.reload()` avant de conclure à un bug ; (3) un double-clic
+Playwright vise le CENTRE de l'élément (souvent du blanc à droite d'un paragraphe
+court) : viser `position: {x: 20, y: 8}` ; (4) pour revenir à l'état initial, le
+focus doit être dans l'éditeur (cliquer dans le document puis ~80 × Ctrl+Z) ;
+(5) restaurer le zoom (barre de statut) et fermer les dialogues avant de relancer.
+
 ## Audit de code (2026-10-22)
 
 Inventaire par `knip` (code mort) et `jscpd` (doublons) : `tsc` propre,
