@@ -126,6 +126,7 @@ import {
   slugifyBookmark,
   escapeHtmlText,
   headerFooterTargetNearViewport,
+  revealInViewport,
   mmToPx,
 } from "./editorUtils";
 import { useCodeLangChip } from "./hooks/useCodeLangChip";
@@ -991,11 +992,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       }),
       editHeader: () => {
         const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
-        if (el) startHeaderFooterEditRef.current(el);
+        if (!el) return;
+        revealInViewport(el);
+        startHeaderFooterEditRef.current(el);
       },
       editFooter: () => {
         const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-footer");
-        if (el) startHeaderFooterEditRef.current(el);
+        if (!el) return;
+        revealInViewport(el);
+        startHeaderFooterEditRef.current(el);
       },
       insertHeaderFooterVariable: (token) => insertHeaderFooterVariableRef.current(token),
       closeHeaderFooterEdit: () => {

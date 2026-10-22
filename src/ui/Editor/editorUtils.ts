@@ -148,6 +148,16 @@ export function headerFooterTargetNearViewport(canvas: HTMLElement | null, selec
   return best;
 }
 
+/** Amène `el` au centre de la zone visible s'il en sort (instantané). Le
+ * champ d'en-tête/pied de page s'ouvre à la position de l'élément : sans ça,
+ * « Pied de page » depuis le haut de la page 1 ouvrait un champ hors écran
+ * et le bouton semblait ne rien faire. */
+export function revealInViewport(el: HTMLElement): void {
+  const r = el.getBoundingClientRect();
+  if (r.bottom > 0 && r.top < window.innerHeight) return;
+  el.scrollIntoView({ block: "center", behavior: "instant" as ScrollBehavior });
+}
+
 export function mmToPx(mm: number): number {
   const probe = document.createElement("div");
   probe.style.height = `${mm}mm`;
