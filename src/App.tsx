@@ -801,7 +801,7 @@ function App() {
                 <CoverPagePanel
                   key={stats.cover.pos}
                   source={stats.cover.source}
-                  onSourceChange={(source) => editorRef.current?.updateCoverSource(source)}
+                  onInsertVariable={(token) => editorRef.current?.insertCoverVariable(token)}
                   onDelete={() => editorRef.current?.deleteSelectedNode()}
                   onClose={() => setCoverPanelOpen(false)}
                 />
