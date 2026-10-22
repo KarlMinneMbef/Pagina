@@ -56,6 +56,7 @@ const STATS_INITIALES: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
+  cover: null,
 };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};
@@ -221,6 +222,8 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
           onOpenHeadingStyles={AUCUNE_ACTION_DIALOGUE}
           onOpenDocumentProperties={AUCUNE_ACTION_DIALOGUE}
           onOpenParagraphDialog={AUCUNE_ACTION_DIALOGUE}
+          onInsertSectionBreak={AUCUNE_ACTION_DIALOGUE}
+          onOpenCoverGallery={AUCUNE_ACTION_DIALOGUE}
           activeBlockStyle={stats.activeBlockStyle}
           activeMarks={stats.activeMarks}
           activeAlign={stats.activeAlign}

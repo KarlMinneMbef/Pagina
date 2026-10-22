@@ -33,6 +33,31 @@ export async function pickFiles(): Promise<string[]> {
   return Array.isArray(selected) ? selected : [selected];
 }
 
+/** Sélecteur natif « Enregistrer » pour EXPORTER un modèle de page de
+ *  garde (voir core/coverTemplates.ts) ; null si annulé. */
+export async function pickCoverTemplateSaveLocation(defaultName: string): Promise<string | null> {
+  const COVER_FILTERS = [{ name: "Modèle de page de garde Pagina", extensions: ["json"] }];
+  return save({
+    defaultPath: defaultName,
+    filters: COVER_FILTERS,
+    title: "Exporter le modèle de page de garde",
+  });
+}
+
+/** Sélecteur natif « Ouvrir » pour IMPORTER un modèle de page de garde
+ *  exporté depuis un autre poste ; null si annulé. */
+export async function pickCoverTemplateFile(): Promise<string | null> {
+  const COVER_FILTERS = [{ name: "Modèle de page de garde Pagina", extensions: ["json"] }];
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    filters: COVER_FILTERS,
+    title: "Importer un modèle de page de garde",
+  });
+  if (!selected || Array.isArray(selected)) return null;
+  return selected;
+}
+
 /** Boîte de dialogue "Enregistrer sous" — retourne le chemin choisi, ou
  * `null` si l'utilisateur annule. N'écrit rien elle-même (voir
  * `tabsStore.saveTabAs`, qui appelle ensuite `writeTextFile`). */

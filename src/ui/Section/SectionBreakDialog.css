@@ -1,0 +1,140 @@
+/*
+ * Fenêtre « Saut de section » — châssis compact commun aux dialogues de
+ * l'app (voir SectionBreakDialog.tsx), charte MBEF.
+ */
+.sbk-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.sbk-dialog {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  width: 430px;
+  max-width: calc(100vw - 40px);
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  color: #343334;
+}
+
+.sbk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #003f2b;
+  color: #ffffff;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+}
+
+.sbk-close {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.sbk-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.sbk-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sbk-note {
+  margin: 0;
+  font-size: 11px;
+  color: #6f6f6f;
+  line-height: 1.4;
+}
+
+.sbk-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.sbk-field span {
+  width: 120px;
+  white-space: nowrap;
+}
+
+.sbk-field input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #343334;
+}
+
+.sbk-field input:focus {
+  outline: 1px solid #24ac6e;
+}
+
+.sbk-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sbk-check input {
+  accent-color: #24ac6e;
+  cursor: pointer;
+}
+
+.sbk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e4e4e2;
+}
+
+.sbk-actions-spacer {
+  flex: 1;
+}
+
+.sbk-btn {
+  padding: 6px 16px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  color: #343334;
+}
+
+.sbk-btn:hover {
+  background: #f0f0ee;
+}
+
+.sbk-btn-primary {
+  background: #003f2b;
+  border-color: #003f2b;
+  color: #ffffff;
+}
+
+.sbk-btn-primary:hover {
+  background: #00503a;
+}

@@ -137,6 +137,48 @@ projets"). Constats et actions :
 
 ### Fait et fonctionnel
 
+- **Sections + Pages de garde (2026-10-22)** — les deux chantiers
+  validés en conception avec l'utilisateur :
+  - **Sections** (une section = un sous-document : numérotation et
+    sommaire propres) : extension `SectionBreak.ts` — marqueur
+    `<!-- section: <JSON URI-encodé> -->` (titre + reprise), séparateur
+    peint « Section — Titre » avec `id` slug (mêmes ancres que les
+    titres, paintPages). Numérotation : `HeadingAutoNumber` remet les
+    compteurs à zéro aux sauts avec `restart`. Sommaires :
+    `collectTocTargets(doc, pos)` — un sommaire AVANT la première
+    section liste les SECTIONS (table des parties), un sommaire DANS
+    une section ne liste que SES titres ; les slugs sont calculés sur
+    la séQUENCE COMPLÈTE du document (collectAllTargets) pour rester
+    alignés avec les ancres peintes même pour un sous-ensemble.
+    **PIÈGE CORRIGÉ** : la première regex de parsing exigeait du JSON
+    littéral alors que la sérialisation écrit de l'URI-encodé — un
+    saut de section sauvegardé ne se RELISAIT PAS (silencieusement
+    supprimé au prochain enregistrement) ; le décodeur accepte
+    maintenant les deux formes.
+  - **Pages de garde** : extension `CoverPage.ts` — nœud atome avec
+    `source` Markdown en attribut (`<!-- coverpage: <URI> -->`),
+    rendu RÉSOLU par NodeView : les variables ({{title}}, {{author}},
+    {{date}}…) sont substituées à l'affichage comme les en-têtes/pieds
+    (fournisseurs `setCoverRenderProviders` + `refreshAllCoverPages`
+    posés par MarkdownEditor, re-résolution à chaque changement de
+    propriétés). Galerie (`ui/Cover/CoverGalleryDialog.tsx`) : 5
+    modèles intégrés charte MBEF (Classique/Moderne/Technique/Minimal/
+    Chantier), aperçu papier, saut de page optionnel après. Panneau
+    contextuel (CoverPagePanel) au clic sur la page : source + variables
+    insérables + « Enregistrer comme modèle » (localStorage
+    `pagina.coverTemplates`) ; export/import JSON par dialogues natifs
+    (fileService). PAS D'IMAGES pour l'instant (décision utilisateur —
+    avec le format .xmd). Le clic sur les blocs atomes cover/section
+    pose un NodeSelection (cas du mousedown, comme Mermaid — un atome
+    ne passe pas posFromEvent).
+  - Vérifié dans l'app (fichier de test dédié zz-test-sections.md,
+    créé puis supprimé) : numérotation 1,2 puis REPRISE 1,2 après le
+    saut de section ; sommaire global = [Partie B] ; sommaire de
+    section = [1. Titre trois, 2. Titre quatre] ; séparateur peint avec
+    titre et ancre ; galerie → insertion → page peinte avec variables
+    résolues → clic → panneau → modèle enregistré dans localStorage.
+    tsc, 38 tests, build verts.
+
 - **Diagrammes Mermaid : exemples métier BTP + couleurs configurables
   (2026-10-22)** — deux évolutions de l'éditeur de diagrammes :
   - **Les 7 onglets de modèles remplacés par des scripts métier BTP**

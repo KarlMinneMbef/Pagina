@@ -82,6 +82,15 @@ export function applyHeadingNumbering(view: EditorView, headingStyles: Record<He
   let modified = false;
 
   state.doc.descendants((node, pos) => {
+    // Saut de section avec reprise de numérotation (voir SectionBreak.ts) :
+    // la section se comporte comme un sous-document, ses titres repartent
+    // de « 1. » — on remet TOUS les compteurs à zéro, comme Word.
+    if (node.type.name === "sectionBreak") {
+      if (node.attrs.restart) {
+        counters.fill(0);
+      }
+      return true;
+    }
     if (node.type.name !== "heading") return true;
     const level = (node.attrs.level as HeadingLevel) ?? 1;
     counters[level - 1] += 1;

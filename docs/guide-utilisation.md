@@ -98,8 +98,14 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 ### En-tête et pied
 - **En-tête** / **Pied de page** : positionne le curseur sur la zone correspondante de la page courante — l'édition se fait **sur la page même**, le ruban entier s'y applique.
 
-### Sommaire
-- **Marqueur** : insère l'emplacement du sommaire ; le panneau **Sommaire** propose ensuite « Mettre à jour » (régénère la liste des titres réels avec liens cliquables) et « Supprimer ».
+### Sommaire / Sections
+- **Marqueur** : insère l'emplacement du sommaire ; le panneau **Sommaire** propose ensuite « Mettre à jour » (régénère la liste des titres réels avec liens cliquables) et « Supprimer».
+- **Saut de section** (onglet Insertion) : commence une nouvelle partie — la numérotation des titres repart à « 1. » et les sommaires deviennent dédiés : un sommaire placé AVANT la première section liste les sections (table des parties) ; un sommaire placé DANS une section ne liste que les titres de cette section.
+
+### Pages de garde
+- **Page de garde** (onglet Insertion) : galerie de 5 modèles (Classique, Moderne, Technique, Minimal, Chantier) avec aperçu, insérés au curseur avec saut de page optionnel.
+- Le contenu accepte les **variables de document** (`{{title}}`, `{{author}}`, `{{date}}`…) — résolues à l'affichage, le fichier garde la variable.
+- Cliquez sur la page de garde pour l'éditer (panneau latéral) : source, variables en un clic, et **« Enregistrer comme modèle »** pour la retrouver dans la galerie ; les modèles s'exportent/s'importent en fichiers JSON pour un autre poste.
 
 ### Diagrammes et formules
 - **Mermaid** : diagramme (la source reste éditable directement dans le bloc).

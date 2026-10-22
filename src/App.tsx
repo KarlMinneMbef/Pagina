@@ -27,6 +27,9 @@ import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
 import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialog";
 import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
+import { SectionBreakDialog } from "./ui/Section/SectionBreakDialog";
+import { CoverGalleryDialog } from "./ui/Cover/CoverGalleryDialog";
+import { CoverPagePanel } from "./ui/Cover/CoverPagePanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { SettingsDialog } from "./ui/Settings/SettingsDialog";
 import { UserDialog } from "./ui/User/UserDialog";
@@ -56,6 +59,7 @@ const EMPTY_STATS: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
+  cover: null,
 };
 
 function App() {
@@ -120,6 +124,14 @@ function App() {
   // sur un diagramme peint / à l'insertion, refermé quand la sélection
   // quitte le diagramme — même cycle que le panneau Équation.
   const [mermaidPanelOpen, setMermaidPanelOpen] = useState(false);
+  // Fenêtres « Saut de section » et galerie « Page de garde » (2026-10-22)
+  // — ouvertes depuis l'onglet Insertion du ruban.
+  const [sectionBreakDialogOpen, setSectionBreakDialogOpen] = useState(false);
+  const [coverGalleryOpen, setCoverGalleryOpen] = useState(false);
+  // Panneau « Page de garde » : même front montant que le panneau
+  // Diagramme, piloté par stats.cover (NodeSelection sur le bloc).
+  const [coverPanelOpen, setCoverPanelOpen] = useState(false);
+  const wasCoverSelRef = useRef(false);
   const wasMermaidSelRef = useRef(false);
   useEffect(() => {
     const was = wasMermaidSelRef.current;
@@ -131,6 +143,16 @@ function App() {
       setMermaidPanelOpen(false);
     }
   }, [stats.mermaid]);
+  useEffect(() => {
+    const was = wasCoverSelRef.current;
+    wasCoverSelRef.current = !!stats.cover;
+    if (stats.cover && !was) {
+      setCoverPanelOpen(true);
+      setCtxTab("page-de-garde");
+    } else if (!stats.cover && was) {
+      setCoverPanelOpen(false);
+    }
+  }, [stats.cover]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "f") {
@@ -154,7 +176,7 @@ function App() {
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -574,6 +596,9 @@ function App() {
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
         onOpenDocumentProperties={() => setDocumentPropertiesOpen(true)}
+        /* Sections + pages de garde (2026-10-22) : onglet Insertion. */
+        onInsertSectionBreak={() => setSectionBreakDialogOpen(true)}
+        onOpenCoverGallery={() => setCoverGalleryOpen(true)}
         onOpenParagraphDialog={() => setParagraphDialogOpen(true)}
         onToggleHeadingPanel={() => {
           setHeadingPanelOpen((o) => !o);
@@ -658,7 +683,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen || coverPanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -671,10 +696,11 @@ function App() {
                 ...(headingPanelOpen ? [{ id: "styles", label: "Styles" }] : []),
                 ...(findReplaceOpen ? [{ id: "rechercher", label: "Rechercher" }] : []),
                 ...(mermaidPanelOpen && stats.mermaid ? [{ id: "diagramme", label: "Diagramme" }] : []),
+                ...(coverPanelOpen && stats.cover ? [{ id: "page-de-garde", label: "Page de garde" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde")}
             /* « Rechercher » plus large (volet façon Word, retour
              * utilisateur 2026-10-21) — appliqué au changement d'onglet
              * seulement, l'utilisateur garde la main sur la poignée. */
@@ -768,6 +794,18 @@ function App() {
                   onClose={() => setMermaidPanelOpen(false)}
                 />
               )}
+            {ctxTab === "page-de-garde" &&
+              coverPanelOpen &&
+              stats.cover &&
+              editorRef.current && (
+                <CoverPagePanel
+                  key={stats.cover.pos}
+                  source={stats.cover.source}
+                  onSourceChange={(source) => editorRef.current?.updateCoverSource(source)}
+                  onDelete={() => editorRef.current?.deleteSelectedNode()}
+                  onClose={() => setCoverPanelOpen(false)}
+                />
+              )}
           </ContextualPanelHost>
         )}
       </div>
@@ -810,6 +848,18 @@ function App() {
         />
       )}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {sectionBreakDialogOpen && activeTab && (
+        <SectionBreakDialog
+          onApply={({ title, restart }) => editorRef.current?.insertSectionBreak(title, restart)}
+          onClose={() => setSectionBreakDialogOpen(false)}
+        />
+      )}
+      {coverGalleryOpen && activeTab && (
+        <CoverGalleryDialog
+          onInsert={(source, withPageBreak) => editorRef.current?.insertCoverPage(source, withPageBreak)}
+          onClose={() => setCoverGalleryOpen(false)}
+        />
+      )}
       {userOpen && <UserDialog onClose={() => setUserOpen(false)} />}
     </div>
   );

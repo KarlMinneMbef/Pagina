@@ -1,0 +1,257 @@
+/*
+ * Galerie « Page de garde » (voir CoverGalleryDialog.tsx) — châssis des
+ * dialogues de l'app, deux colonnes : liste des modèles / aperçu papier.
+ */
+.cvg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.cvg-dialog {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  width: 760px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  color: #343334;
+}
+
+.cvg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #003f2b;
+  color: #ffffff;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+}
+
+.cvg-close {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.cvg-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.cvg-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.cvg-cols {
+  display: flex;
+  gap: 14px;
+  min-height: 320px;
+}
+
+.cvg-list {
+  width: 230px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.cvg-list-title {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cvg-list-title:first-child {
+  margin-top: 0;
+}
+
+.cvg-item {
+  text-align: left;
+  flex: 1;
+  border: 1px solid #d0d3d4;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 7px 10px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #343334;
+  cursor: pointer;
+}
+
+.cvg-item:hover {
+  background: #f0f6f3;
+}
+
+.cvg-item-row {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.cvg-item-row.cvg-item-active .cvg-item,
+.cvg-item.cvg-item-active {
+  border-color: #003f2b;
+  background: #e8f4ee;
+  font-weight: 600;
+}
+
+.cvg-item-tool {
+  border: 1px solid #d0d3d4;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 11px;
+  color: #343334;
+  cursor: pointer;
+  padding: 0 7px;
+}
+
+.cvg-item-tool:hover {
+  background: #f0f0ee;
+}
+
+.cvg-item-danger:hover {
+  color: #b3261e;
+  border-color: #b3261e;
+}
+
+.cvg-empty {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  color: #8a8a8a;
+  line-height: 1.4;
+}
+
+.cvg-import {
+  margin-top: 6px;
+  border: 1px dashed #24ac6e;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 7px 10px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #00503a;
+  cursor: pointer;
+}
+
+.cvg-import:hover {
+  background: #f0f6f3;
+}
+
+.cvg-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cvg-preview-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cvg-preview-paper {
+  flex: 1;
+  border: 1px solid #d0d3d4;
+  border-radius: 5px;
+  background: #ffffff;
+  padding: 22px;
+  min-height: 280px;
+  overflow: auto;
+}
+
+.cvg-preview-html {
+  min-height: 240px;
+}
+
+.cvg-variables-note {
+  margin: 0;
+  font-size: 10px;
+  color: #8a8a8a;
+  line-height: 1.4;
+}
+
+.cvg-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cvg-check input {
+  accent-color: #24ac6e;
+  cursor: pointer;
+}
+
+.cvg-status {
+  margin: 0;
+  font-size: 11px;
+  color: #00503a;
+}
+
+.cvg-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e4e4e2;
+}
+
+.cvg-actions-spacer {
+  flex: 1;
+}
+
+.cvg-btn {
+  padding: 6px 16px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  background: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  color: #343334;
+}
+
+.cvg-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cvg-btn:hover:not(:disabled) {
+  background: #f0f0ee;
+}
+
+.cvg-btn-primary {
+  background: #003f2b;
+  border-color: #003f2b;
+  color: #ffffff;
+}
+
+.cvg-btn-primary:hover:not(:disabled) {
+  background: #00503a;
+}
