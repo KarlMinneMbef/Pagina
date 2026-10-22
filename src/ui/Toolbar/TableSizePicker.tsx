@@ -6,9 +6,10 @@
  * libellé). Partagé entre le ruban (groupe « Tableau ») et le panneau
  * « En-tête/Pied de page » (tableaux dans la zone d'édition riche).
  */
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { IconTable } from "./icons";
 import { keepEditorFocus } from "../focusGuard";
+import { useClickOutside } from "../useClickOutside";
 
 const TABLE_PICKER_MAX_COLS = 8;
 const TABLE_PICKER_MAX_ROWS = 6;
@@ -27,16 +28,7 @@ export function TableSizePicker({
   const [hover, setHover] = useState<{ rows: number; cols: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  useClickOutside(rootRef, open, () => setOpen(false));
 
   const closeAndReset = () => {
     setOpen(false);

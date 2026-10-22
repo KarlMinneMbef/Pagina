@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { darken, isValidHex, lighten, normalizeHex } from "./colorUtils";
 import "./ColorPicker.css";
 import { keepEditorFocus } from "../focusGuard";
+import { useClickOutside } from "../useClickOutside";
 
 /** Couleurs de base façon thème Office — chacune décline 5 nuances
  * (2 plus claires, 1 proche, 2 plus sombres) sur les lignes suivantes. */
@@ -99,14 +100,7 @@ export function ColorPicker({
   const [placement, setPlacement] = useState<{ h: "left" | "right"; v: "down" | "up" }>({ h: "left", v: "down" });
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  useClickOutside(rootRef, open, () => setOpen(false));
 
   useEffect(() => {
     if (!open || !rootRef.current) return;
