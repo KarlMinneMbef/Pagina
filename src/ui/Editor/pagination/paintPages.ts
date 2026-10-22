@@ -406,6 +406,19 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
   const pageBlocks: PageBlockEntry[][] = [[]];
   let forceNextBreak = false;
 
+  // Zones « Page de garde » (CoverZone.ts) : les pages qui reçoivent du
+  // contenu d'une zone headerFooter=false ne peignent NI en-tête NI pied
+  // (l'appelant fournit le contexte, la zone décide ici). Suivi pendant
+  // la répartition : dès qu'un bloc entre les deux marqueurs tombe sur
+  // une page, la page est marquée ; les marqueurs eux-mêmes comptent
+  // (page du début = première page couverte).
+  const pagesWithoutHeaderFooter = new Set<number>();
+  let inCoverZone = false;
+  let coverZoneAllowsHeaderFooter = false;
+  const markCoverZonePage = (pageNumber: number) => {
+    if (inCoverZone && !coverZoneAllowsHeaderFooter) pagesWithoutHeaderFooter.add(pageNumber);
+  };
+
   view.state.doc.forEach((node, offset) => {
     const nodeDom = view.nodeDOM(offset) as HTMLElement | null;
     if (!nodeDom || !(nodeDom instanceof HTMLElement)) return;
@@ -438,6 +451,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
         // qu'à sa toute première entrée (les suivantes ne font jamais
         // démarrer une nouvelle page de force).
         const placement = paginator.placeBlock(height, spaceBefore, spaceAfter, isFirstEntry && forceNextBreak);
+        markCoverZonePage(placement.pageNumber);
 
         while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
         const pageIndex = placement.pageNumber - 1;
@@ -473,6 +487,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
             isLast ? tableSpaceAfter : 0,
             isFirst && forceNextBreak,
           );
+          markCoverZonePage(placement.pageNumber);
           while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
           const pageIndex = placement.pageNumber - 1;
           if (!pending || pendingPageIndex !== pageIndex) {
@@ -501,6 +516,19 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
 
     const placement = paginator.placeBlock(height, spaceBefore, spaceAfter, forceNextBreak);
     forceNextBreak = node.type.name === "pageBreak";
+
+    // Marqueurs de zone page de garde : le marqueur de DÉBUT ouvre la
+    // zone AVANT le marquage de sa page (elle est couverte), le marqueur
+    // de FIN marque sa page puis la referme (même page que le dernier
+    // bloc de contenu en pratique).
+    if (node.type.name === "coverZoneStart") {
+      inCoverZone = true;
+      coverZoneAllowsHeaderFooter = !!node.attrs.headerFooter;
+    }
+    markCoverZonePage(placement.pageNumber);
+    if (node.type.name === "coverZoneEnd") {
+      inCoverZone = false;
+    }
 
     while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
     pageBlocks[placement.pageNumber - 1].push({ kind: "node", pos: offset, dom: nodeDom });
@@ -533,7 +561,11 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       // sur "rien"). Un en-tête/pied de page vide reste invisible en
       // fonctionnement normal (pas de bordure ni de fond) ; seule une
       // info-bulle au survol invite à cliquer (voir MarkdownEditor.css).
-      if (header.showOnFirstPage || !isFirstPage) {
+      // Page couverte par une zone page de garde SANS en-tête/pied
+      // (CoverZone.ts, marqueur début headerFooter=false) : ni en-tête
+      // ni pied peints, comme une vraie page de garde Word.
+      const suppressHeaderFooter = pagesWithoutHeaderFooter.has(pageNumber);
+      if ((header.showOnFirstPage || !isFirstPage) && !suppressHeaderFooter) {
         const headerEl = document.createElement("div");
         headerEl.className = "xmd-page-header";
         headerEl.appendChild(buildHeaderFooterContent(header, fullContext));
@@ -598,7 +630,7 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
       }
       page.appendChild(content);
 
-      if (footer.showOnFirstPage || !isFirstPage) {
+      if ((footer.showOnFirstPage || !isFirstPage) && !suppressHeaderFooter) {
         const footerEl = document.createElement("div");
         footerEl.className = "xmd-page-footer";
         footerEl.appendChild(buildHeaderFooterContent(footer, fullContext));

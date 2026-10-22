@@ -40,23 +40,6 @@
   border-color: #24ac6e;
 }
 
-.cvp-source {
-  min-height: 160px;
-  resize: vertical;
-  border: 1px solid #d0d3d4;
-  border-radius: 8px;
-  background: #fbfbfa;
-  font-family: Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.5;
-  color: #343334;
-  padding: 8px 10px;
-}
-
-.cvp-source:focus {
-  outline: 1px solid #24ac6e;
-}
-
 .cvp-hint {
   margin: 0;
   font-size: 10px;
@@ -103,4 +86,24 @@
   margin: 0;
   font-size: 10px;
   color: #00503a;
+}
+
+/* Propriété « en-tête/pied sur la zone » (refonte zone transparente). */
+.cvp-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #343334;
+  cursor: pointer;
+}
+
+.cvp-check input {
+  accent-color: #003f2b;
+}
+
+.cvp-vars-title {
+  margin: 0;
+  font-size: 10px;
+  color: #75766f;
 }

@@ -56,7 +56,7 @@ const STATS_INITIALES: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
-  cover: null,
+  coverZone: null,
 };
 
 const AUCUNE_ACTION_DIALOGUE = () => {};

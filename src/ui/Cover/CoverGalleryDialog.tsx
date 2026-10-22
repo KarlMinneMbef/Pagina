@@ -1,11 +1,14 @@
 /**
- * Galerie « Page de garde » (2026-10-22) — les modèles intégrés (charte
- * MBEF, voir core/coverTemplates.ts) + les modèles de l'utilisateur
- * (localStorage, exportables/importables en fichiers JSON pour un autre
- * poste). Chaque modèle est inséré au CURSEUR via `onInsert`, avec un
- * saut de page optionnel juste après (recommandé pour une vraie page
- * dédiée). Le contenu se réédite ensuite via le panneau latéral
- * « Page de garde » (CoverPagePanel.tsx) en cliquant dessus.
+ * Galerie « Page de garde » (2026-10-22, refonte zone transparente) — les
+ * modèles intégrés (charte MBEF, voir core/coverTemplates.ts) + les types
+ * de l'utilisateur (localStorage, exportables/importables en fichiers
+ * JSON pour un autre poste). Chaque modèle est inséré au CURSEUR via
+ * `onInsert` comme une ZONE page de garde (CoverZone.ts) : deux marqueurs
+ * transparents encadrant du CONTENU NORMAL, avec un saut de page
+ * optionnel juste après (recommandé pour une vraie page dédiée). Le
+ * contenu se réédite ensuite directement sur la page (tout l'éditeur y
+ * fonctionne) ; le panneau latéral « Page de garde »
+ * (CoverPagePanel.tsx) s'ouvre quand le curseur est dans la zone.
  */
 import { useState } from "react";
 import {

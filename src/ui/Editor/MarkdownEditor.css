@@ -897,9 +897,10 @@ math-virtual-keyboard {
   content: "Section";
 }
 
-/* Page de garde (2026-10-22) : bloc pleine page rendu depuis son Markdown
- * (variables résolues, voir CoverPage.ts) — padding généreux façon Word,
- * le contenu se centre via les styles du modèle lui-même. */
+/* Page de garde LEGACY (CoverPage.ts) : n'est plus produite par l'app
+ * (refonte « zone transparente » 2026-10-22) mais reste LISIBLE à
+ * l'ouverture des anciens documents avant leur première sauvegarde —
+ * styles conservés pour ce rendu de repli. */
 .xmd-coverpage {
   min-height: 220px;
   padding: 36px 8px;
@@ -910,30 +911,76 @@ math-virtual-keyboard {
   margin: 0 0 12px;
 }
 
-/* Champ d'édition EN PLACE d'une page de garde (2026-10-22 — startCoverEdit
- * dans MarkdownEditor.tsx) : hôte fixe posé sur la zone peinte, même
- * langage que .xmd-header-footer-edit ; le contenu s'édite comme du texte
- * normal (ruban complet via cmd()), les {{variables}} restent du texte. */
-.xmd-cover-edit {
-  position: fixed;
-  z-index: 50;
-  font-family: var(--xmd-font-family);
-  font-size: 10pt;
-  border: 2px solid #003f2b;
-  border-radius: 3px;
-  outline: none;
-  padding: 0;
-  background: #ffffff;
-  color: #343334;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  overflow: visible;
+/* Zone « Page de garde » (2026-10-22, refonte utilisateur : « une page
+ * comme les autres, traitée comme une zone code — début et fin de zone,
+ * transparente ») : deux marqueurs discrets encadrant du contenu NORMAL.
+ * La zone n'est PAS un bloc spécial : le contenu entre les marqueurs
+ * s'édite avec tout l'éditeur (ruban, tableaux, curseur) ; les marqueurs
+ * ne marquent que les LIMITES. Discret à l'écran, INVISIBLE à
+ * l'impression (une vraie page de garde Word n'affiche pas ses
+ * repères). */
+.xmd-coverzone {
+  border: none;
+  height: 10px;
+  margin: 4px 0;
+  position: relative;
+  cursor: default;
 }
 
-.xmd-cover-edit .xmd-hf-prosemirror {
-  min-height: inherit;
-  outline: none;
-  padding: 22px 26px;
-  text-align: left;
-  line-height: 1.3;
-  white-space: pre-wrap;
+.xmd-coverzone-start::before,
+.xmd-coverzone-end::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  border-top: 1px dashed #2479a5;
+}
+
+.xmd-coverzone-start::after {
+  content: "Page de garde — début de la zone";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  padding: 0 8px;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  color: #2479a5;
+  white-space: nowrap;
+}
+
+.xmd-coverzone-end::after {
+  content: "Fin de la page de garde";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  padding: 0 8px;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  color: #75766f;
+  white-space: nowrap;
+}
+
+/* Champ de document {{variable}} (DocField.ts) : la page affiche la
+ * VALEUR RÉSOLUE (comme les en-têtes/pieds), le fichier garde la
+ * variable. Chip discret pour signaler le champ à l'édition — le texte
+ * reste du texte normal à l'impression (fond conservé : c'est du
+ * CONTENU, pas un repère d'édition). */
+.xmd-docfield {
+  background: #dfeff8;
+  border-bottom: 1px dotted #2479a5;
+  border-radius: 2px;
+  padding: 0 2px;
+  cursor: default;
+}
+
+@media print {
+  .xmd-coverzone {
+    display: none !important;
+  }
 }
