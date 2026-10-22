@@ -20,6 +20,7 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { uniqueHeadingSlug } from "../pagination/slug";
+import { sectionDisplayTitle } from "./SectionBreak";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -34,39 +35,84 @@ declare module "@tiptap/core" {
 
 const TOC_COMMENT = /^<!--\s*toc\s*-->$/i;
 
-interface TocHeading {
+/** Une cible du sommaire : un titre OU (sommaire global) une section. */
+interface TocTarget {
   level: number;
   text: string;
+  slug: string;
 }
 
-function collectHeadings(doc: any): TocHeading[] {
-  const headings: TocHeading[] = [];
-  doc.descendants((node: any) => {
+/** Toutes les cibles du document dans l'ORDRE (titres ET sauts de
+ *  section), chacune avec son slug DÉJÀ CALCULÉ sur la séquence
+ *  complète — les slugs doivent être identiques à ceux posés sur les
+ *  éléments peints (paintPages.ts parcourt le document dans le même
+ *  ordre) ; un sommaire de SECTION ne listant qu'un sous-ensemble, ses
+ *  liens doivent pourtant viser les ancères globales (un doublon de
+ *  texte dans une section précédente décale les suffixes « -2 »). */
+function collectAllTargets(doc: any): (TocTarget & { pos: number })[] {
+  const targets: (TocTarget & { pos: number })[] = [];
+  const usedSlugs = new Set<string>();
+  let sectionIndex = 0;
+  doc.descendants((node: any, pos: number) => {
+    if (node.type.name === "sectionBreak") {
+      const text = sectionDisplayTitle(node.attrs.title ?? "", ++sectionIndex);
+      targets.push({ level: 1, text, slug: uniqueHeadingSlug(text, usedSlugs), pos });
+      return true;
+    }
     if (node.type.name === "heading") {
-      headings.push({ level: node.attrs.level, text: node.textContent });
+      targets.push({ level: node.attrs.level, text: node.textContent, slug: uniqueHeadingSlug(node.textContent, usedSlugs), pos });
     }
     return true;
   });
-  return headings;
+  return targets;
+}
+
+/** Cibles d'un sommaire posé à `tocPos` (portée par section, 2026-10-22) :
+ *  - AVANT la première section : les SECTIONS elles-mêmes (vue d'ensemble
+ *    du document en parties, comme la table d'un recueil) — ou tous les
+ *    titres s'il n'y a AUCUNE section (comportement historique) ;
+ *  - DANS une section : uniquement les titres de cette section (entre le
+ *    saut de section qui la commence et le suivant) — son « sommaire
+ *    dédié », numérotation comprise (voir HeadingAutoNumber.ts). */
+function collectTocTargets(doc: any, tocPos: number): TocTarget[] {
+  const all = collectAllTargets(doc);
+  const sections = all.filter((t) => {
+    const node = doc.nodeAt(t.pos);
+    return node?.type.name === "sectionBreak";
+  });
+  // Le saut de section qui contient ce sommaire = le DERNIER avant tocPos.
+  let containing: (TocTarget & { pos: number }) | null = null;
+  for (const s of sections) {
+    if (s.pos < tocPos) containing = s;
+    else break;
+  }
+  if (!containing) {
+    // Sommaire GLOBAL : les sections (ou tous les titres sans sections).
+    if (sections.length > 0) return sections.map(({ level, text, slug }) => ({ level, text, slug }));
+    return all
+      .filter((t) => doc.nodeAt(t.pos)?.type.name === "heading")
+      .map(({ level, text, slug }) => ({ level, text, slug }));
+  }
+  const next = sections.find((s) => s.pos > containing!.pos);
+  return all
+    .filter((t) => t.pos > containing!.pos && (!next || t.pos < next.pos))
+    .filter((t) => doc.nodeAt(t.pos)?.type.name === "heading")
+    .map(({ level, text, slug }) => ({ level, text, slug }));
 }
 
 /** Construit une liste à puces IMBRIQUÉE (JSON de nœuds ProseMirror) à
- * partir d'une liste plate de titres avec leur niveau — chaque titre devient
- * l'enfant du titre précédent le plus proche de niveau strictement inférieur.
- * Chaque entrée est un vrai LIEN (`#slug`, voir `pagination/slug.ts`) —
- * cliquable dans l'éditeur pour sauter au titre correspondant (voir le
- * gestionnaire de clic dans `MarkdownEditor.tsx`) ET dans n'importe quel
- * rendu Markdown→HTML classique (ancre standard). L'ordre de parcours ET
- * l'algorithme de slug DOIVENT rester identiques à `paintPages.ts`, sinon
- * le lien généré ici ne correspondrait à aucun `id` réellement posé sur les
- * titres peints. */
-function buildTocContent(headings: TocHeading[]): any {
-  if (headings.length === 0) {
-    return { type: "paragraph", content: [{ type: "text", text: "(Aucun titre dans le document)" }] };
+ * partir d'une liste plate de cibles avec leur niveau — chaque cible
+ * devient l'enfant de la précédente la plus proche de niveau strictement
+ * inférieur. Chaque entrée est un vrai LIEN (`#slug`) — cliquable dans
+ * l'éditeur ET dans n'importe quel rendu Markdown→HTML classique (ancre
+ * standard). Les slugs sont PRÉ-CALCULÉS sur la séquence complète du
+ * document (`collectAllTargets`) : ils doivent rester identiques à ceux
+ * posés sur les éléments peints (paintPages.ts), même pour le
+ * sous-ensemble d'un sommaire de section. */
+function buildTocContent(targets: TocTarget[]): any {
+  if (targets.length === 0) {
+    return { type: "paragraph", content: [{ type: "text", text: "(Aucun titre dans cette partie)" }] };
   }
-
-  const usedSlugs = new Set<string>();
-  const withSlugs = headings.map((h) => ({ ...h, slug: uniqueHeadingSlug(h.text, usedSlugs) }));
 
   interface Frame {
     level: number;
@@ -83,7 +129,7 @@ function buildTocContent(headings: TocHeading[]): any {
     }
   };
 
-  for (const h of withSlugs) {
+  for (const h of targets) {
     while (stack.length > 1 && h.level <= stack[stack.length - 1].level) {
       closeFrame();
     }
@@ -198,18 +244,14 @@ export const TocMarker = Node.create({
       // Remplace TOUS les marqueurs présents par le sommaire généré ; s'il
       // n'y en a aucun, insère directement le sommaire à la position du
       // curseur (confort — évite un aller-retour "insérer le marqueur PUIS
-      // générer" quand on veut juste un sommaire tout de suite).
+      // générer" quand on veut juste un sommaire tout de suite). Depuis le
+      // 2026-10-22, chaque marqueur reçoit le sommaire de SA portée : les
+      // marqueurs AVANT la première section listent les sections (ou tous
+      // les titres sans sections), ceux DANS une section ne listent que
+      // les titres de cette section (sommaire dédié).
       generateToc:
         () =>
         ({ tr, state, dispatch, chain }: any) => {
-          const headings = collectHeadings(state.doc).filter(
-            // Le sommaire ne doit jamais se citer lui-même : sans intérêt
-            // ici puisque le marqueur n'est pas un titre, mais on protège
-            // quand même contre un futur changement de schéma.
-            (h: TocHeading) => h.level >= 1,
-          );
-          const content = buildTocContent(headings);
-
           let foundMarker = false;
           const positions: number[] = [];
           state.doc.descendants((node: any, pos: number) => {
@@ -221,18 +263,22 @@ export const TocMarker = Node.create({
           });
 
           if (!foundMarker) {
+            const content = buildTocContent(collectTocTargets(state.doc, state.selection.from));
             return chain().insertContent(content).run();
           }
 
           if (dispatch) {
             // En partant de la fin : remplacer un marqueur ne doit pas
             // décaler la position des marqueurs suivants qu'on n'a pas
-            // encore traités.
+            // encore traités — et chaque remplacement relit le document
+            // COURANT (`state.doc`, jamais `tr.doc` : les remplacements
+            // précédents ne changent pas la portée d'un marqueur, les
+            // sauts de section sont avant/après, pas dedans).
             for (let i = positions.length - 1; i >= 0; i--) {
               const pos = positions[i];
               const node = state.doc.nodeAt(pos);
               if (!node) continue;
-              const contentNode = state.schema.nodeFromJSON(content);
+              const contentNode = state.schema.nodeFromJSON(buildTocContent(collectTocTargets(state.doc, pos)));
               tr.replaceWith(pos, pos + node.nodeSize, contentNode);
             }
             // Replace le curseur DANS le sommaire fraîchement généré (le
@@ -264,8 +310,11 @@ export const TocMarker = Node.create({
           const found = findTocListAt(state.doc, state.selection.from);
           if (!found) return false;
           if (dispatch) {
-            const headings = collectHeadings(state.doc).filter((h: TocHeading) => h.level >= 1);
-            const content = buildTocContent(headings);
+            // Portée par section (2026-10-22) : la position du sommaire
+            // détermine ce qu'il liste — sections avant la première, ou
+            // titres de la section qui le contient.
+            const targets = collectTocTargets(state.doc, found.pos);
+            const content = buildTocContent(targets);
             const contentNode = state.schema.nodeFromJSON(content);
             tr.replaceWith(found.pos, found.pos + found.node.nodeSize, contentNode);
             // Sans ceci, ProseMirror replace la sélection à un endroit

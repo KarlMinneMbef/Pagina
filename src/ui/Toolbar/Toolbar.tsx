@@ -60,6 +60,8 @@ import {
   IconMermaid,
   IconOrderedList,
   IconPageBreak,
+  IconSectionBreak,
+  IconCoverPage,
   IconPageSetup,
   IconComment,
   IconPaste,
@@ -314,6 +316,8 @@ export function Toolbar({
   onOpenPageSetup,
   onOpenHeadingStyles,
   onOpenDocumentProperties,
+  onInsertSectionBreak,
+  onOpenCoverGallery,
   onOpenParagraphDialog,
   onToggleHeadingPanel,
   headingPanelOpen = false,
@@ -335,6 +339,11 @@ export function Toolbar({
   onOpenHeadingStyles: () => void;
   /** Ouvre la fenêtre « Propriétés du document » (roadmap 1.3). */
   onOpenDocumentProperties: () => void;
+  /** Ouvre la fenêtre « Saut de section » (titre + reprise de
+   *  numérotation — sections, 2026-10-22). */
+  onInsertSectionBreak: () => void;
+  /** Ouvre la galerie de pages de garde (modèles + variables). */
+  onOpenCoverGallery: () => void;
   /** Ouvre la fenêtre « Paragraphe — Retrait et espacement » (comme le
    * lanceur du groupe Paragraphe de Word + « Options d'interligne… »). */
   onOpenParagraphDialog: () => void;
@@ -811,6 +820,20 @@ export function Toolbar({
                 title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
                 icon={<IconFootnote size={15} />}
                 label="Note de bas de page"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={onInsertSectionBreak}
+                title="Saut de section — commence une nouvelle partie : numérotation des titres et sommaire dédiés"
+                icon={<IconSectionBreak size={15} />}
+                label="Saut de section"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={onOpenCoverGallery}
+                title="Page de garde — modèles réutilisables avec variables de document ({{title}}, {{author}}…)"
+                icon={<IconCoverPage size={15} />}
+                label="Page de garde"
               />
             </div>
           </RibbonGroup>

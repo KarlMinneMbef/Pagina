@@ -1,0 +1,106 @@
+/*
+ * Panneau latéral « Page de garde » (voir CoverPagePanel.tsx) — même
+ * langage que les autres panneaux contextuels (dm-*, eq-*), charte MBEF.
+ */
+.cvp-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.cvp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.cvp-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cvp-var-btn {
+  border: 1px solid #d0d3d4;
+  border-radius: 10px;
+  background: #ffffff;
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  color: #00503a;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.cvp-var-btn:hover {
+  background: #f0f6f3;
+  border-color: #24ac6e;
+}
+
+.cvp-source {
+  min-height: 160px;
+  resize: vertical;
+  border: 1px solid #d0d3d4;
+  border-radius: 8px;
+  background: #fbfbfa;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #343334;
+  padding: 8px 10px;
+}
+
+.cvp-source:focus {
+  outline: 1px solid #24ac6e;
+}
+
+.cvp-hint {
+  margin: 0;
+  font-size: 10px;
+  color: #75766f;
+  line-height: 1.45;
+}
+
+.cvp-model {
+  display: flex;
+  gap: 6px;
+}
+
+.cvp-model-name {
+  flex: 1;
+  border: 1px solid #d0d3d4;
+  border-radius: 6px;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #343334;
+  padding: 5px 8px;
+}
+
+.cvp-model-name:focus {
+  outline: 1px solid #24ac6e;
+}
+
+.cvp-model-btn {
+  border: 1px solid #003f2b;
+  border-radius: 6px;
+  background: #003f2b;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #ffffff;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cvp-model-btn:hover {
+  background: #00503a;
+}
+
+.cvp-model-note {
+  margin: 0;
+  font-size: 10px;
+  color: #00503a;
+}

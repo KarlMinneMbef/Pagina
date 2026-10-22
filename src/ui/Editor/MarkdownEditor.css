@@ -865,3 +865,47 @@ math-virtual-keyboard {
   flex: 1;
   min-width: 0;
 }
+
+/* Saut de section (2026-10-22) : séparateur discret « Section — Titre »,
+ * même esprit que .xmd-pagebreak — la section commence (et la précédente
+ * se termine) à cet endroit ; numérotation des titres et sommaire dédié
+ * (voir SectionBreak.ts / TocMarker.ts). */
+.xmd-sectionbreak {
+  border: none;
+  border-top: 2px solid #003f2b;
+  margin: 14px 0;
+  position: relative;
+  cursor: default;
+}
+
+.xmd-sectionbreak::after {
+  content: "Section — " attr(data-title);
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  padding: 0 10px;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #003f2b;
+  white-space: nowrap;
+}
+
+.xmd-sectionbreak[data-title=""]::after {
+  content: "Section";
+}
+
+/* Page de garde (2026-10-22) : bloc pleine page rendu depuis son Markdown
+ * (variables résolues, voir CoverPage.ts) — padding généreux façon Word,
+ * le contenu se centre via les styles du modèle lui-même. */
+.xmd-coverpage {
+  min-height: 220px;
+  padding: 36px 8px;
+  margin: 6px 0;
+}
+
+.xmd-coverpage-content p {
+  margin: 0 0 12px;
+}

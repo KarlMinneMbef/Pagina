@@ -21,6 +21,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import { createPaginator } from "./paginator";
 import { resolveHeaderFooterText, type HeaderFooterSettings, type HeaderFooterContext } from "../../../core/pageLayout";
 import { uniqueHeadingSlug } from "./slug";
+import { sectionDisplayTitle } from "../extensions/SectionBreak";
 import { createCloneIndex, indexCloneBlock, type CloneIndex } from "./cloneIndex";
 
 const HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6";
@@ -511,6 +512,11 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
   // calculés dans le même ordre que `TocMarker.ts` (`collectHeadings`) pour
   // que les liens du sommaire pointent vers le bon `id`.
   const usedSlugs = new Set<string>();
+  // Compteur de sections partagé sur toute la boucle, comme usedSlugs :
+  // le libellé de repli « Section n » (SectionBreak.ts) doit être calculé
+  // dans le MÊME ordre que TocMarker.ts (collectAllTargets) pour que
+  // l'ancre du sommaire global vise le bon id peint.
+  let sectionCounter = 0;
 
   canvas.replaceChildren(
     ...pageBlocks.map((blocks, index) => {
@@ -563,6 +569,12 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
           const headingEl = clone.matches(HEADING_SELECTOR) ? clone : clone.querySelector(HEADING_SELECTOR);
           if (headingEl) {
             headingEl.id = uniqueHeadingSlug(headingEl.textContent ?? "", usedSlugs);
+          }
+          // Saut de section : `id` posé pour les liens du sommaire GLOBAL
+          // (qui liste les sections — voir TocMarker.ts) ; le libellé de
+          // repli « Section n » suit le même compteur que collectAllTargets.
+          if (clone.matches('div[data-type="section-break"]')) {
+            clone.id = uniqueHeadingSlug(sectionDisplayTitle(clone.getAttribute("data-title") ?? "", ++sectionCounter), usedSlugs);
           }
           content.appendChild(clone);
         } else if (entry.kind === "tableRows") {

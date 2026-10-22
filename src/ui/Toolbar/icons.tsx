@@ -284,6 +284,29 @@ export function IconPageBreak({ size, className }: IconProps) {
   );
 }
 
+/** Icône « Saut de section » — double barre de séparation. */
+export function IconSectionBreak({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M4 8h16" />
+      <path d="M4 16h16" />
+      <path d="M12 4v2M12 11v2M12 18v2" />
+    </Svg24>
+  );
+}
+
+/** Icône « Page de garde » — page avec grand titre centré. */
+export function IconCoverPage({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h7" />
+      <path d="M10.5 17h4" />
+    </Svg24>
+  );
+}
+
 /** Icône « Note de bas de page ». */
 export function IconFootnote({ size, className }: IconProps) {
   return (

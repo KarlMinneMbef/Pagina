@@ -54,6 +54,8 @@ import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
 import { TocMarker, isInsideToc } from "./extensions/TocMarker";
 import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
 import { MermaidDiagram, setMermaidRenderedCallback } from "./extensions/MermaidDiagram";
+import { SectionBreak } from "./extensions/SectionBreak";
+import { CoverPage, setCoverRenderProviders, refreshAllCoverPages } from "./extensions/CoverPage";
 import { InlineMath, BlockMath } from "./extensions/Math";
 import { applyHeadingNumbering } from "./extensions/HeadingAutoNumber";
 import {
@@ -250,6 +252,15 @@ export interface MarkdownEditorHandle {
    * en fin de document (n = 1 + le plus grand id de note déjà utilisé). */
   insertFootnote: () => void;
   insertMermaidDiagram: () => void;
+  /** Insère un saut de section (titre affiché + reprise de numérotation). */
+  insertSectionBreak: (title: string, restart: boolean) => void;
+  /** Insère une page de garde (source Markdown + variables), avec saut
+   *  de page optionnel juste après. */
+  insertCoverPage: (source: string, withPageBreak: boolean) => void;
+  /** Remplace la source de la page de garde sélectionnée. */
+  updateCoverSource: (source: string) => void;
+  /** Supprime le nœud atomique sélectionné (page de garde, diagramme…). */
+  deleteSelectedNode: () => void;
   /** Met à jour la source du diagramme sélectionné (panneau
    * « Diagramme ») — sans effet si aucun diagramme n'est sélectionné. */
   updateMermaidSource: (source: string) => void;
@@ -563,6 +574,15 @@ function getMermaidAtSelection(editor: Editor): EditorStats["mermaid"] {
   const sel = editor.state.selection;
   const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
   if (selNode && selNode.type.name === "mermaidDiagram") {
+    return { pos: sel.from, source: String(selNode.attrs.source ?? "") };
+  }
+  return null;
+}
+
+function getCoverAtSelection(editor: Editor): EditorStats["cover"] {
+  const sel = editor.state.selection;
+  const selNode = (sel as unknown as { node?: { type: { name: string }; attrs: { source?: string } } }).node;
+  if (selNode && selNode.type.name === "coverPage") {
     return { pos: sel.from, source: String(selNode.attrs.source ?? "") };
   }
   return null;
@@ -956,6 +976,9 @@ export interface EditorStats {
    * `pos` sert de CLÉ d'identité (le panneau se remonte au changement de
    * diagramme, jamais à la frappe). */
   mermaid: { pos: number; source: string } | null;
+  /** Page de garde sous le curseur (NodeSelection sur un bloc
+   *  coverPage) — pilote le panneau latéral « Page de garde ». */
+  cover: { pos: number; source: string } | null;
   /** Formule mathématique sélectionnée (`inlineMath`/`blockMath` — nœud
    * atomique désigné par NodeSelection, posée à l'insertion ou au clic sur
    * la formule peinte) — pilote le panneau latéral « Équation » (éditeur
@@ -1183,6 +1206,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         FootnoteReference,
         FootnoteDefinition,
         MermaidDiagram,
+        SectionBreak,
+        CoverPage,
         InlineMath,
         BlockMath,
         Markdown.configure({
@@ -1291,6 +1316,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
+          cover: getCoverAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -1486,6 +1512,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         currentPage: currentPageRef.current,
         headerFooterEditMode: headerFooterModeRef.current,
         mermaid: editor ? getMermaidAtSelection(editor) : null,
+        cover: editor ? getCoverAtSelection(editor) : null,
       }),
       editHeader: () => {
         const el = headerFooterTargetNearViewport(canvasRef.current, ".xmd-page-header");
@@ -1542,6 +1569,34 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if (nb && nb.type.name === "mermaidDiagram" && editor) {
           editor.commands.setNodeSelection($from.pos - nb.nodeSize);
         }
+      },
+      // Saut de section (SectionBreak.ts) — titre + reprise de
+      // numérotation ; le séparateur peint montre « Section — Titre ».
+      insertSectionBreak: (title, restart) => {
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertSectionBreak({ title, restart }).run();
+      },
+      // Page de garde (CoverPage.ts) : le bloc + un saut de page EN UNE
+      // transaction (insertContent d'un TABLEAU de nœuds) — l'insertion
+      // après un NodeSelection remplacerait la sélection, d'où le
+      // regroupement ; le curseur finit après le saut de page.
+      insertCoverPage: (source, withPageBreak) => {
+        const nodes: any[] = [{ type: "coverPage", attrs: { source } }];
+        if (withPageBreak) nodes.push({ type: "pageBreak" });
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent(nodes).run();
+      },
+      // Mise à jour de la source de la page de garde SÉLECTIONNÉE
+      // (NodeSelection posé par le clic sur le bloc peint).
+      updateCoverSource: (source) => {
+        const selNode = (editor?.state.selection as unknown as { node?: any })?.node;
+        if (!editor || !selNode || selNode.type.name !== "coverPage") return;
+        editor.chain().focus(undefined, { scrollIntoView: false }).command(({ tr, state }: any) => {
+          tr.setNodeMarkup(state.selection.from, undefined, { ...selNode.attrs, source });
+          return true;
+        }).run();
+      },
+      // Supprime le nœud sélectionné (page de garde sous NodeSelection).
+      deleteSelectedNode: () => {
+        cmd()?.chain().focus(undefined, { scrollIntoView: false }).deleteSelection().run();
       },
       updateMermaidSource: (source) => {
         const m = editor ? getMermaidAtSelection(editor) : null;
@@ -1803,6 +1858,30 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         return editor.storage.markdown.parser.parse(md) as string;
       };
 
+      // Pages de garde (CoverPage.ts) : leurs NodeViews rendent le contenu
+      // RÉSOLU (variables substituées) — le parseur et le contexte vivent
+      // ici. Rechargés à CHAQUE changement de layout (propriétés du
+      // document modifiées → variables à re-résoudre) : l'effet se
+      // rejouant, le nouveau contexte est repoussé aux NodeViews.
+      setCoverRenderProviders({
+        mdToHtml,
+        getContext: () => ({
+          page: 1,
+          pages: 1,
+          date: formatTodayForHeaderFooter(),
+          filename: documentTitleRef.current,
+          version: layout.documentVersion,
+          author: layout.author,
+          title: layout.documentProperties?.title ?? "",
+          subject: layout.documentProperties?.subject ?? "",
+          keywords: layout.documentProperties?.keywords ?? "",
+          created: layout.documentProperties?.createdDate ?? "",
+          modified: layout.documentProperties?.modifiedDate ?? "",
+          custom: layout.documentProperties?.custom ?? [],
+        }),
+      });
+      refreshAllCoverPages();
+
       const repaint = () => {
         const canvas = canvasRef.current;
         const liveHost = liveHostRef.current;
@@ -1919,6 +1998,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
+          cover: getCoverAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: headerFooterModeRef.current,
         });
@@ -2155,6 +2235,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
+          cover: getCoverAtSelection(editor),
           tableSelectionShape: getSelectionShape(editor),
           headerFooterEditMode: mode,
         });
@@ -2771,6 +2852,56 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           return;
         }
         const mathTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-math");
+        // Page de garde (2026-10-22) : clic sur le bloc rendu → NodeSelection
+        // → panneau latéral « Page de garde ». Même mécanique que Mermaid :
+        // un atome ne passe pas toujours bien posFromEvent, le clone peint
+        // porte data-src-pos = position exacte du nœud.
+        const coverTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-coverpage");
+        if (coverTarget) {
+          e.preventDefault();
+          const isCoverNode = (n: any) => n && n.type.name === "coverPage";
+          let coverPos: number | null = null;
+          const blockPosAttr = coverTarget.closest<HTMLElement>("[data-src-pos]")?.getAttribute("data-src-pos");
+          if (blockPosAttr != null) {
+            const p = parseInt(blockPosAttr, 10);
+            if (isCoverNode(editor.state.doc.nodeAt(p))) coverPos = p;
+          }
+          if (coverPos === null) {
+            const clickPos = posFromEvent(e);
+            if (clickPos !== null) {
+              if (isCoverNode(editor.state.doc.nodeAt(clickPos))) coverPos = clickPos;
+              else if (isCoverNode(editor.state.doc.nodeAt(clickPos - 1))) coverPos = clickPos - 1;
+            }
+          }
+          if (coverPos === null) return;
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setNodeSelection(coverPos);
+          return;
+        }
+        // Saut de section : clic → NodeSelection (sélectionnable, Suppr le
+        // retire — même confort que le saut de page).
+        const sectionTarget = (e.target as HTMLElement)?.closest<HTMLElement>(".xmd-sectionbreak");
+        if (sectionTarget) {
+          e.preventDefault();
+          const isSectionNode = (n: any) => n && n.type.name === "sectionBreak";
+          const blockPosAttr = sectionTarget.closest<HTMLElement>("[data-src-pos]")?.getAttribute("data-src-pos");
+          let sectionPos: number | null = null;
+          if (blockPosAttr != null) {
+            const p = parseInt(blockPosAttr, 10);
+            if (isSectionNode(editor.state.doc.nodeAt(p))) sectionPos = p;
+          }
+          if (sectionPos === null) {
+            const clickPos = posFromEvent(e);
+            if (clickPos !== null) {
+              if (isSectionNode(editor.state.doc.nodeAt(clickPos))) sectionPos = clickPos;
+              else if (isSectionNode(editor.state.doc.nodeAt(clickPos - 1))) sectionPos = clickPos - 1;
+            }
+          }
+          if (sectionPos === null) return;
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setNodeSelection(sectionPos);
+          return;
+        }
         if (mathTarget) {
           e.preventDefault();
           const clickPos = posFromEvent(e);
@@ -3010,6 +3141,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
+          cover: getCoverAtSelection(editor),
             tableSelectionShape: getSelectionShape(editor),
             headerFooterEditMode: headerFooterModeRef.current,
           });
