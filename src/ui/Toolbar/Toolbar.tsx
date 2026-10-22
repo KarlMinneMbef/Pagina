@@ -70,6 +70,7 @@ import {
 } from "./icons";
 import "./Toolbar.css";
 import { keepEditorFocus } from "../focusGuard";
+import { useClickOutside } from "../useClickOutside";
 
 /** Caractères spéciaux (bouton « Caractères spéciaux » de l'onglet Insertion) :
  * insérés comme caractère Unicode réel, comme les emoji. Évite volontairement
@@ -412,16 +413,7 @@ export function Toolbar({
   // refermé au clic extérieur (même comportement que le ColorPicker).
   const [lineSpacingMenuOpen, setLineSpacingMenuOpen] = useState(false);
   const lineSpacingMenuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!lineSpacingMenuOpen) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (lineSpacingMenuRef.current && !lineSpacingMenuRef.current.contains(e.target as Node)) {
-        setLineSpacingMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [lineSpacingMenuOpen]);
+  useClickOutside(lineSpacingMenuRef, lineSpacingMenuOpen, () => setLineSpacingMenuOpen(false));
 
   const memoriserCouleur = (cle: string, setter: (v: string) => void, couleur: string) => {
     setter(couleur);
@@ -1136,16 +1128,7 @@ function HeadingPicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  useClickOutside(rootRef, open, () => setOpen(false));
 
   return (
     <div className="tb-heading-picker" ref={rootRef}>
