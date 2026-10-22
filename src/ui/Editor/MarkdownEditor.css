@@ -984,3 +984,53 @@ math-virtual-keyboard {
     display: none !important;
   }
 }
+
+/* ===== IMPRESSION / EXPORT PDF (2026-10-22) =====
+ * Ce que l'écran montre doit sortir sur le papier, SANS les repères
+ * d'édition. Constats de la passe de test : les fonds (bandeaux de page de
+ * garde, surlignages) disparaissaient, « Saut de page » s'imprimait, les
+ * blocs de code et tableaux larges gardaient leur barre de défilement. */
+@media print {
+  /* Fonds et couleurs imprimés tels quels (sinon le navigateur les retire). */
+  .xmd-page,
+  .xmd-page * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Repères d'édition : invisibles à l'impression, l'espace reste réservé
+   * pour ne pas décaler la pagination. */
+  .xmd-pagebreak,
+  .xmd-sectionbreak,
+  .xmd-toc-marker {
+    visibility: hidden;
+  }
+
+  /* Champ {{variable}} : du texte normal sur le papier. */
+  .xmd-docfield {
+    background: none !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+  }
+
+  /* Sélection de cellules / bloc : jamais imprimée. */
+  .selectedCell,
+  .ProseMirror-selectednode {
+    background: inherit !important;
+    outline: none !important;
+  }
+  .selectedCell::after {
+    display: none !important;
+  }
+
+  /* Pas de défilement sur papier : le contenu large passe à la ligne. */
+  .xmd-page pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: visible;
+  }
+  .xmd-page .tableWrapper,
+  .xmd-page .xmd-mermaid-preview {
+    overflow: visible !important;
+  }
+}

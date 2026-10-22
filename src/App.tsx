@@ -35,6 +35,7 @@ import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { SettingsDialog } from "./ui/Settings/SettingsDialog";
 import { UserDialog } from "./ui/User/UserDialog";
 import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
+import { resolvePageSizeMm } from "./core/pageLayout";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
@@ -446,7 +447,8 @@ function App() {
         await messageDialog(`PDF enregistré : ${path}`, { title: "Pagina", kind: "info" });
       }
     });
-    await exportPdf(path);
+    const { widthMm, heightMm } = resolvePageSizeMm(activeTab.layout);
+    await exportPdf(path, widthMm, heightMm);
   };
 
   const handleCloseTab = async (path: string) => {
