@@ -34,6 +34,7 @@ import {
 } from "../Toolbar/icons";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import "./TablePropertiesPanel.css";
+import { keepEditorFocus } from "../focusGuard";
 
 /** Clé de `Set` pour une ligne de grille — voir `GridLine` dans
  * MarkdownEditor.tsx (`axis`/`index`), simplement sérialisée en chaîne pour
@@ -455,7 +456,7 @@ function BorderDiagram({
       <g
         key={lineKey(line)}
         className="tp-bd-edge-group"
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepEditorFocus}
         onClick={() => !disabled && onToggle(line)}
       >
         <title>{`${positionLabel} ${active ? "(bordure posée — cliquer pour la retirer du tableau)" : "(absente — cliquer pour la poser dans le tableau)"}`}</title>

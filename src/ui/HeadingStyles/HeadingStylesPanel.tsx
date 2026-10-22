@@ -17,6 +17,7 @@ import { formatCounter } from "../../core/pageLayout";
 import "./HeadingStylesPanel.css";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import { IconGear } from "../Toolbar/icons";
+import { keepEditorFocus } from "../focusGuard";
 
 type Active = "paragraph" | HeadingLevel;
 
@@ -87,7 +88,7 @@ export function HeadingStylesPanel({
           className={`hsp-item${active === "paragraph" ? " hsp-item-active" : ""}`}
           // Garde le focus (et donc la sélection) dans l'éditeur : sans ça le
           // mousedown vide la sélection avant que le clic ne s'applique.
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepEditorFocus}
           onClick={onPickParagraph}
           title="Texte normal (paragraphe)"
         >
@@ -104,7 +105,7 @@ export function HeadingStylesPanel({
               role="option"
               aria-selected={active === level}
               className={`hsp-item${active === level ? " hsp-item-active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={keepEditorFocus}
               onClick={() => onPick(level)}
               title={`Appliquer le style Titre ${level} (cliquer à nouveau sur le niveau actif le repasse en texte normal)`}
             >

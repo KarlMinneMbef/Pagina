@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { IconTable } from "./icons";
+import { keepEditorFocus } from "../focusGuard";
 
 const TABLE_PICKER_MAX_COLS = 8;
 const TABLE_PICKER_MAX_ROWS = 6;
@@ -48,7 +49,7 @@ export function TableSizePicker({
         type="button"
         className="tb-big-btn tb-btn-with-caret"
         disabled={disabled}
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepEditorFocus}
         onClick={() => setOpen((o) => !o)}
         title={title}
       >
