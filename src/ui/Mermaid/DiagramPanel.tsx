@@ -20,6 +20,14 @@
 import { useEffect, useRef, useState } from "react";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
 import { IconTrash } from "../Toolbar/icons";
+import {
+  DIAGRAM_THEMES,
+  buildMermaidConfig,
+  diagramThemeVersion,
+  setDiagramTheme,
+  useDiagramTheme,
+} from "../../core/diagramTheme";
+import { refreshAllMermaidDiagrams } from "../Editor/extensions/MermaidDiagram";
 import "./DiagramPanel.css";
 
 /** Un modèle de diagramme : libellé + squelette Mermaid prêt à
@@ -35,42 +43,153 @@ const TEMPLATES: DiagramTemplate[] = [
   {
     id: "flowchart",
     label: "Organigramme",
-    source: "flowchart TD\n    A[Départ] --> B{Décision ?}\n    B -- Oui --> C[Action]\n    B -- Non --> D[Fin]\n    C --> D",
+    source: `flowchart TD
+    A[Dossier d'études] --> B{Visa synthétique}
+    B -->|Conforme| C[DCE émis]
+    B -->|Réserve| D[Fiche de réserves]
+    D --> A
+    C --> E[Réponse AT / consultation]
+    E --> F[Marché attribué]
+    F --> G[Visite de chantier]
+    G --> H[Levée des observations]
+    H --> I[DIUO + DOE]`,
   },
   {
     id: "sequence",
     label: "Séquence",
-    source:
-      "sequenceDiagram\n    participant U as Utilisateur\n    participant S as Système\n    U->>S: Demande\n    S-->>U: Réponse",
+    source: `sequenceDiagram
+    participant MOA
+    participant BE
+    participant MOE
+    participant Entreprise
+    MOA->>BE: Dossier d'études
+    BE->>MOE: Visa synthétique
+    MOE-->>BE: Observations / réserves
+    BE->>MOA: Dossier corrigé
+    MOA->>Entreprise: Notification de marché
+    Entreprise-->>BE: Questions AT
+    BE->>Entreprise: Réponse au plus tard 12 jours avant`,
   },
   {
     id: "gantt",
     label: "Gantt",
-    source:
-      "gantt\n    title Planning du chantier\n    dateFormat YYYY-MM-DD\n    section Études\n    Conception      :a1, 2026-11-01, 10d\n    section Chantier\n    Travaux         :a2, after a1, 20d",
+    source: `gantt
+    title Planning d'études — Lot 2 CVC
+    dateFormat YYYY-MM-DD
+    section Études
+    Conception APS       :done, a1, 2026-09-01, 20d
+    Visite de chantier   :active, a2, after a1, 5d
+    Synthèse APD         :a3, after a2, 15d
+    section Consultation
+    DCE émis             :b1, after a3, 3d
+    Réponses AT          :b2, after b1, 21d
+    section Chantier
+    Travaux              :c1, after b2, 60d
+    DOE                  :milestone, c2, after c1, 0d`,
   },
   {
     id: "pie",
     label: "Camembert",
-    source: "pie title Répartition\n    \"Lot 1\" : 45\n    \"Lot 2\" : 35\n    \"Reste\" : 20",
+    source: `pie showData
+    title Répartition du chiffrage — Lot 2
+    "Génie climatique" : 42
+    "Plomberie sanitaire" : 28
+    "Régulation GTC" : 15
+    "Essais et mise en service" : 9
+    "DOE et Diagnostics" : 6`,
   },
   {
     id: "class",
     label: "Classes",
-    source: "classDiagram\n    class Equipement {\n        +String nom\n        +puissance\n    }\n    Equipement <|-- Chaudiere",
+    source: `classDiagram
+    class Dossier {
+        +String numero
+        +String designation
+        +Etat etat
+        +valider()
+        +cloturer()
+    }
+    class Reserves {
+        +List items
+        +ajouter()
+        +lever()
+    }
+    class Plan {
+        +String indice
+        +String discipline
+        +incrementer()
+    }
+    Dossier "1" --> "*" Plan
+    Dossier "1" --> "*" Reserves`,
   },
   {
     id: "state",
     label: "État",
-    source: "stateDiagram-v2\n    [*] --> EnService\n    EnService --> Arret : Maintenance\n    Arret --> [*]",
+    source: `stateDiagram-v2
+    [*] --> EnCours
+    EnCours --> EnVisa : dossier complet
+    EnVisa --> Reserve : observations
+    EnVisa --> Valide : conforme
+    Reserve --> EnCours : corrections
+    Valide --> Cloture : DOE rendu
+    Cloture --> [*]`,
   },
   {
     id: "er",
     label: "Relations",
-    source:
-      "erDiagram\n    CHANTIER ||--o{ LOT : contient\n    LOT ||--|{ EQUIPEMENT : comporte",
+    source: `erDiagram
+    AFFAIRE ||--o{ DOSSIER : contient
+    DOSSIER ||--|{ PLAN : "comporte"
+    DOSSIER ||--o{ RESERVES : "génère"
+    PLAN }o--|| DISCIPLINE : "appartient à"
+    AFFAIRE {
+        string numero
+        string client
+        date date_commande
+    }
+    PLAN {
+        string indice
+        string designation
+    }`,
   },
 ];
+
+/** Un champ de couleur personnalisée : nuancier natif + témoin « auto »
+ *  quand aucune surcharge n'est posée (la couleur du thème s'applique). */
+function DiagramColorField({
+  label,
+  value,
+  onChange,
+  onClear,
+}: {
+  label: string;
+  /** Couleur de surcharge, "" = aucune (couleur du thème). */
+  value: string;
+  onChange: (color: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <span className="dm-color-field">
+      <span className="dm-color-label">{label}</span>
+      {/* React mappe onChange sur l'évènement natif « input » des
+       * <input type="color"> — le piège « change » (CLAUDE.md) ne
+       * s'applique pas ici, la couleur suit le glissement en direct. */}
+      <input
+        type="color"
+        value={value || "#e8f4ee"}
+        onChange={(e) => onChange(e.target.value)}
+        title={value ? `${label} : ${value} (cliquez pour changer)` : `${label} : automatique (couleur du thème)`}
+      />
+      {value ? (
+        <button type="button" className="dm-color-clear" onClick={onClear} title={`Retirer la surcharge « ${label} »`}>
+          ✕
+        </button>
+      ) : (
+        <span className="dm-color-none">auto</span>
+      )}
+    </span>
+  );
+}
 
 /** Panneau Diagramme : édition de la source Mermaid avec rendu SVG live. */
 export function DiagramPanel({
@@ -93,7 +212,15 @@ export function DiagramPanel({
   const [value, setValue] = useState(source);
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewError, setPreviewError] = useState<string | null>(null);
+  // Thème de couleurs (thème + surcharges) — réglage GLOBAL (tous les
+  // diagrammes, persisted via core/diagramTheme.ts), édité depuis ici.
+  const diagramTheme = useDiagramTheme();
+  const [colorsOpen, setColorsOpen] = useState(false);
   const renderSeq = useRef(0);
+  // Version de la config de thème déjà appliquée par CE panneau (le
+  // module MermaidDiagram a la sienne — le garde interne de
+  // mermaid.initialize rend la ré-application gratuite).
+  const appliedThemeVersion = useRef(-1);
   // Debounce du rendu : re-rendre le SVG à CHAQUE caractère coûterait
   // trop (mermaid.render est asynchrone et loin d'être gratuit).
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,7 +233,11 @@ export function DiagramPanel({
     const seq = renderSeq.current;
     try {
       const { default: mermaid } = await import("mermaid");
-      mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+      const v = diagramThemeVersion();
+      if (v !== appliedThemeVersion.current) {
+        mermaid.initialize({ startOnLoad: false, ...buildMermaidConfig() });
+        appliedThemeVersion.current = v;
+      }
       const { svg } = await mermaid.render(`xmd-diagram-panel-${seq}`, src);
       if (seq === renderSeq.current) {
         setPreviewHtml(svg);
@@ -139,6 +270,16 @@ export function DiagramPanel({
     void renderPreview(tpl.source);
   };
 
+  /** Applique un changement de thème/couleurs : persiste (API isolée,
+   * core/diagramTheme.ts), re-rend l'aperçu ET toutes les vues de la
+   * page (refreshAllMermaidDiagrams — le repaint de la couche peinte
+   * ne fait que cloner le SVG, il ne relance pas mermaid). */
+  const applyTheme = (patch: Parameters<typeof setDiagramTheme>[0]) => {
+    setDiagramTheme(patch);
+    void renderPreview(value);
+    refreshAllMermaidDiagrams();
+  };
+
   return (
     <div className="dm-panel">
       <PanelHeader
@@ -156,6 +297,62 @@ export function DiagramPanel({
         closeTitle="Fermer le panneau (la sélection reste)"
       />
       <div className="dm-body">
+        {/* Thème de couleurs — réglage GLOBAL (tous les diagrammes du
+         * document et des prochains), jamais écrit dans la source. */}
+        <div className="dm-theme-row">
+          <label className="dm-theme-field">
+            <span>Thème</span>
+            <select
+              value={diagramTheme.theme}
+              onChange={(e) => applyTheme({ theme: e.target.value as typeof diagramTheme.theme })}
+              title="Couleurs appliquées à tous les diagrammes (rendu uniquement)"
+            >
+              {DIAGRAM_THEMES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="dm-theme-btn"
+            onClick={() => setColorsOpen((o) => !o)}
+            title="Surcharger les couleurs du thème (rendu uniquement, jamais dans la source)"
+          >
+            {colorsOpen ? "Masquer les couleurs" : "Personnaliser…"}
+          </button>
+        </div>
+        {colorsOpen && (
+          <div className="dm-colors">
+            <DiagramColorField
+              label="Principale"
+              value={diagramTheme.colors.primary}
+              onChange={(c) => applyTheme({ colors: { ...diagramTheme.colors, primary: c } })}
+              onClear={() => applyTheme({ colors: { ...diagramTheme.colors, primary: "" } })}
+            />
+            <DiagramColorField
+              label="Secondaire"
+              value={diagramTheme.colors.secondary}
+              onChange={(c) => applyTheme({ colors: { ...diagramTheme.colors, secondary: c } })}
+              onClear={() => applyTheme({ colors: { ...diagramTheme.colors, secondary: "" } })}
+            />
+            <DiagramColorField
+              label="Accent"
+              value={diagramTheme.colors.accent}
+              onChange={(c) => applyTheme({ colors: { ...diagramTheme.colors, accent: c } })}
+              onClear={() => applyTheme({ colors: { ...diagramTheme.colors, accent: "" } })}
+            />
+            <button
+              type="button"
+              className="dm-colors-reset"
+              onClick={() => applyTheme({ colors: { primary: "", secondary: "", accent: "" } })}
+              title="Revenir aux couleurs pures du thème choisi"
+            >
+              Réinitialiser
+            </button>
+          </div>
+        )}
         <div className="dm-templates">
           {TEMPLATES.map((t) => (
             <button

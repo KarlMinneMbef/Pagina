@@ -137,6 +137,10 @@ Les boutons « Formule en ligne / en bloc » insèrent la formule et ouvrent le 
 
 Ouvert au clic sur un diagramme (ou à l'insertion d'un bloc Mermaid) : la **source du diagramme** s'édite dans le panneau latéral avec un **rendu live** à chaque frappe — plus besoin d'éditer le bloc de code à la main. « Supprimer le diagramme » le retire du document.
 
+- **Modèles métier** : 7 onglets prêts à l'emploi (organigramme de visa, séquence MOA/BE/MOE, planning Gantt, camembert de chiffrage, classes, états, relations) — un clic remplace la source (Ctrl+Z pour revenir).
+- **Thème ▾** : couleurs appliquées à tous les diagrammes (Pagina par défaut, plus Clair, Sombre, Forêt, Neutre) — **rendu uniquement**, jamais écrit dans le fichier.
+- **Personnaliser…** : trois nuanciers (Principale = fonds, Secondaire = notes/sections, Accent = bordures et liens) qui surchargent le thème choisi.
+
 ### En-tête / Pied de page
 Ouvert pendant l'édition de la zone : propose les **variables** en un clic — `{{page}}`, `{{pages}}`, `{{date}}`, `{{filename}}`, `{{version}}`, `{{author}}`, `{{title}}`, `{{subject}}`, `{{keywords}}`, `{{created}}`, `{{modified}}` — et **chaque champ personnalisé** créé dans [Propriétés du document](#propriétés-du-document) par son propre nom. Remplacées par leur valeur dans le rendu et à l'impression.
 
