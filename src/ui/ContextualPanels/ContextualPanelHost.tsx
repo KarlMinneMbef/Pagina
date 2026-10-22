@@ -11,6 +11,15 @@ import { useHorizontalResize } from "../ResizeHandle/useHorizontalResize";
 import { ResizeHandle } from "../ResizeHandle/ResizeHandle";
 import "./ContextualPanelHost.css";
 
+/** Les panneaux contextuels agissent sur la sélection de l'éditeur : un clic
+ *  sur un de leurs boutons ne doit pas lui retirer le focus (sinon Ctrl+Z et
+ *  la frappe ne vont plus au document). Les champs de saisie gardent leur
+ *  comportement natif. */
+function keepFocusUnlessField(e: React.MouseEvent) {
+  if ((e.target as HTMLElement).closest("input, textarea, select, math-field, label, [contenteditable='true']")) return;
+  e.preventDefault();
+}
+
 /** Un panneau de la colonne contextuelle (id, titre, contenu React). */
 export interface ContextualTab {
   id: string;
@@ -43,7 +52,7 @@ export function ContextualPanelHost({
   }, [widthRequest]);
   if (tabs.length === 0) return null;
   return (
-    <aside className="ctx-host" style={{ width }}>
+    <aside className="ctx-host" style={{ width }} onMouseDown={keepFocusUnlessField}>
       <ResizeHandle side="left" onMouseDown={onHandleMouseDown} />
       {tabs.length > 1 && (
         <div className="ctx-tabs" role="tablist">
