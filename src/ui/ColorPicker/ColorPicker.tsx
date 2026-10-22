@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from "react";
 import { darken, isValidHex, lighten, normalizeHex } from "./colorUtils";
 import "./ColorPicker.css";
+import { keepEditorFocus } from "../focusGuard";
 
 /** Couleurs de base façon thème Office — chacune décline 5 nuances
  * (2 plus claires, 1 proche, 2 plus sombres) sur les lignes suivantes. */
@@ -138,7 +139,7 @@ export function ColorPicker({
         className={triggerClassName ?? "cp-trigger"}
         disabled={disabled}
         title={onApplyLast ? (applyLastTitle ?? title) : title}
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepEditorFocus}
         onClick={() => (onApplyLast ? onApplyLast() : setOpen((o) => !o))}
       >
         {trigger}
@@ -152,7 +153,7 @@ export function ColorPicker({
           className={caretClassName ?? "cp-trigger-caret"}
           disabled={disabled}
           title={title}
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepEditorFocus}
           onClick={() => setOpen((o) => !o)}
         >
           ▾

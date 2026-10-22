@@ -13,6 +13,7 @@
 import { IconVarAuthor, IconVarDate, IconVarFile, IconVarPage, IconVarPages, IconVarText, IconVarVersion } from "../Toolbar/icons";
 import "./HeaderFooterPanel.css";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
+import { keepEditorFocus } from "../focusGuard";
 
 /** Jetons disponibles — voir `resolveHeaderFooterText` dans
  * core/pageLayout.ts pour la substitution réelle. */
@@ -50,7 +51,6 @@ export function HeaderFooterPanel({
   /** Termine l'édition (referme le champ ; le contenu est déjà appliqué). */
   onClose: () => void;
 }) {
-  const noFocus = (e: React.MouseEvent) => e.preventDefault();
   return (
     <div className="hf-panel">
       <PanelHeader
@@ -69,7 +69,7 @@ export function HeaderFooterPanel({
                 type="button"
                 className="hf-action"
                 title={v.title}
-                onMouseDown={noFocus}
+                onMouseDown={keepEditorFocus}
                 onClick={() => onInsertVariable(v.token)}
               >
                 <span className="hf-action-icon">{v.icon}</span>
@@ -90,7 +90,7 @@ export function HeaderFooterPanel({
                   type="button"
                   className="hf-action"
                   title={`Insérer la valeur du champ « ${v.label} » (défini dans la fenêtre Propriétés du document)`}
-                  onMouseDown={noFocus}
+                  onMouseDown={keepEditorFocus}
                   onClick={() => onInsertVariable(v.token)}
                 >
                   <span className="hf-action-icon">

@@ -14,6 +14,7 @@ import type { Editor } from "@tiptap/react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import { IconLink } from "../Toolbar/icons";
 import "./SelectionBar.css";
+import { keepEditorFocus } from "../focusGuard";
 
 const run = (editor: Editor) => editor.chain().focus(undefined, { scrollIntoView: false });
 
@@ -26,7 +27,7 @@ export function SelectionBar({ editor, left, top }: { editor: Editor; left: numb
       key={name}
       className={`xmd-selbar-btn${editor.isActive(name) ? " xmd-selbar-btn-active" : ""}${extraClass}`}
       title={title}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepEditorFocus}
       onClick={toggle}
     >
       {label}
@@ -47,7 +48,7 @@ export function SelectionBar({ editor, left, top }: { editor: Editor; left: numb
   const textColor = (editor.getAttributes("textStyle").color as string | undefined) ?? undefined;
 
   return (
-    <div className="xmd-selbar" style={{ left, top }} role="toolbar" aria-label="Mise en forme rapide" onMouseDown={(e) => e.preventDefault()}>
+    <div className="xmd-selbar" style={{ left, top }} role="toolbar" aria-label="Mise en forme rapide" onMouseDown={keepEditorFocus}>
       {mark("bold", <strong>B</strong>, "Gras (Ctrl+B)", () => run(editor).toggleBold().run())}
       {mark("italic", <em>I</em>, "Italique (Ctrl+I)", () => run(editor).toggleItalic().run())}
       {mark("underline", <u>U</u>, "Souligné (Ctrl+U)", () => run(editor).toggleUnderline().run())}

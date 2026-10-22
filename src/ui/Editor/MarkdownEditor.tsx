@@ -93,6 +93,7 @@ import { resolvePageSizeMm, formatTodayForHeaderFooter, type PageLayoutSettings 
 import type { Node as ProseNode } from "@tiptap/pm/model";
 import "katex/dist/katex.min.css";
 import "./MarkdownEditor.css";
+import { keepEditorFocus } from "../focusGuard";
 
 /** Options de recherche du panneau « Rechercher / Remplacer » (roadmap
  * 2.4) — mêmes sémantiques que Word. */
@@ -3545,7 +3546,7 @@ function TableContextMenu({
       disabled={disabled}
       className={`xmd-table-ctx-item${danger ? " xmd-table-ctx-item-danger" : ""}`}
       // Garde le focus (donc la sélection) dans l'éditeur invisible.
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={keepEditorFocus}
       onClick={() => onAction(run)}
     >
       <span>{label}</span>

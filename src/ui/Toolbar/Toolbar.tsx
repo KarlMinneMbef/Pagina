@@ -69,6 +69,7 @@ import {
   IconTocMarker,
 } from "./icons";
 import "./Toolbar.css";
+import { keepEditorFocus } from "../focusGuard";
 
 /** Caractères spéciaux (bouton « Caractères spéciaux » de l'onglet Insertion) :
  * insérés comme caractère Unicode réel, comme les emoji. Évite volontairement
@@ -1089,7 +1090,7 @@ function StyleGallery({
       <button
         className={`tb-style-btn${active === "paragraph" ? " tb-style-btn-active" : ""}`}
         disabled={disabled}
-        onMouseDown={(e) => e.preventDefault()}
+        onMouseDown={keepEditorFocus}
         onClick={onPickParagraph}
         title="Normal"
       >
@@ -1100,7 +1101,7 @@ function StyleGallery({
           key={level}
           className={`tb-style-btn${active === level ? " tb-style-btn-active" : ""}`}
           disabled={disabled}
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepEditorFocus}
           onClick={() => onPick(level)}
           title={`Titre ${level}`}
         >
@@ -1111,7 +1112,7 @@ function StyleGallery({
         <button
           className={`tb-btn-icon tb-heading-picker-trigger${panelOpen ? " tb-btn-icon-active" : ""}`}
           disabled={disabled}
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={keepEditorFocus}
           onClick={onTogglePanel}
           title="Panneau des styles de titres (Titre 1 à 6, avec aperçu et niveau actif)"
         >
@@ -1268,7 +1269,7 @@ function EmojiPicker({
                     type="button"
                     className="tb-emoji-cell"
                     title={emoji}
-                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseDown={keepEditorFocus}
                     onClick={() => {
                       onPick(emoji);
                       setOpen(false);
