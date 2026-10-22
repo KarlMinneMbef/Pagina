@@ -98,6 +98,35 @@ export const ParagraphMarkdown = ParagraphBase.extend({
         renderHTML: (attributes) =>
           attributes.indentRightCm > 0 ? { style: `margin-right: ${attributes.indentRightCm}cm` } : {},
       },
+      /** Styles HTML BRUTS du paragraphe sans équivalent géré (bordures des
+       *  pages de garde, tailles/couleurs/marges posées par les modèles…)
+       *  — transportés TELS QUELS : visibles en édition (WYSIWYG, voir
+       *  startCoverEdit) et conservés à l'aller-retour sérialisation.
+       *  RÈGLE ANTI-DOUBLAGE : les propriétés gérées par un attribut
+       *  dédié (text-align → TextAlign, margin-left/right → indent*)
+       *  sont RETIRÉES du htmlStyle au parse — le rendu FUSIONNE ensuite
+       *  htmlStyle et les attributs dédiés dans le même style, qui serait
+       *  re-capturé entier au parse suivant : sans cet élagage, chaque
+       *  aller-retour doublerait « text-align: … » dans le style.
+       *  (2026-10-22, retour utilisateur : les barres horizontales des
+       *  pages de garde étaient invisibles en édition ET perdues.) */
+      htmlStyle: {
+        default: null,
+        parseHTML: (element) => {
+          const raw = (element.getAttribute("style") ?? "").trim();
+          if (!raw) return null;
+          const stripped = raw
+            .replace(/text-align\s*:\s*[^;]*;?/gi, "")
+            .replace(/margin-left\s*:\s*[^;]*;?/gi, "")
+            .replace(/margin-right\s*:\s*[^;]*;?/gi, "")
+            .replace(/\s*;\s*(?=;)/g, "")
+            .replace(/^;\s*|;\s*$/g, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          return stripped.length > 0 ? stripped : null;
+        },
+        renderHTML: (attributes) => (attributes.htmlStyle ? { style: attributes.htmlStyle } : {}),
+      },
     };
   },
 
@@ -148,15 +177,17 @@ export const ParagraphMarkdown = ParagraphBase.extend({
             state.closeBlock(node);
             return;
           }
-          // Paragraphe ALIGNÉ ou RETRAIT (text-align via le ruban, indent
-          // via Tabulation ±) : pas d'équivalent en Markdown standard —
-          // repli HTML <p style="…"> comme tous les réglages avancés (voir
+          // Paragraphe ALIGNÉ, RETRAIT (text-align via le ruban, indent via
+          // Tabulation ±) ou STYLE BRUT (bordures des pages de garde…) :
+          // pas d'équivalent en Markdown standard — repli HTML
+          // <p style="…"> comme tous les réglages avancés (voir
           // Markdown.configure({ html: true })). SANS ce repli, le
           // sérialiseur ci-dessous écrivait le texte inline sans les
           // attributs : le réglage était silencieusement PERDU à la
           // sauvegarde (bug préexistant sur l'alignement, révélé par la
-          // vérification systématique du ruban refait).
-          if (node.attrs.textAlign || node.attrs.indentCm > 0 || node.attrs.indentRightCm > 0) {
+          // vérification systématique du ruban refait ; le htmlStyle des
+          // pages de garde a révélé le même cas le 2026-10-22).
+          if (node.attrs.textAlign || node.attrs.htmlStyle || node.attrs.indentCm > 0 || node.attrs.indentRightCm > 0) {
             const div = document.createElement("div");
             div.appendChild(DOMSerializer.fromSchema(this.editor.schema).serializeNode(node));
             state.write(div.innerHTML);
