@@ -97,6 +97,13 @@ Le fichier enregistré est un **Markdown 100 % standard** (GFM). Tout ce qui n'e
 }
 ```
 
+#### `pageBorder` — cadre autour de la page
+
+`{"enabled":false,"style":"solid","widthPt":1,"color":"#000000","offsetMm":10,"appliesTo":"all"}`
+— `style` : `solid` | `dashed` | `dotted` | `double` ; `offsetMm` : distance entre le bord de la
+page et le cadre ; `appliesTo` : `all` (toutes les pages), `first` (première page) ou `cover`
+(pages de garde). Champs absents = valeurs ci-dessus (cadre désactivé).
+
 ### Règles de cohérence
 
 | Champ | Type | Défaut | Règle |

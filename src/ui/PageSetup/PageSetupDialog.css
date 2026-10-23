@@ -342,3 +342,21 @@
   gap: 6px;
   margin-top: 4px;
 }
+
+/* Couleur du cadre de page (menu couleur partagé). */
+.ps-color-trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid #b9b9b7;
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.ps-color-swatch {
+  display: block;
+  width: 36px;
+  height: 14px;
+  border-radius: 2px;
+}

@@ -1565,6 +1565,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           marginBottomPx: geometry.marginBottomPx,
           header: { ...layout.header, html: mdToHtml(layout.header.text) },
           footer: { ...layout.footer, html: mdToHtml(layout.footer.text) },
+          pageBorder: layout.pageBorder,
           context: {
             date: formatTodayForHeaderFooter(),
             filename: documentTitleRef.current,

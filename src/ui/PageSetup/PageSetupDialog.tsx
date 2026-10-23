@@ -24,6 +24,7 @@
 import { useState } from "react";
 import type { PageLayoutSettings } from "../../core/pageLayout";
 import { PAPER_SIZE_LABELS, PAPER_SIZES_MM, resolvePageSizeMm, saveDefaultPageLayout } from "../../core/pageLayout";
+import { ColorPicker } from "../ColorPicker/ColorPicker";
 import "./PageSetupDialog.css";
 
 type PsTab = "marges" | "papier" | "miseEnPage";
@@ -95,6 +96,19 @@ function PagePreview({ layout }: { layout: PageLayoutSettings }) {
         stroke="#b9b9b7"
         strokeDasharray="2 2"
       />
+      {/* cadre de page */}
+      {layout.pageBorder.enabled && (
+        <rect
+          x={mx(layout.pageBorder.offsetMm)}
+          y={mx(layout.pageBorder.offsetMm)}
+          width={Math.max(w - 2 * mx(layout.pageBorder.offsetMm), 0)}
+          height={Math.max(h - 2 * mx(layout.pageBorder.offsetMm), 0)}
+          fill="none"
+          stroke={layout.pageBorder.color}
+          strokeWidth={Math.max(layout.pageBorder.widthPt * 0.5, 0.5)}
+          strokeDasharray={layout.pageBorder.style === "dashed" ? "4 2" : layout.pageBorder.style === "dotted" ? "1 2" : undefined}
+        />
+      )}
       {/* zones en-tête / pied de page */}
       {layout.header.text && (
         <rect x={mx(layout.marginLeftMm)} y={mx(layout.header.fromEdgeMm)} width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)} height={mx(layout.header.heightMm)} fill="#e8e8e6" />
@@ -139,6 +153,9 @@ export function PageSetupDialog({
 
   const setFooter = (patch: Partial<PageLayoutSettings["footer"]>) =>
     setDraft((d) => ({ ...d, footer: { ...d.footer, ...patch } }));
+
+  const setBorder = (patch: Partial<PageLayoutSettings["pageBorder"]>) =>
+    setDraft((d) => ({ ...d, pageBorder: { ...d.pageBorder, ...patch } }));
 
   const handleApply = () => {
     onApply(draft);
@@ -390,9 +407,82 @@ export function PageSetupDialog({
                     <button type="button" className="ps-btn ps-btn-link" disabled>
                       Numérotation des lignes…
                     </button>
-                    <button type="button" className="ps-btn ps-btn-link" disabled>
-                      Bordures…
-                    </button>
+                  </div>
+                </fieldset>
+
+                <fieldset className="ps-group">
+                  <legend>Bordure de page</legend>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={draft.pageBorder.enabled} onChange={(e) => setBorder({ enabled: e.target.checked })} />
+                    Afficher un cadre autour de la page
+                  </label>
+                  <div className={draft.pageBorder.enabled ? "" : "ps-disabled-field"}>
+                    <label className="ps-num ps-select">
+                      <span>Appliquer à :</span>
+                      <select
+                        disabled={!draft.pageBorder.enabled}
+                        value={draft.pageBorder.appliesTo}
+                        onChange={(e) => setBorder({ appliesTo: e.target.value as PageLayoutSettings["pageBorder"]["appliesTo"] })}
+                      >
+                        <option value="all">Toutes les pages</option>
+                        <option value="first">Première page uniquement</option>
+                        <option value="cover">Pages de garde</option>
+                      </select>
+                    </label>
+                    <label className="ps-num ps-select">
+                      <span>Style :</span>
+                      <select
+                        disabled={!draft.pageBorder.enabled}
+                        value={draft.pageBorder.style}
+                        onChange={(e) => setBorder({ style: e.target.value as PageLayoutSettings["pageBorder"]["style"] })}
+                      >
+                        <option value="solid">Continu</option>
+                        <option value="dashed">Tireté</option>
+                        <option value="dotted">Pointillé</option>
+                        <option value="double">Double</option>
+                      </select>
+                    </label>
+                    <div className="ps-margins-grid ps-indent">
+                      <label className="ps-num">
+                        <span>Épaisseur (pt) :</span>
+                        <span className="ps-num-box">
+                          <input
+                            type="number"
+                            min={0.25}
+                            max={12}
+                            step={0.25}
+                            disabled={!draft.pageBorder.enabled}
+                            value={draft.pageBorder.widthPt}
+                            onChange={(e) => setBorder({ widthPt: Math.max(0.25, Math.min(12, parseFloat(e.target.value) || 1)) })}
+                          />
+                        </span>
+                      </label>
+                      <label className="ps-num">
+                        <span>Distance du bord (mm) :</span>
+                        <span className="ps-num-box">
+                          <input
+                            type="number"
+                            min={0}
+                            max={50}
+                            step={1}
+                            disabled={!draft.pageBorder.enabled}
+                            value={draft.pageBorder.offsetMm}
+                            onChange={(e) => setBorder({ offsetMm: Math.max(0, Math.min(50, parseFloat(e.target.value) || 0)) })}
+                          />
+                        </span>
+                      </label>
+                    </div>
+                    <label className="ps-num">
+                      <span>Couleur :</span>
+                      <ColorPicker
+                        disabled={!draft.pageBorder.enabled}
+                        value={draft.pageBorder.color}
+                        title="Couleur du cadre de page"
+                        triggerClassName="ps-color-trigger"
+                        trigger={<span className="ps-color-swatch" style={{ background: draft.pageBorder.color }} />}
+                        onChange={(color) => setBorder({ color })}
+                      />
+                    </label>
                   </div>
                 </fieldset>
               </div>

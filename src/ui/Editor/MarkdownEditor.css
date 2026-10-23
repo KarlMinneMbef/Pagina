@@ -1067,3 +1067,11 @@ math-virtual-keyboard {
     overflow: visible !important;
   }
 }
+
+/* Cadre de page (PageBorderSettings) : posé par paintPages.ts, hors flux, à
+ * `offsetMm` du bord de la page ; imprimé tel quel (couleurs exactes). */
+.xmd-page-border {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
