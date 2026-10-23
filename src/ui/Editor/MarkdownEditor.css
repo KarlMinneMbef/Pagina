@@ -774,16 +774,27 @@ math-virtual-keyboard {
  * affichée juste après par le système de pagination automatique. */
 .xmd-pagebreak {
   border: none;
-  border-top: 1px solid #e0e0e0;
-  margin: 10px 0;
-  position: relative;
+  height: 0;
+  margin: 0;
+  padding: 0;
   cursor: default;
+}
+
+/* Repère en bas de la page qu'il termine, hors flux (voir les repères de
+ * page de garde) : il ne consomme plus d'espace. */
+.xmd-pagebreak::before {
+  content: "";
+  position: absolute;
+  left: 4mm;
+  right: 4mm;
+  bottom: 5px;
+  border-top: 1px solid #e0e0e0;
 }
 
 .xmd-pagebreak::after {
   content: "Saut de page";
   position: absolute;
-  top: -7px;
+  bottom: -1px;
   left: 50%;
   transform: translateX(-50%);
   background: #ffffff;
@@ -919,11 +930,18 @@ math-virtual-keyboard {
  * ne marquent que les LIMITES. Discret à l'écran, INVISIBLE à
  * l'impression (une vraie page de garde Word n'affiche pas ses
  * repères). */
+/* Repères HORS FLUX (2026-10-23, retour utilisateur : « les repères tout en
+ * haut et tout en bas ») : hauteur 0, aucune marge — ils ne décalent donc ni
+ * le contenu, ni la pagination (l'écran et le PDF mesurent la même chose), et
+ * ne peuvent plus chevaucher le texte. Le repère de DÉBUT s'accroche au bord
+ * HAUT de sa page, celui de FIN au bord BAS (.xmd-page est positionnée ; le
+ * contenu n'a pas de position, donc `top`/`bottom` se mesurent sur la page).
+ * Cliquables (le libellé fait partie de l'élément) pour sélectionner/supprimer. */
 .xmd-coverzone {
   border: none;
-  height: 10px;
-  margin: 4px 0;
-  position: relative;
+  height: 0;
+  margin: 0;
+  padding: 0;
   cursor: default;
 }
 
@@ -931,39 +949,42 @@ math-virtual-keyboard {
 .xmd-coverzone-end::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 4px;
+  left: 4mm;
+  right: 4mm;
   border-top: 1px dashed #2479a5;
+}
+
+.xmd-coverzone-start::before {
+  top: 5px;
+}
+
+.xmd-coverzone-end::before {
+  bottom: 22px;
+}
+
+.xmd-coverzone-start::after,
+.xmd-coverzone-end::after {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  padding: 0 8px;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  white-space: nowrap;
 }
 
 .xmd-coverzone-start::after {
   content: "Page de garde — début de la zone";
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
-  padding: 0 8px;
-  font-family: Arial, sans-serif;
-  font-size: 9px;
+  top: -1px;
   font-weight: 600;
   color: #2479a5;
-  white-space: nowrap;
 }
 
 .xmd-coverzone-end::after {
   content: "Fin de la page de garde";
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
-  padding: 0 8px;
-  font-family: Arial, sans-serif;
-  font-size: 9px;
+  bottom: 16px;
   color: #75766f;
-  white-space: nowrap;
 }
 
 /* Champ de document {{variable}} (DocField.ts) : la page affiche la
