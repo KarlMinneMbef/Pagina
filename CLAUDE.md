@@ -254,6 +254,14 @@ clonait le style (un bandeau de plus) ; `<strong>` + `font-weight` doublés.
   liens du sommaire visent le mauvais `id`). Menu « Apparence » dans le panneau Page de
   garde ; la galerie rend son aperçu avec les mêmes règles CSS. Anciens fichiers à HTML
   inline : inchangés, en style libre. Voir `docs/format-fichier.md` §5.4.
+- **Marges de la page de garde** (2026-10-23) : jetons `margin-top|left|right=mm` dans le
+  marqueur de début ; `CoverTheme.ts` les pose en `style` de décoration sur chaque bloc de
+  la zone (`margin-left: calc(Xmm - var(--xmd-margin-left))`) — ce sont des marges de BLOC,
+  pas de page : la pagination (qui mesure l'éditeur invisible) reste exacte sans toucher au
+  paginateur, et une marge plus petite que celle du document fait déborder un bandeau jusqu'au
+  bord de la page (vérifié à l'écran et dans le PDF natif). Limites : la marge haute ne vaut
+  que si la zone ouvre le document ; pas de marge basse ; le repère de début de zone (visible
+  à l'écran seulement) décale ~5 mm l'affichage par rapport au PDF.
 - Piège : `coverThemes.css` doit être importé APRÈS `MarkdownEditor.css`
   (spécificité égale avec `.xmd-prosemirror h1` : le dernier gagne).
 - Piège de méthode : un clic Playwright à `x: 20` sur un titre de couverture tombe sur le
