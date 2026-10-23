@@ -19,7 +19,7 @@
 // boîtes A4 fixes), pas la mise en page fine ligne par ligne qu'ils font.
 import type { EditorView } from "@tiptap/pm/view";
 import { createPaginator } from "./paginator";
-import { resolveHeaderFooterText, type HeaderFooterSettings, type HeaderFooterContext } from "../../../core/pageLayout";
+import { resolveHeaderFooterText, type HeaderFooterSettings, type HeaderFooterContext, type PageBorderSettings } from "../../../core/pageLayout";
 import { uniqueHeadingSlug } from "./slug";
 import { sectionDisplayTitle } from "../extensions/SectionBreak";
 import { coverZoneContentOffsets } from "../extensions/CoverZone";
@@ -177,6 +177,8 @@ export interface PaintPagesOptions {
   marginBottomPx: number;
   header: PaintHeaderFooterSettings;
   footer: PaintHeaderFooterSettings;
+  /** Cadre autour des pages (absent = aucun). */
+  pageBorder?: PageBorderSettings;
   /** Tout le contexte de substitution des variables SAUF `page`/`pages`,
    * qui dépendent de la page en cours de peinture — calculés ici. */
   context: Omit<HeaderFooterContext, "page" | "pages">;
@@ -414,9 +416,13 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
   // une page, la page est marquée ; les marqueurs eux-mêmes comptent
   // (page du début = première page couverte).
   const pagesWithoutHeaderFooter = new Set<number>();
+  // Toutes les pages qui reçoivent du contenu d'une zone page de garde (la
+  // bordure « pages de garde » s'y limite).
+  const coverZonePages = new Set<number>();
   let inCoverZone = false;
   let coverZoneAllowsHeaderFooter = false;
   const markCoverZonePage = (pageNumber: number) => {
+    if (inCoverZone) coverZonePages.add(pageNumber);
     if (inCoverZone && !coverZoneAllowsHeaderFooter) pagesWithoutHeaderFooter.add(pageNumber);
   };
 
@@ -637,6 +643,19 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
         }
       }
       page.appendChild(content);
+
+      // Cadre de page : posé À PART du contenu (après lui, hors flux, sans
+      // capter la souris) pour ne gêner ni la pagination ni la résolution des clics.
+      const border = options.pageBorder;
+      if (border?.enabled && (border.appliesTo === "all" || (border.appliesTo === "first" && isFirstPage) || (border.appliesTo === "cover" && coverZonePages.has(pageNumber)))) {
+        const frame = document.createElement("div");
+        frame.className = "xmd-page-border";
+        frame.style.inset = `${border.offsetMm}mm`;
+        // « double » exige au moins 3 pt pour que les deux filets se voient.
+        const width = border.style === "double" ? Math.max(border.widthPt, 3) : border.widthPt;
+        frame.style.border = `${width}pt ${border.style} ${border.color}`;
+        page.appendChild(frame);
+      }
 
       if ((footer.showOnFirstPage || !isFirstPage) && !suppressHeaderFooter) {
         const footerEl = document.createElement("div");

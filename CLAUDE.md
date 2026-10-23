@@ -273,6 +273,14 @@ clonait le style (un bandeau de plus) ; `<strong>` + `font-weight` doublés.
   marge haute négative). `.xmd-sectionbreak` reste dans le flux (une section ne force pas de
   nouvelle page). Cliquer le libellé ne sélectionne pas le repère (comme avant) : on supprime
   une page de garde par le panneau.
+- **Bordure de page** (2026-10-23, « cadre noir » des pages CCTP) : `layout.pageBorder`
+  (`PageBorderSettings` : enabled, style, widthPt, color, offsetMm, appliesTo `all|first|cover`)
+  dans `pagina:config`, réglée dans Mise en page > onglet « Mise en page » > « Bordure de page »
+  (le bouton inerte « Bordures… » a disparu). `paintPages.ts` ajoute un `div.xmd-page-border`
+  (`inset: offsetMm`, hors flux, `pointer-events: none`, APRÈS le contenu) sur les pages
+  concernées ; `coverZonePages` (toutes les pages touchées par une zone page de garde) sert à
+  « Pages de garde ». Imprimé tel quel (vérifié dans le PDF natif). Style « double » : 3 pt
+  minimum. Config fusionnée champ par champ (ancien fichier = pas de cadre).
 - Piège : `coverThemes.css` doit être importé APRÈS `MarkdownEditor.css`
   (spécificité égale avec `.xmd-prosemirror h1` : le dernier gagne).
 - Piège de méthode : un clic Playwright à `x: 20` sur un titre de couverture tombe sur le

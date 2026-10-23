@@ -59,6 +59,20 @@ export interface HeaderFooterSettings {
  *  en-tête/pied, styles de titres, interligne/espacement, propriétés et champs
  *  personnalisés. Sérialisée dans le commentaire `pagina:config` en tête du
  *  .md (voir serializeDocumentConfig / extractDocumentConfig). */
+/** Bordure de page (cadre autour de la page, comme « Bordures de page » de
+ *  Word) : un rectangle posé à `offsetMm` du bord PHYSIQUE de la page, sur
+ *  toutes les pages, la première seulement, ou les pages de garde. */
+export interface PageBorderSettings {
+  enabled: boolean;
+  style: "solid" | "dashed" | "dotted" | "double";
+  /** Épaisseur en points. */
+  widthPt: number;
+  color: string;
+  /** Distance entre le bord de la page et le cadre, en millimètres. */
+  offsetMm: number;
+  appliesTo: "all" | "first" | "cover";
+}
+
 export interface PageLayoutSettings {
   /** Police de base du corps de texte (hors mise en forme "avancée" appliquée à la main). */
   fontFamily: string;
@@ -103,6 +117,8 @@ export interface PageLayoutSettings {
    * entre documents pour l'instant — l'utilisateur a mentionné vouloir un
    * import/export de cette config plus tard, pas encore développé). */
   headingStyles: Record<HeadingLevel, HeadingLevelStyle>;
+  /** Cadre autour des pages — voir `PageBorderSettings`. */
+  pageBorder: PageBorderSettings;
 }
 
 /** Champ personnalisé des propriétés du document (roadmap 1.3, fenêtre
@@ -268,6 +284,7 @@ const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   author: "",
   documentProperties: { title: "", subject: "", createdDate: "", modifiedDate: "", keywords: "", comments: "", custom: [] },
   headingStyles: DEFAULT_HEADING_STYLES,
+  pageBorder: { enabled: false, style: "solid", widthPt: 1, color: "#000000", offsetMm: 10, appliesTo: "all" },
 };
 
 /** Dimensions "portrait" des formats papier supportés, en millimètres. */
@@ -334,6 +351,7 @@ export function loadDefaultPageLayout(): PageLayoutSettings {
       ...parsed,
       header: { ...DEFAULT_PAGE_LAYOUT.header, ...parsed.header },
       footer: { ...DEFAULT_PAGE_LAYOUT.footer, ...parsed.footer },
+      pageBorder: { ...DEFAULT_PAGE_LAYOUT.pageBorder, ...parsed.pageBorder },
     };
   } catch {
     return DEFAULT_PAGE_LAYOUT;
@@ -539,6 +557,7 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
         ...parsed.layout,
         header: { ...DEFAULT_PAGE_LAYOUT.header, ...parsed.layout?.header },
         footer: { ...DEFAULT_PAGE_LAYOUT.footer, ...parsed.layout?.footer },
+        pageBorder: { ...DEFAULT_PAGE_LAYOUT.pageBorder, ...parsed.layout?.pageBorder },
         // Fusion NIVEAU PAR NIVEAU : un ancien fichier (ou un fichier édité
         // à la main) peut n'avoir que certains niveaux définis — les
         // niveaux manquants retombent sur leur défaut individuellement,

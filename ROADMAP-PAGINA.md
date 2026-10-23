@@ -20,6 +20,7 @@
 | 0.5 | **Remplacer `window.prompt/alert`** | 7 appels (lien, signet, renvoi, nouveau fichier) par un vrai composant de dialogue ; attention au focus de l'éditeur (la sélection ne doit pas être perdue pour le lien) | ⬜ |
 | 0.6 | **Failles `npm audit`** | `dompurify` (via mermaid) et `katex` : la correction peut changer les versions majeures — à tester sur les diagrammes et les formules | ⬜ |
 | 0.7 | **Sommaire : lisibilité** | Retour utilisateur du 2026-10-20 (« pas très lisible à l'utilisation »), sans précision : à CLARIFIER avec l'utilisateur avant de coder (coupure entre pages ? densité ? panneau ?) | ⬜ |
+| 0.9 | **Bordures de page** | Cadre autour de la page (toutes / première / pages de garde), style, épaisseur, couleur, distance — pour les pages type CCTP | ✅ (2026-10-23) |
 | 0.8 | **Onglet « modifié » après annulation** | Après annulation complète, l'onglet reste marqué modifié (comparaison avec le texte brut du disque, pas avec la pile d'annulation) — mineur | ⬜ |
 
 ---

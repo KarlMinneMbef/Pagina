@@ -27,6 +27,21 @@ describe("commentaire pagina:config", () => {
     expect(content).toBe("# Titre\n\nCorps.");
   });
 
+  it("bordure de page : défauts pour un ancien fichier, aller-retour pour un cadre activé", () => {
+    expect(DEFAULT_PAGE_LAYOUT.pageBorder.enabled).toBe(false);
+    const ancien = extractDocumentConfig('<!-- pagina:config {"configVersion":1,"layout":{"paperSize":"A4"}} -->\n# T').layout;
+    expect(ancien.pageBorder).toEqual(DEFAULT_PAGE_LAYOUT.pageBorder);
+
+    const layout = { ...DEFAULT_PAGE_LAYOUT, pageBorder: { enabled: true, style: "double" as const, widthPt: 2, color: "#343334", offsetMm: 8, appliesTo: "cover" as const } };
+    const relu = extractDocumentConfig(withDocumentConfig(layout, "# T")).layout;
+    expect(relu.pageBorder).toEqual(layout.pageBorder);
+  });
+
+  it("une bordure partielle est complétée par les défauts champ par champ", () => {
+    const partiel = extractDocumentConfig('<!-- pagina:config {"configVersion":1,"layout":{"pageBorder":{"enabled":true,"offsetMm":5}}} -->\n# T').layout;
+    expect(partiel.pageBorder).toEqual({ ...DEFAULT_PAGE_LAYOUT.pageBorder, enabled: true, offsetMm: 5 });
+  });
+
   it("un JSON invalide retombe sur les défauts sans perdre le corps", () => {
     const { layout, content } = extractDocumentConfig("<!-- pagina:config {pas du json} -->\n# Titre");
     expect(layout.paperSize).toBe(DEFAULT_PAGE_LAYOUT.paperSize);
