@@ -42,7 +42,7 @@ Le fichier enregistré est un **Markdown 100 % standard** (GFM). Tout ce qui n'e
 |---|---|---|
 | `<!-- pagebreak -->` | Saut de page manuel | N'importe où dans le texte |
 | `<!-- toc -->` | Emplacement du sommaire (remplacé par la liste réelle à la génération) | Généralement après le titre |
-| `<!-- coverzone-start [header] [theme=nom] [margin-top=mm] [margin-left=mm] [margin-right=mm] -->` … `<!-- coverzone-end -->` | Page de garde : deux marqueurs encadrent du contenu NORMAL (voir §5.4) | En général en tête de document |
+| `<!-- coverzone-start [header] [theme=nom] [margin-top=mm] [margin-left=mm] [margin-right=mm] [margin-bottom=mm] -->` … `<!-- coverzone-end -->` | Page de garde : deux marqueurs encadrent du contenu NORMAL (voir §5.4) | En général en tête de document |
 
 ---
 
@@ -200,10 +200,11 @@ Rédigé par : {{author}}
 - Le thème (`classique`, `moderne`, `technique`, `minimal`, `chantier`) ne change QUE
   l'apparence, par type de bloc (`#` titre, `##` sous-titre, `###` repère, texte) — il
   n'est jamais écrit dans le contenu. Sans `theme`, la page est en style libre.
-- `margin-top`, `margin-left`, `margin-right` (en mm, distance au BORD DE LA PAGE) personnalisent
+- `margin-top`, `margin-left`, `margin-right`, `margin-bottom` (en mm, distance au BORD DE LA PAGE) personnalisent
   les marges de la page de garde ; absents, ce sont celles du document. Une marge plus petite que
   celle du document permet à un bandeau d'aller jusqu'au bord de la page. `margin-top` ne
-  s'applique que si la page de garde ouvre le document.
+  s'applique que si la page de garde ouvre le document ; `margin-bottom` fixe la limite basse du
+  contenu (où il passe à la page suivante).
 - Les titres d'une page de garde n'entrent ni dans le sommaire ni dans la numérotation.
 - Anciens fichiers : une page de garde écrite en paragraphes `<p style="…">` reste lisible et
   éditable (style libre) ; elle n'est pas convertie automatiquement.

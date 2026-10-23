@@ -324,7 +324,7 @@ export interface MarkdownEditorHandle {
   setCoverZoneTheme: (theme: string) => void;
   /** Marges ABSOLUES (mm, distance au bord de la page) de la zone au curseur ;
    *  `null` = marge du document. */
-  setCoverZoneMargins: (margins: { top: number | null; left: number | null; right: number | null }) => void;
+  setCoverZoneMargins: (margins: { top: number | null; left: number | null; right: number | null; bottom: number | null }) => void;
   /** Contenu Markdown COURANT de la zone qui contient le curseur — pour
    *  « Enregistrer comme type » dans le panneau latéral ; `null` si le
    *  curseur n'est dans aucune zone. */
@@ -1160,7 +1160,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         tr.setMeta("addToHistory", true);
         editor.view.dispatch(tr);
       },
-      setCoverZoneMargins: ({ top, left, right }) => {
+      setCoverZoneMargins: ({ top, left, right, bottom }) => {
         if (!editor) return;
         const zone = findCoverZoneAround(editor.state.doc, editor.state.selection.from);
         if (!zone) return;
@@ -1170,6 +1170,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           marginTopMm: top,
           marginLeftMm: left,
           marginRightMm: right,
+          marginBottomMm: bottom,
         });
         tr.setMeta("addToHistory", true);
         editor.view.dispatch(tr);

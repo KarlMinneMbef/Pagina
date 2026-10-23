@@ -525,10 +525,15 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
     if (node.type.name === "coverZoneStart") {
       inCoverZone = true;
       coverZoneAllowsHeaderFooter = !!node.attrs.headerFooter;
+      // Marge BASSE personnalisee de la page de garde : plus petite que celle
+      // du document = plus de place avant la coupure (et inversement).
+      const bottomMm = node.attrs.marginBottomMm;
+      paginator.setExtraContentHeight(typeof bottomMm === "number" ? marginBottomPx - (bottomMm * 96) / 25.4 : 0);
     }
     markCoverZonePage(placement.pageNumber);
     if (node.type.name === "coverZoneEnd") {
       inCoverZone = false;
+      paginator.setExtraContentHeight(0);
     }
 
     while (pageBlocks.length < placement.pageNumber) pageBlocks.push([]);
