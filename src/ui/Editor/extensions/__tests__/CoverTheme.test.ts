@@ -40,13 +40,26 @@ function makeEditor(markdown: string): Editor {
 
 describe("CoverZone — thème visuel (Markdown pur + marqueur)", () => {
   it("lit et écrit le marqueur de début avec thème et en-tête", () => {
-    expect(parseCoverZoneStartMarker("<!-- coverzone-start -->")).toEqual({ headerFooter: false, theme: "" });
-    expect(parseCoverZoneStartMarker("<!-- coverzone-start header -->")).toEqual({ headerFooter: true, theme: "" });
-    expect(parseCoverZoneStartMarker("<!-- coverzone-start theme=chantier -->")).toEqual({ headerFooter: false, theme: "chantier" });
-    expect(parseCoverZoneStartMarker("<!-- coverzone-start header theme=moderne -->")).toEqual({ headerFooter: true, theme: "moderne" });
+    const none = { marginTopMm: null, marginLeftMm: null, marginRightMm: null };
+    expect(parseCoverZoneStartMarker("<!-- coverzone-start -->")).toEqual({ headerFooter: false, theme: "", ...none });
+    expect(parseCoverZoneStartMarker("<!-- coverzone-start header -->")).toEqual({ headerFooter: true, theme: "", ...none });
+    expect(parseCoverZoneStartMarker("<!-- coverzone-start theme=chantier -->")).toEqual({ headerFooter: false, theme: "chantier", ...none });
+    expect(parseCoverZoneStartMarker("<!-- coverzone-start header theme=moderne -->")).toEqual({ headerFooter: true, theme: "moderne", ...none });
     expect(parseCoverZoneStartMarker("<!-- autre commentaire -->")).toBeNull();
-    expect(formatCoverZoneStartMarker(true, "moderne")).toBe("<!-- coverzone-start header theme=moderne -->");
-    expect(formatCoverZoneStartMarker(false, "")).toBe("<!-- coverzone-start -->");
+    expect(formatCoverZoneStartMarker({ headerFooter: true, theme: "moderne" })).toBe("<!-- coverzone-start header theme=moderne -->");
+    expect(formatCoverZoneStartMarker({})).toBe("<!-- coverzone-start -->");
+  });
+
+  it("lit et écrit les marges de la page de garde (mm, ordre libre, jetons inconnus ignorés)", () => {
+    const m = parseCoverZoneStartMarker("<!-- coverzone-start margin-left=0 theme=chantier margin-top=12.5 futur=1 margin-right=5 -->");
+    expect(m).toEqual({ headerFooter: false, theme: "chantier", marginTopMm: 12.5, marginLeftMm: 0, marginRightMm: 5 });
+    expect(formatCoverZoneStartMarker(m!)).toBe("<!-- coverzone-start theme=chantier margin-top=12.5 margin-left=0 margin-right=5 -->");
+  });
+
+  it("aller-retour des marges dans le Markdown de l'éditeur", () => {
+    const md = "<!-- coverzone-start margin-top=10 margin-left=0 -->\n\nTexte\n\n<!-- coverzone-end -->\n";
+    const out = getMarkdown(makeEditor(md));
+    expect(out).toContain("<!-- coverzone-start margin-top=10 margin-left=0 -->");
   });
 
   it("aller-retour : le thème survit et le contenu reste du Markdown pur (aucun HTML)", () => {

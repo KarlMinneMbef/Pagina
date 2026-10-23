@@ -21,12 +21,45 @@ function tokenToName(token: string): string {
   return token.replace(/^\{\{|\}\}$/g, "").trim();
 }
 
+type Margins = { top: number | null; left: number | null; right: number | null };
+
+/** Saisie d'une marge en mm : validée à Entrée/perte de focus, vide = marge du document. */
+function MarginField({ label, value, fallback, onCommit }: { label: string; value: number | null; fallback: number; onCommit: (v: number | null) => void }) {
+  const [text, setText] = useState(value === null ? "" : String(value));
+  const commit = () => {
+    const t = text.trim().replace(",", ".");
+    if (t === "") return onCommit(null);
+    const n = parseFloat(t);
+    if (!Number.isFinite(n)) return setText(value === null ? "" : String(value));
+    onCommit(Math.max(-50, Math.min(150, n)));
+  };
+  return (
+    <label className="cvp-margin">
+      <span>{label}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={text}
+        placeholder={String(fallback)}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+    </label>
+  );
+}
+
 /** Panneau Page de garde : propriétés de la zone, champs, type, suppression. */
 export function CoverPagePanel({
   zoneStart,
   headerFooter,
   theme,
   onChangeTheme,
+  margins,
+  documentMargins,
+  onChangeMargins,
   customVariables,
   onToggleHeaderFooter,
   onInsertField,
@@ -43,6 +76,12 @@ export function CoverPagePanel({
   theme: string;
   /** Change le thème visuel de la zone. */
   onChangeTheme: (theme: string) => void;
+  /** Marges ABSOLUES de la page de garde en mm (`null` = celles du document). */
+  margins: Margins;
+  /** Marges du document (affichées en indication quand le champ est vide). */
+  documentMargins: { top: number; left: number; right: number };
+  /** Change les marges de la page de garde. */
+  onChangeMargins: (margins: Margins) => void;
   /** Champs personnalisés du document (Propriétés) — même liste que le
    *  panneau En-tête/Pied. */
   customVariables: { token: string; label: string }[];
@@ -106,6 +145,21 @@ export function CoverPagePanel({
             ))}
           </select>
         </label>
+        <p className="cvp-vars-title">Marges de la page de garde (mm, depuis le bord de la page ; la marge haute ne s'applique que si elle ouvre le document) :</p>
+        <div className="cvp-margins">
+          <MarginField label="Haut" value={margins.top} fallback={documentMargins.top} onCommit={(v) => onChangeMargins({ ...margins, top: v })} />
+          <MarginField label="Gauche" value={margins.left} fallback={documentMargins.left} onCommit={(v) => onChangeMargins({ ...margins, left: v })} />
+          <MarginField label="Droite" value={margins.right} fallback={documentMargins.right} onCommit={(v) => onChangeMargins({ ...margins, right: v })} />
+          <button
+            type="button"
+            className="cvp-margins-reset"
+            title="Reprendre les marges du document"
+            disabled={margins.top === null && margins.left === null && margins.right === null}
+            onClick={() => onChangeMargins({ top: null, left: null, right: null })}
+          >
+            Marges du document
+          </button>
+        </div>
         <label className="cvp-check">
           <input
             type="checkbox"

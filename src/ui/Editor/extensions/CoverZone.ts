@@ -25,31 +25,74 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
-/** Zone page de garde englobant une position : positions des marqueurs
- *  début/fin (le nœud `coverZoneEnd` commence à `end`), et propriété
- *  en-tête/pied du marqueur de début. */
-export interface CoverZoneInfo {
-  start: number;
-  end: number;
+/** Propriétés portées par le marqueur de début d'une zone page de garde. Les
+ *  marges sont en mm, ABSOLUES (distance au bord de la page) ; `null` = marge
+ *  du document. */
+export interface CoverZoneProps {
   headerFooter: boolean;
   /** Thème visuel de la zone (« chantier »…), « » = style libre. */
   theme: string;
+  marginTopMm: number | null;
+  marginLeftMm: number | null;
+  marginRightMm: number | null;
 }
 
-/** Marqueur de DÉBUT : `<!-- coverzone-start[ header][ theme=nom] -->`. */
-const COVER_START_RE = /^<!--\s*coverzone-start((?:\s+header)?)(?:\s+theme=([\w-]+))?\s*-->$/i;
+/** Zone page de garde englobant une position : positions des marqueurs
+ *  début/fin (le nœud `coverZoneEnd` commence à `end`) + propriétés du
+ *  marqueur de début. */
+export interface CoverZoneInfo extends CoverZoneProps {
+  start: number;
+  end: number;
+}
+
+/** Marqueur de DÉBUT : `<!-- coverzone-start[ header][ theme=nom][ margin-top=mm]
+ *  [ margin-left=mm][ margin-right=mm] -->` (jetons dans n'importe quel ordre). */
+const COVER_START_RE = /^<!--\s*coverzone-start((?:\s+[\w-]+(?:=[\w.,-]*)?)*)\s*-->$/i;
+
+const MARGIN_KEYS = { "margin-top": "marginTopMm", "margin-left": "marginLeftMm", "margin-right": "marginRightMm" } as const;
 
 /** Lit un marqueur de début ; `null` si la ligne n'en est pas un. Exporté
- *  pour les tests (le parseur markdown-it l'utilise tel quel). */
-export function parseCoverZoneStartMarker(line: string): { headerFooter: boolean; theme: string } | null {
+ *  pour les tests (le parseur markdown-it l'utilise tel quel). Les jetons
+ *  inconnus sont ignorés (compatibilité avec de futures propriétés). */
+export function parseCoverZoneStartMarker(line: string): CoverZoneProps | null {
   const m = line.trim().match(COVER_START_RE);
   if (!m) return null;
-  return { headerFooter: !!m[1], theme: m[2] ?? "" };
+  const props: CoverZoneProps = { headerFooter: false, theme: "", marginTopMm: null, marginLeftMm: null, marginRightMm: null };
+  for (const token of m[1].trim().split(/\s+/).filter(Boolean)) {
+    const [key, value = ""] = token.split("=");
+    const k = key.toLowerCase();
+    if (k === "header") props.headerFooter = true;
+    else if (k === "theme") props.theme = value;
+    else if (k in MARGIN_KEYS) {
+      const mm = parseFloat(value);
+      if (Number.isFinite(mm)) props[MARGIN_KEYS[k as keyof typeof MARGIN_KEYS]] = mm;
+    }
+  }
+  return props;
 }
 
 /** Écrit un marqueur de début (inverse de `parseCoverZoneStartMarker`). */
-export function formatCoverZoneStartMarker(headerFooter: boolean, theme: string): string {
-  return `<!-- coverzone-start${headerFooter ? " header" : ""}${theme ? ` theme=${theme}` : ""} -->`;
+export function formatCoverZoneStartMarker(props: Partial<CoverZoneProps>): string {
+  const tokens: string[] = [];
+  if (props.headerFooter) tokens.push("header");
+  if (props.theme) tokens.push(`theme=${props.theme}`);
+  for (const [key, attr] of Object.entries(MARGIN_KEYS)) {
+    const v = props[attr];
+    if (typeof v === "number" && Number.isFinite(v)) tokens.push(`${key}=${v}`);
+  }
+  return `<!-- coverzone-start${tokens.length ? " " + tokens.join(" ") : ""} -->`;
+}
+
+/** Propriétés de zone lues sur les attributs du nœud marqueur de début. */
+export function coverPropsFromAttrs(attrs: Record<string, any>): CoverZoneProps {
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return {
+    headerFooter: !!attrs.headerFooter,
+    theme: String(attrs.theme ?? ""),
+    marginTopMm: num(attrs.marginTopMm),
+    marginLeftMm: num(attrs.marginLeftMm),
+    marginRightMm: num(attrs.marginRightMm),
+  };
 }
 
 /** Positions (blocs de premier niveau) du CONTENU des zones page de garde —
@@ -84,7 +127,7 @@ export function findCoverZoneAround(doc: ProseMirrorNode, pos: number): CoverZon
   let found: CoverZoneInfo | null = null;
   doc.forEach((node, offset) => {
     if (node.type.name === "coverZoneStart") {
-      open.zone = { start: offset, end: -1, headerFooter: !!node.attrs.headerFooter, theme: String(node.attrs.theme ?? "") };
+      open.zone = { start: offset, end: -1, ...coverPropsFromAttrs(node.attrs) };
     } else if (node.type.name === "coverZoneEnd") {
       const zone = open.zone;
       if (zone && zone.end < 0) {
@@ -184,6 +227,13 @@ declare module "@tiptap/core" {
   }
 }
 
+/** Attribut numérique d'un élément (null si absent/illisible). */
+function numAttr(el: HTMLElement, name: string): number | null {
+  const raw = el.getAttribute(name);
+  const n = raw === null ? NaN : parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 /** Marqueur DÉBUT de zone page de garde — porte les propriétés de la zone
  *  (l'attribut headerFooter est posé par le panneau latéral). */
 export const CoverZoneStart = Node.create({
@@ -198,6 +248,10 @@ export const CoverZoneStart = Node.create({
       headerFooter: { default: false },
       /** Thème visuel (CoverTheme.ts + coverThemes.css) ; « » = aucun. */
       theme: { default: "", renderHTML: () => ({}) },
+      /** Marges ABSOLUES de la page de garde en mm (null = celles du document). */
+      marginTopMm: { default: null, renderHTML: () => ({}) },
+      marginLeftMm: { default: null, renderHTML: () => ({}) },
+      marginRightMm: { default: null, renderHTML: () => ({}) },
     };
   },
 
@@ -208,6 +262,9 @@ export const CoverZoneStart = Node.create({
         getAttrs: (el) => ({
           headerFooter: (el as HTMLElement).getAttribute("data-header-footer") === "true",
           theme: (el as HTMLElement).getAttribute("data-theme") ?? "",
+          marginTopMm: numAttr(el as HTMLElement, "data-margin-top"),
+          marginLeftMm: numAttr(el as HTMLElement, "data-margin-left"),
+          marginRightMm: numAttr(el as HTMLElement, "data-margin-right"),
         }),
       },
     ];
@@ -220,6 +277,9 @@ export const CoverZoneStart = Node.create({
         "data-type": "cover-zone-start",
         "data-header-footer": node.attrs.headerFooter ? "true" : "false",
         "data-theme": node.attrs.theme || null,
+        "data-margin-top": node.attrs.marginTopMm ?? null,
+        "data-margin-left": node.attrs.marginLeftMm ?? null,
+        "data-margin-right": node.attrs.marginRightMm ?? null,
         class: "xmd-coverzone xmd-coverzone-start",
       }),
     ];
@@ -238,7 +298,7 @@ export const CoverZoneStart = Node.create({
     return {
       markdown: {
         serialize(state: any, node: any) {
-          state.write(formatCoverZoneStartMarker(!!node.attrs.headerFooter, String(node.attrs.theme ?? "")));
+          state.write(formatCoverZoneStartMarker(coverPropsFromAttrs(node.attrs)));
           state.closeBlock(node);
         },
         parse: {
@@ -257,6 +317,9 @@ export const CoverZoneStart = Node.create({
                 token.attrSet("data-type", "cover-zone-start");
                 token.attrSet("data-header-footer", m.headerFooter ? "true" : "false");
                 token.attrSet("data-theme", m.theme);
+                if (m.marginTopMm !== null) token.attrSet("data-margin-top", String(m.marginTopMm));
+                if (m.marginLeftMm !== null) token.attrSet("data-margin-left", String(m.marginLeftMm));
+                if (m.marginRightMm !== null) token.attrSet("data-margin-right", String(m.marginRightMm));
                 token.attrSet("class", "xmd-coverzone xmd-coverzone-start");
                 state.line = startLine + 1;
                 return true;
@@ -265,7 +328,8 @@ export const CoverZoneStart = Node.create({
             markdownit.renderer.rules.coverzonestart = (tokens: any, idx: number) => {
               const token = tokens[idx];
               const theme = token.attrGet("data-theme") ?? "";
-              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}"${theme ? ` data-theme="${theme}"` : ""} class="xmd-coverzone xmd-coverzone-start"></div>`;
+              const margin = (name: string) => (token.attrGet(name) != null ? ` ${name}="${token.attrGet(name)}"` : "");
+              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}"${theme ? ` data-theme="${theme}"` : ""}${margin("data-margin-top")}${margin("data-margin-left")}${margin("data-margin-right")} class="xmd-coverzone xmd-coverzone-start"></div>`;
             };
           },
         },

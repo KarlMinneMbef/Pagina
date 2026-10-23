@@ -744,6 +744,13 @@ function App() {
                   headerFooter={stats.coverZone.headerFooter}
                   theme={stats.coverZone.theme}
                   onChangeTheme={(theme) => editorRef.current?.setCoverZoneTheme(theme)}
+                  margins={{ top: stats.coverZone.marginTopMm, left: stats.coverZone.marginLeftMm, right: stats.coverZone.marginRightMm }}
+                  documentMargins={{
+                    top: activeTab?.layout.marginTopMm ?? 25,
+                    left: activeTab?.layout.marginLeftMm ?? 20,
+                    right: activeTab?.layout.marginRightMm ?? 20,
+                  }}
+                  onChangeMargins={(m) => editorRef.current?.setCoverZoneMargins(m)}
                   customVariables={(activeTab?.layout.documentProperties?.custom ?? [])
                     .filter((c) => c.name.trim() !== "")
                     .map((c) => ({ token: `{{${c.name.trim()}}}`, label: c.name.trim() }))}

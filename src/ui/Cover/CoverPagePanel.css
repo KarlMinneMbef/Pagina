@@ -122,3 +122,31 @@
   font-size: 11px;
   padding: 2px 4px;
 }
+
+/* Marges de la page de garde (mm). */
+.cvp-margins {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.cvp-margin {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: #75766f;
+}
+
+.cvp-margin input {
+  width: 52px;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.cvp-margins-reset {
+  font-size: 10px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
