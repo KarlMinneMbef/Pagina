@@ -265,6 +265,14 @@ clonait le style (un bandeau de plus) ; `<strong>` + `font-weight` doublés.
   bas=0 → 33 lignes sur la page 1 au lieu de 29, bas=60 → 24). Limites : la marge haute ne vaut
   que si la zone ouvre le document ; le repère de début de zone (visible
   à l'écran seulement) décale ~5 mm l'affichage par rapport au PDF.
+- **Repères HORS FLUX** (2026-10-23, demande utilisateur « tout en haut et tout en bas ») :
+  `.xmd-coverzone` et `.xmd-pagebreak` ont `height: 0` et aucune marge ; libellé et trait sont
+  des pseudo-éléments `position: absolute` mesurés sur `.xmd-page` (le contenu n'est pas
+  positionné) — début de zone en haut de sa page, fin de zone puis « Saut de page » empilés en
+  bas. Ils ne décalent plus rien (écran = PDF, plus de chevauchement avec le texte ni avec la
+  marge haute négative). `.xmd-sectionbreak` reste dans le flux (une section ne force pas de
+  nouvelle page). Cliquer le libellé ne sélectionne pas le repère (comme avant) : on supprime
+  une page de garde par le panneau.
 - Piège : `coverThemes.css` doit être importé APRÈS `MarkdownEditor.css`
   (spécificité égale avec `.xmd-prosemirror h1` : le dernier gagne).
 - Piège de méthode : un clic Playwright à `x: 20` sur un titre de couverture tombe sur le
