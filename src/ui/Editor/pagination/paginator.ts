@@ -69,6 +69,11 @@ export function createPaginator({ pageHeight, margins }: PaginatorOptions) {
   }
 
   const pages: PageState[] = [];
+  // Hauteur de contenu SUPPLEMENTAIRE (px, negative = moins) pour les blocs
+  // places tant qu'elle est posee : marge basse personnalisee d'une page de
+  // garde (CoverZone.ts). Une marge plus petite que celle du document laisse
+  // le contenu descendre plus bas avant la coupure de page.
+  let extraContentHeight = 0;
 
   function newPage(): PageState {
     const state: PageState = {
@@ -99,7 +104,7 @@ export function createPaginator({ pageHeight, margins }: PaginatorOptions) {
       // même affichée pleine hauteur (l'espace restant est simplement vide) —
       // on compense donc exactement comme pour une coupure naturelle.
       // Idempotent : pas de nouvelle page si celle-ci est déjà vide.
-      previousPageLeftover = contentHeight - state.cursorY;
+      previousPageLeftover = contentHeight + extraContentHeight - state.cursorY;
       state = newPage();
       startsNewPage = true;
     }
@@ -107,13 +112,13 @@ export function createPaginator({ pageHeight, margins }: PaginatorOptions) {
     const effectiveSpaceBefore = spaceBefore + state.trailingSpacing;
     const totalHeight = effectiveSpaceBefore + height;
     const safeHeight = Number.isFinite(totalHeight) && totalHeight > 0 ? totalHeight : 0;
-    const available = contentHeight - state.cursorY;
+    const available = contentHeight + extraContentHeight - state.cursorY;
 
     if (safeHeight > available && state.cursorY !== 0) {
       // Ne tient pas sur cette page (et la page n'est pas vide) : coupure
       // naturelle. On compense pour que la page qui se termine fasse quand
       // même une hauteur pleine (comme les autres, façon Word).
-      previousPageLeftover = contentHeight - state.cursorY;
+      previousPageLeftover = contentHeight + extraContentHeight - state.cursorY;
       state = newPage();
       startsNewPage = true;
     }
@@ -128,6 +133,10 @@ export function createPaginator({ pageHeight, margins }: PaginatorOptions) {
 
   return {
     placeBlock,
+    /** Pose (ou remet a 0) la hauteur de contenu supplementaire des blocs suivants. */
+    setExtraContentHeight(px: number) {
+      extraContentHeight = Number.isFinite(px) ? px : 0;
+    },
     get pageCount() {
       return Math.max(pages.length, 1);
     },

@@ -744,11 +744,12 @@ function App() {
                   headerFooter={stats.coverZone.headerFooter}
                   theme={stats.coverZone.theme}
                   onChangeTheme={(theme) => editorRef.current?.setCoverZoneTheme(theme)}
-                  margins={{ top: stats.coverZone.marginTopMm, left: stats.coverZone.marginLeftMm, right: stats.coverZone.marginRightMm }}
+                  margins={{ top: stats.coverZone.marginTopMm, left: stats.coverZone.marginLeftMm, right: stats.coverZone.marginRightMm, bottom: stats.coverZone.marginBottomMm }}
                   documentMargins={{
                     top: activeTab?.layout.marginTopMm ?? 25,
                     left: activeTab?.layout.marginLeftMm ?? 20,
                     right: activeTab?.layout.marginRightMm ?? 20,
+                    bottom: activeTab?.layout.marginBottomMm ?? 25,
                   }}
                   onChangeMargins={(m) => editorRef.current?.setCoverZoneMargins(m)}
                   customVariables={(activeTab?.layout.documentProperties?.custom ?? [])

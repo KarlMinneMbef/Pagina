@@ -21,7 +21,7 @@ function tokenToName(token: string): string {
   return token.replace(/^\{\{|\}\}$/g, "").trim();
 }
 
-type Margins = { top: number | null; left: number | null; right: number | null };
+type Margins = { top: number | null; left: number | null; right: number | null; bottom: number | null };
 
 /** Saisie d'une marge en mm : validée à Entrée/perte de focus, vide = marge du document. */
 function MarginField({ label, value, fallback, onCommit }: { label: string; value: number | null; fallback: number; onCommit: (v: number | null) => void }) {
@@ -79,7 +79,7 @@ export function CoverPagePanel({
   /** Marges ABSOLUES de la page de garde en mm (`null` = celles du document). */
   margins: Margins;
   /** Marges du document (affichées en indication quand le champ est vide). */
-  documentMargins: { top: number; left: number; right: number };
+  documentMargins: { top: number; left: number; right: number; bottom: number };
   /** Change les marges de la page de garde. */
   onChangeMargins: (margins: Margins) => void;
   /** Champs personnalisés du document (Propriétés) — même liste que le
@@ -145,17 +145,18 @@ export function CoverPagePanel({
             ))}
           </select>
         </label>
-        <p className="cvp-vars-title">Marges de la page de garde (mm, depuis le bord de la page ; la marge haute ne s'applique que si elle ouvre le document) :</p>
+        <p className="cvp-vars-title">Marges de la page de garde (mm, depuis le bord de la page ; la marge haute ne s'applique que si elle ouvre le document ; la marge basse fixe où le contenu passe à la page suivante) :</p>
         <div className="cvp-margins">
           <MarginField label="Haut" value={margins.top} fallback={documentMargins.top} onCommit={(v) => onChangeMargins({ ...margins, top: v })} />
           <MarginField label="Gauche" value={margins.left} fallback={documentMargins.left} onCommit={(v) => onChangeMargins({ ...margins, left: v })} />
           <MarginField label="Droite" value={margins.right} fallback={documentMargins.right} onCommit={(v) => onChangeMargins({ ...margins, right: v })} />
+          <MarginField label="Bas" value={margins.bottom} fallback={documentMargins.bottom} onCommit={(v) => onChangeMargins({ ...margins, bottom: v })} />
           <button
             type="button"
             className="cvp-margins-reset"
             title="Reprendre les marges du document"
-            disabled={margins.top === null && margins.left === null && margins.right === null}
-            onClick={() => onChangeMargins({ top: null, left: null, right: null })}
+            disabled={margins.top === null && margins.left === null && margins.right === null && margins.bottom === null}
+            onClick={() => onChangeMargins({ top: null, left: null, right: null, bottom: null })}
           >
             Marges du document
           </button>

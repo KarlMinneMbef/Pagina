@@ -40,7 +40,7 @@ function makeEditor(markdown: string): Editor {
 
 describe("CoverZone — thème visuel (Markdown pur + marqueur)", () => {
   it("lit et écrit le marqueur de début avec thème et en-tête", () => {
-    const none = { marginTopMm: null, marginLeftMm: null, marginRightMm: null };
+    const none = { marginTopMm: null, marginLeftMm: null, marginRightMm: null, marginBottomMm: null };
     expect(parseCoverZoneStartMarker("<!-- coverzone-start -->")).toEqual({ headerFooter: false, theme: "", ...none });
     expect(parseCoverZoneStartMarker("<!-- coverzone-start header -->")).toEqual({ headerFooter: true, theme: "", ...none });
     expect(parseCoverZoneStartMarker("<!-- coverzone-start theme=chantier -->")).toEqual({ headerFooter: false, theme: "chantier", ...none });
@@ -51,9 +51,9 @@ describe("CoverZone — thème visuel (Markdown pur + marqueur)", () => {
   });
 
   it("lit et écrit les marges de la page de garde (mm, ordre libre, jetons inconnus ignorés)", () => {
-    const m = parseCoverZoneStartMarker("<!-- coverzone-start margin-left=0 theme=chantier margin-top=12.5 futur=1 margin-right=5 -->");
-    expect(m).toEqual({ headerFooter: false, theme: "chantier", marginTopMm: 12.5, marginLeftMm: 0, marginRightMm: 5 });
-    expect(formatCoverZoneStartMarker(m!)).toBe("<!-- coverzone-start theme=chantier margin-top=12.5 margin-left=0 margin-right=5 -->");
+    const m = parseCoverZoneStartMarker("<!-- coverzone-start margin-left=0 theme=chantier margin-top=12.5 futur=1 margin-right=5 margin-bottom=8 -->");
+    expect(m).toEqual({ headerFooter: false, theme: "chantier", marginTopMm: 12.5, marginLeftMm: 0, marginRightMm: 5, marginBottomMm: 8 });
+    expect(formatCoverZoneStartMarker(m!)).toBe("<!-- coverzone-start theme=chantier margin-top=12.5 margin-left=0 margin-right=5 margin-bottom=8 -->");
   });
 
   it("aller-retour des marges dans le Markdown de l'éditeur", () => {

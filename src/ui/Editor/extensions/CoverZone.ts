@@ -35,6 +35,7 @@ export interface CoverZoneProps {
   marginTopMm: number | null;
   marginLeftMm: number | null;
   marginRightMm: number | null;
+  marginBottomMm: number | null;
 }
 
 /** Zone page de garde englobant une position : positions des marqueurs
@@ -46,10 +47,15 @@ export interface CoverZoneInfo extends CoverZoneProps {
 }
 
 /** Marqueur de DÉBUT : `<!-- coverzone-start[ header][ theme=nom][ margin-top=mm]
- *  [ margin-left=mm][ margin-right=mm] -->` (jetons dans n'importe quel ordre). */
+ *  [ margin-left=mm][ margin-right=mm][ margin-bottom=mm] -->` (jetons dans n'importe quel ordre). */
 const COVER_START_RE = /^<!--\s*coverzone-start((?:\s+[\w-]+(?:=[\w.,-]*)?)*)\s*-->$/i;
 
-const MARGIN_KEYS = { "margin-top": "marginTopMm", "margin-left": "marginLeftMm", "margin-right": "marginRightMm" } as const;
+const MARGIN_KEYS = {
+  "margin-top": "marginTopMm",
+  "margin-left": "marginLeftMm",
+  "margin-right": "marginRightMm",
+  "margin-bottom": "marginBottomMm",
+} as const;
 
 /** Lit un marqueur de début ; `null` si la ligne n'en est pas un. Exporté
  *  pour les tests (le parseur markdown-it l'utilise tel quel). Les jetons
@@ -57,7 +63,7 @@ const MARGIN_KEYS = { "margin-top": "marginTopMm", "margin-left": "marginLeftMm"
 export function parseCoverZoneStartMarker(line: string): CoverZoneProps | null {
   const m = line.trim().match(COVER_START_RE);
   if (!m) return null;
-  const props: CoverZoneProps = { headerFooter: false, theme: "", marginTopMm: null, marginLeftMm: null, marginRightMm: null };
+  const props: CoverZoneProps = { headerFooter: false, theme: "", marginTopMm: null, marginLeftMm: null, marginRightMm: null, marginBottomMm: null };
   for (const token of m[1].trim().split(/\s+/).filter(Boolean)) {
     const [key, value = ""] = token.split("=");
     const k = key.toLowerCase();
@@ -92,6 +98,7 @@ export function coverPropsFromAttrs(attrs: Record<string, any>): CoverZoneProps 
     marginTopMm: num(attrs.marginTopMm),
     marginLeftMm: num(attrs.marginLeftMm),
     marginRightMm: num(attrs.marginRightMm),
+    marginBottomMm: num(attrs.marginBottomMm),
   };
 }
 
@@ -252,6 +259,7 @@ export const CoverZoneStart = Node.create({
       marginTopMm: { default: null, renderHTML: () => ({}) },
       marginLeftMm: { default: null, renderHTML: () => ({}) },
       marginRightMm: { default: null, renderHTML: () => ({}) },
+      marginBottomMm: { default: null, renderHTML: () => ({}) },
     };
   },
 
@@ -265,6 +273,7 @@ export const CoverZoneStart = Node.create({
           marginTopMm: numAttr(el as HTMLElement, "data-margin-top"),
           marginLeftMm: numAttr(el as HTMLElement, "data-margin-left"),
           marginRightMm: numAttr(el as HTMLElement, "data-margin-right"),
+          marginBottomMm: numAttr(el as HTMLElement, "data-margin-bottom"),
         }),
       },
     ];
@@ -280,6 +289,7 @@ export const CoverZoneStart = Node.create({
         "data-margin-top": node.attrs.marginTopMm ?? null,
         "data-margin-left": node.attrs.marginLeftMm ?? null,
         "data-margin-right": node.attrs.marginRightMm ?? null,
+        "data-margin-bottom": node.attrs.marginBottomMm ?? null,
         class: "xmd-coverzone xmd-coverzone-start",
       }),
     ];
@@ -320,6 +330,7 @@ export const CoverZoneStart = Node.create({
                 if (m.marginTopMm !== null) token.attrSet("data-margin-top", String(m.marginTopMm));
                 if (m.marginLeftMm !== null) token.attrSet("data-margin-left", String(m.marginLeftMm));
                 if (m.marginRightMm !== null) token.attrSet("data-margin-right", String(m.marginRightMm));
+                if (m.marginBottomMm !== null) token.attrSet("data-margin-bottom", String(m.marginBottomMm));
                 token.attrSet("class", "xmd-coverzone xmd-coverzone-start");
                 state.line = startLine + 1;
                 return true;
@@ -329,7 +340,7 @@ export const CoverZoneStart = Node.create({
               const token = tokens[idx];
               const theme = token.attrGet("data-theme") ?? "";
               const margin = (name: string) => (token.attrGet(name) != null ? ` ${name}="${token.attrGet(name)}"` : "");
-              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}"${theme ? ` data-theme="${theme}"` : ""}${margin("data-margin-top")}${margin("data-margin-left")}${margin("data-margin-right")} class="xmd-coverzone xmd-coverzone-start"></div>`;
+              return `<div data-type="cover-zone-start" data-header-footer="${token.attrGet("data-header-footer") ?? "false"}"${theme ? ` data-theme="${theme}"` : ""}${margin("data-margin-top")}${margin("data-margin-left")}${margin("data-margin-right")}${margin("data-margin-bottom")} class="xmd-coverzone xmd-coverzone-start"></div>`;
             };
           },
         },

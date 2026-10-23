@@ -259,8 +259,11 @@ clonait le style (un bandeau de plus) ; `<strong>` + `font-weight` doublés.
   la zone (`margin-left: calc(Xmm - var(--xmd-margin-left))`) — ce sont des marges de BLOC,
   pas de page : la pagination (qui mesure l'éditeur invisible) reste exacte sans toucher au
   paginateur, et une marge plus petite que celle du document fait déborder un bandeau jusqu'au
-  bord de la page (vérifié à l'écran et dans le PDF natif). Limites : la marge haute ne vaut
-  que si la zone ouvre le document ; pas de marge basse ; le repère de début de zone (visible
+  bord de la page (vérifié à l'écran et dans le PDF natif). La marge BASSE agit sur la
+  pagination : `paginator.setExtraContentHeight` (positionné par `paintPages.ts` entre les
+  marqueurs de la zone) ajoute ou retire de la hauteur utile aux blocs de la zone (vérifié :
+  bas=0 → 33 lignes sur la page 1 au lieu de 29, bas=60 → 24). Limites : la marge haute ne vaut
+  que si la zone ouvre le document ; le repère de début de zone (visible
   à l'écran seulement) décale ~5 mm l'affichage par rapport au PDF.
 - Piège : `coverThemes.css` doit être importé APRÈS `MarkdownEditor.css`
   (spécificité égale avec `.xmd-prosemirror h1` : le dernier gagne).
