@@ -50,7 +50,11 @@ import type { EditorView } from "@tiptap/pm/view";
 import { formatCounter, type HeadingLevel, type HeadingLevelStyle } from "../../../core/pageLayout";
 import { coverZoneContentOffsets, isInCoverZoneContent } from "./CoverZone";
 
-const PREFIX_RE = /^(?:[0-9]+|[A-Za-z]+)(?:\.(?:[0-9]+|[A-Za-z]+))*\.\s+/;
+/** Dernier état « au moins un niveau numéroté » vu par éditeur (voir
+ *  `applyHeadingNumbering` : détecte le passage numéroté → non numéroté). */
+const lastAnyNumbered = new WeakMap<EditorView, boolean>();
+
+const PREFIX_RE =/^(?:[0-9]+|[A-Za-z]+)(?:\.(?:[0-9]+|[A-Za-z]+))*\.\s+/;
 
 function computePrefix(
   level: HeadingLevel,
@@ -75,7 +79,14 @@ function computePrefix(
  * marché dans le cas courant où aucun niveau n'a de numérotation activée. */
 export function applyHeadingNumbering(view: EditorView, headingStyles: Record<HeadingLevel, HeadingLevelStyle>): void {
   const anyNumbered = Object.values(headingStyles).some((s) => s.numbering !== "none");
-  if (!anyNumbered) return;
+  // La numérotation est ÉCRITE dans le texte des titres : quand on la coupe
+  // partout (réglage des titres, application d'un style…), il faut retirer les
+  // préfixes posés, sinon « 1. Titre » resterait à jamais. On ne le fait qu'au
+  // PASSAGE numéroté → non numéroté d'un éditeur vivant (jamais à l'ouverture
+  // d'un fichier non numéroté, dont un « 1. » éventuel est du vrai texte).
+  const wasNumbered = lastAnyNumbered.get(view) ?? false;
+  lastAnyNumbered.set(view, anyNumbered);
+  if (!anyNumbered && !wasNumbered) return;
 
   const { state } = view;
   const counters = [0, 0, 0, 0, 0, 0];

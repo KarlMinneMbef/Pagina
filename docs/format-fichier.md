@@ -104,6 +104,12 @@ Le fichier enregistré est un **Markdown 100 % standard** (GFM). Tout ce qui n'e
 page et le cadre ; `appliesTo` : `all` (toutes les pages), `first` (première page) ou `cover`
 (pages de garde). Champs absents = valeurs ci-dessus (cadre désactivé).
 
+#### `toc` — style du sommaire
+
+`{"maxLevel":6,"bullets":true,"indentMm":8,"color":"","underline":true,"boldFirstLevel":false}`
+— `maxLevel` : niveau de titre le plus profond listé (1 à 6) ; `color` vide = couleur des liens.
+Appliqué à tout sommaire généré (à régénérer pour changer `maxLevel`).
+
 ### Règles de cohérence
 
 | Champ | Type | Défaut | Règle |

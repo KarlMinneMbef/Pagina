@@ -79,7 +79,18 @@ function collectAllTargets(doc: any): (TocTarget & { pos: number })[] {
  *  - DANS une section : uniquement les titres de cette section (entre le
  *    saut de section qui la commence et le suivant) — son « sommaire
  *    dédié », numérotation comprise (voir HeadingAutoNumber.ts). */
+/** Niveau de titre le plus profond listé par les sommaires générés (style du
+ *  sommaire, voir `TocStyleSettings`) — posé par MarkdownEditor. */
+let tocMaxLevel = 6;
+export function setTocMaxLevel(level: number): void {
+  tocMaxLevel = Number.isFinite(level) ? Math.max(1, Math.min(6, Math.round(level))) : 6;
+}
+
 function collectTocTargets(doc: any, tocPos: number): TocTarget[] {
+  return collectTocTargetsAllLevels(doc, tocPos).filter((t) => t.level <= tocMaxLevel);
+}
+
+function collectTocTargetsAllLevels(doc: any, tocPos: number): TocTarget[] {
   const all = collectAllTargets(doc);
   const sections = all.filter((t) => {
     const node = doc.nodeAt(t.pos);
@@ -185,7 +196,7 @@ function isTocLinkParagraph(node: any): boolean {
  * le panneau latéral. Une liste normale de simples liens internes (cas
  * rarissime, jamais généré par l'app) matcherait aussi — limite acceptée,
  * bien moins grave qu'exiger un attribut non persistant. */
-function isTocList(node: any): boolean {
+export function isTocList(node: any): boolean {
   if (!node || node.type.name !== "bulletList" || node.childCount === 0) return false;
   let allMatch = true;
   node.forEach((item: any) => {

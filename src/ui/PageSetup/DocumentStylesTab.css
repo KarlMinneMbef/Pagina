@@ -1,0 +1,206 @@
+/* Onglet « Styles » de Mise en page — couleurs MBEF (sapin, prairie, azur). */
+.dst-root {
+  display: flex;
+  gap: 14px;
+  min-height: 330px;
+}
+
+.dst-list {
+  width: 215px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid #d0d3d4;
+  padding-right: 10px;
+  overflow-y: auto;
+}
+
+.dst-title {
+  margin: 8px 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dst-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #75766f;
+}
+
+.dst-item-row {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.dst-item-active {
+  background: #dfeff8;
+  box-shadow: inset 3px 0 0 #24ac6e;
+}
+
+.dst-item {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #343334;
+  cursor: pointer;
+}
+
+.dst-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dst-tool {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #75766f;
+  cursor: pointer;
+}
+
+.dst-tool:hover {
+  color: #003f2b;
+}
+
+.dst-danger:hover {
+  color: #eb5b1f;
+}
+
+.dst-import {
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px dashed #24ac6e;
+  background: #ffffff;
+  color: #003f2b;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dst-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dst-box {
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #fafafa;
+  min-height: 92px;
+}
+
+.dst-box-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #003f2b;
+}
+
+.dst-desc {
+  margin: 4px 0;
+  font-size: 11px;
+  color: #343334;
+}
+
+.dst-summary {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: #343334;
+}
+
+.dst-parts {
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dst-parts legend {
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+  padding: 0 4px;
+}
+
+.dst-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #343334;
+}
+
+.dst-part input {
+  accent-color: #24ac6e;
+}
+
+.dst-part-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: #75766f;
+}
+
+.dst-part-missing {
+  opacity: 0.6;
+}
+
+.dst-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dst-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid #b9b9b7;
+  background: #ffffff;
+  color: #343334;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dst-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dst-btn-primary {
+  background: #24ac6e;
+  border-color: #24ac6e;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.dst-save {
+  display: flex;
+  gap: 6px;
+}
+
+.dst-save input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  font-size: 12px;
+  border: 1px solid #b9b9b7;
+  border-radius: 4px;
+}
+
+.dst-status {
+  margin: 0;
+  font-size: 11px;
+  color: #003f2b;
+}

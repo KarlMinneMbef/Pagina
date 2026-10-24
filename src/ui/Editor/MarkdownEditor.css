@@ -1075,3 +1075,22 @@ math-virtual-keyboard {
   box-sizing: border-box;
   pointer-events: none;
 }
+
+/* ===== Style du sommaire (layout.toc, voir TocStyle.ts) ===== */
+.xmd-prosemirror ul[data-toc] {
+  list-style: var(--xmd-toc-list-style, disc);
+}
+.xmd-prosemirror ul[data-toc] {
+  padding-left: var(--xmd-toc-top-padding, 40px);
+}
+.xmd-prosemirror ul[data-toc] ul {
+  list-style: var(--xmd-toc-list-style, disc);
+  padding-left: var(--xmd-toc-indent, 8mm);
+}
+.xmd-prosemirror ul[data-toc] a {
+  color: var(--xmd-toc-color, -webkit-link);
+  text-decoration: var(--xmd-toc-decoration, underline);
+}
+.xmd-prosemirror ul[data-toc] > li > p a {
+  font-weight: var(--xmd-toc-first-weight, normal);
+}

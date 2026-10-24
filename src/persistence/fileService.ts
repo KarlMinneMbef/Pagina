@@ -44,6 +44,28 @@ export async function pickCoverTemplateSaveLocation(defaultName: string): Promis
   });
 }
 
+/** Sélecteur « Enregistrer » pour EXPORTER un style de document (voir
+ *  core/documentStyles.ts) ; null si annulé. */
+export async function pickDocumentStyleSaveLocation(defaultName: string): Promise<string | null> {
+  return save({
+    defaultPath: defaultName,
+    filters: [{ name: "Style de document Pagina", extensions: ["json"] }],
+    title: "Exporter le style de document",
+  });
+}
+
+/** Sélecteur « Ouvrir » pour IMPORTER un style de document ; null si annulé. */
+export async function pickDocumentStyleFile(): Promise<string | null> {
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    filters: [{ name: "Style de document Pagina", extensions: ["json"] }],
+    title: "Importer un style de document",
+  });
+  if (!selected || Array.isArray(selected)) return null;
+  return selected;
+}
+
 /** Sélecteur natif « Ouvrir » pour IMPORTER un modèle de page de garde
  *  exporté depuis un autre poste ; null si annulé. */
 export async function pickCoverTemplateFile(): Promise<string | null> {

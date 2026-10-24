@@ -25,9 +25,10 @@ import { useState } from "react";
 import type { PageLayoutSettings } from "../../core/pageLayout";
 import { PAPER_SIZE_LABELS, PAPER_SIZES_MM, resolvePageSizeMm, saveDefaultPageLayout } from "../../core/pageLayout";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
+import { DocumentStylesTab } from "./DocumentStylesTab";
 import "./PageSetupDialog.css";
 
-type PsTab = "marges" | "papier" | "miseEnPage";
+type PsTab = "marges" | "papier" | "miseEnPage" | "styles";
 
 /** mm (stockage) → cm (affichage Word) et retour, sans erreur de flottant. */
 const mmToCm = (mm: number) => Math.round((mm / 10) * 100) / 100;
@@ -154,6 +155,9 @@ export function PageSetupDialog({
   const setFooter = (patch: Partial<PageLayoutSettings["footer"]>) =>
     setDraft((d) => ({ ...d, footer: { ...d.footer, ...patch } }));
 
+  const setToc = (patch: Partial<PageLayoutSettings["toc"]>) =>
+    setDraft((d) => ({ ...d, toc: { ...d.toc, ...patch } }));
+
   const setBorder = (patch: Partial<PageLayoutSettings["pageBorder"]>) =>
     setDraft((d) => ({ ...d, pageBorder: { ...d.pageBorder, ...patch } }));
 
@@ -198,9 +202,13 @@ export function PageSetupDialog({
           <button className={`ps-tab${tab === "miseEnPage" ? " ps-tab-active" : ""}`} onClick={() => setTab("miseEnPage")}>
             Mise en page
           </button>
+          <button className={`ps-tab${tab === "styles" ? " ps-tab-active" : ""}`} onClick={() => setTab("styles")}>
+            Styles
+          </button>
         </div>
 
         <div className="ps-body">
+          {tab === "styles" && <DocumentStylesTab draft={draft} onApplyToDraft={setDraft} />}
           {tab === "marges" && (
             <div className="ps-cols">
               <div className="ps-col-main">
@@ -408,6 +416,59 @@ export function PageSetupDialog({
                       Numérotation des lignes…
                     </button>
                   </div>
+                </fieldset>
+
+                <fieldset className="ps-group">
+                  <legend>Style du sommaire</legend>
+                  <label className="ps-num ps-select">
+                    <span>Niveaux listés :</span>
+                    <select value={draft.toc.maxLevel} onChange={(e) => setToc({ maxLevel: parseInt(e.target.value, 10) })}>
+                      {[1, 2, 3, 4, 5, 6].map((n) => (
+                        <option key={n} value={n}>
+                          {n === 1 ? "Titre 1 seulement" : `Titres 1 à ${n}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={draft.toc.bullets} onChange={(e) => setToc({ bullets: e.target.checked })} />
+                    Puces devant les entrées
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={draft.toc.underline} onChange={(e) => setToc({ underline: e.target.checked })} />
+                    Entrées soulignées
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={draft.toc.boldFirstLevel} onChange={(e) => setToc({ boldFirstLevel: e.target.checked })} />
+                    Premier niveau en gras
+                  </label>
+                  <div className="ps-margins-grid ps-indent">
+                    <label className="ps-num">
+                      <span>Retrait par niveau (mm) :</span>
+                      <span className="ps-num-box">
+                        <input
+                          type="number"
+                          min={0}
+                          max={30}
+                          step={1}
+                          value={draft.toc.indentMm}
+                          onChange={(e) => setToc({ indentMm: Math.max(0, Math.min(30, parseFloat(e.target.value) || 0)) })}
+                        />
+                      </span>
+                    </label>
+                  </div>
+                  <label className="ps-num">
+                    <span>Couleur des entrées :</span>
+                    <ColorPicker
+                      value={draft.toc.color || "#2f52a0"}
+                      title="Couleur des entrées du sommaire (Automatique = couleur des liens)"
+                      triggerClassName="ps-color-trigger"
+                      trigger={<span className="ps-color-swatch" style={{ background: draft.toc.color || "#2f52a0" }} />}
+                      onAutomatic={() => setToc({ color: "" })}
+                      onChange={(color) => setToc({ color })}
+                    />
+                  </label>
+                  <p className="ps-note">S'applique aux sommaires générés ; régénérez-les pour prendre en compte les niveaux listés.</p>
                 </fieldset>
 
                 <fieldset className="ps-group">

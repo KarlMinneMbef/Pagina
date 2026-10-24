@@ -51,7 +51,7 @@ import { useEffect, useLayoutEffect, useImperativeHandle, forwardRef, useRef, us
 import { PageBreak } from "./extensions/PageBreak";
 import { Bookmark } from "./extensions/Bookmark";
 import { ParagraphMarkdown } from "./extensions/ParagraphMarkdown";
-import { TocMarker } from "./extensions/TocMarker";
+import { TocMarker, setTocMaxLevel } from "./extensions/TocMarker";
 import { FootnoteReference, FootnoteDefinition } from "./extensions/Footnote";
 import { MermaidDiagram, setMermaidRenderedCallback } from "./extensions/MermaidDiagram";
 import { SectionBreak } from "./extensions/SectionBreak";
@@ -67,6 +67,7 @@ import {
 } from "./extensions/CoverZone";
 import { DocField, setDocFieldContext, refreshAllDocFields } from "./extensions/DocField";
 import { CoverTheme } from "./extensions/CoverTheme";
+import { TocStyle } from "./extensions/TocStyle";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { InlineMath, BlockMath } from "./extensions/Math";
@@ -706,6 +707,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         CoverZoneStart,
         CoverZoneEnd,
         CoverTheme,
+        TocStyle,
         // Champ de document {{variable}} inline — valeur résolue affichée
         // (comme les en-têtes/pieds), variable gardée dans le .md.
         DocField,
@@ -1478,6 +1480,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // résolvent la valeur avec, et le re-push à chaque changement de
       // layout (propriétés du document modifiées) met à jour tous les
       // champs affichés.
+      // Profondeur des sommaires générés (style du sommaire).
+      setTocMaxLevel(layout.toc.maxLevel);
       setDocFieldContext(() => ({
         page: 1,
         pages: 1,
@@ -2716,6 +2720,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       // / .xmd-page-footer dans MarkdownEditor.css.
       "--xmd-header-top": `${layout.header.fromEdgeMm}mm`,
       "--xmd-footer-bottom": `${layout.footer.fromEdgeMm}mm`,
+      // Style du sommaire (TocStyle.ts + règles `ul[data-toc]`).
+      "--xmd-toc-list-style": layout.toc.bullets ? "disc" : "none",
+      "--xmd-toc-indent": `${layout.toc.indentMm}mm`,
+      "--xmd-toc-top-padding": layout.toc.bullets ? "40px" : "0px",
+      "--xmd-toc-decoration": layout.toc.underline ? "underline" : "none",
+      "--xmd-toc-first-weight": layout.toc.boldFirstLevel ? "bold" : "normal",
+      ...(layout.toc.color ? { "--xmd-toc-color": layout.toc.color } : {}),
       // Style par niveau de titre (voir pageLayout.ts) — une variable par
       // propriété et par niveau, consommées par les règles `.xmd-prosemirror
       // h1`...`h6` dans MarkdownEditor.css. La numérotation elle-même n'a

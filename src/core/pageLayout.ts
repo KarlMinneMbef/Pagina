@@ -55,10 +55,6 @@ export interface HeaderFooterSettings {
   fromEdgeMm: number;
 }
 
-/** MISE EN PAGE complète d'un document : marges, papier, police de base,
- *  en-tête/pied, styles de titres, interligne/espacement, propriétés et champs
- *  personnalisés. Sérialisée dans le commentaire `pagina:config` en tête du
- *  .md (voir serializeDocumentConfig / extractDocumentConfig). */
 /** Bordure de page (cadre autour de la page, comme « Bordures de page » de
  *  Word) : un rectangle posé à `offsetMm` du bord PHYSIQUE de la page, sur
  *  toutes les pages, la première seulement, ou les pages de garde. */
@@ -73,6 +69,26 @@ export interface PageBorderSettings {
   appliesTo: "all" | "first" | "cover";
 }
 
+/** Style du SOMMAIRE (apparence et profondeur) — appliqué à tout sommaire
+ *  généré du document (voir TocStyle.ts et `generateToc`). */
+export interface TocStyleSettings {
+  /** Niveau de titre le plus profond listé (1 à 6). */
+  maxLevel: number;
+  /** Puces devant les entrées. */
+  bullets: boolean;
+  /** Retrait de chaque niveau imbriqué, en millimètres. */
+  indentMm: number;
+  /** Couleur des entrées (« » = couleur des liens du document). */
+  color: string;
+  underline: boolean;
+  /** Entrées de premier niveau en gras. */
+  boldFirstLevel: boolean;
+}
+
+/** MISE EN PAGE complète d'un document : marges, papier, police de base,
+ *  en-tête/pied, styles de titres, interligne/espacement, propriétés et champs
+ *  personnalisés. Sérialisée dans le commentaire `pagina:config` en tête du
+ *  .md (voir serializeDocumentConfig / extractDocumentConfig). */
 export interface PageLayoutSettings {
   /** Police de base du corps de texte (hors mise en forme "avancée" appliquée à la main). */
   fontFamily: string;
@@ -119,6 +135,8 @@ export interface PageLayoutSettings {
   headingStyles: Record<HeadingLevel, HeadingLevelStyle>;
   /** Cadre autour des pages — voir `PageBorderSettings`. */
   pageBorder: PageBorderSettings;
+  /** Style du sommaire — voir `TocStyleSettings`. */
+  toc: TocStyleSettings;
 }
 
 /** Champ personnalisé des propriétés du document (roadmap 1.3, fenêtre
@@ -285,6 +303,7 @@ const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   documentProperties: { title: "", subject: "", createdDate: "", modifiedDate: "", keywords: "", comments: "", custom: [] },
   headingStyles: DEFAULT_HEADING_STYLES,
   pageBorder: { enabled: false, style: "solid", widthPt: 1, color: "#000000", offsetMm: 10, appliesTo: "all" },
+  toc: { maxLevel: 6, bullets: true, indentMm: 8, color: "", underline: true, boldFirstLevel: false },
 };
 
 /** Dimensions "portrait" des formats papier supportés, en millimètres. */
@@ -352,6 +371,7 @@ export function loadDefaultPageLayout(): PageLayoutSettings {
       header: { ...DEFAULT_PAGE_LAYOUT.header, ...parsed.header },
       footer: { ...DEFAULT_PAGE_LAYOUT.footer, ...parsed.footer },
       pageBorder: { ...DEFAULT_PAGE_LAYOUT.pageBorder, ...parsed.pageBorder },
+      toc: { ...DEFAULT_PAGE_LAYOUT.toc, ...parsed.toc },
     };
   } catch {
     return DEFAULT_PAGE_LAYOUT;
@@ -558,6 +578,7 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
         header: { ...DEFAULT_PAGE_LAYOUT.header, ...parsed.layout?.header },
         footer: { ...DEFAULT_PAGE_LAYOUT.footer, ...parsed.layout?.footer },
         pageBorder: { ...DEFAULT_PAGE_LAYOUT.pageBorder, ...parsed.layout?.pageBorder },
+        toc: { ...DEFAULT_PAGE_LAYOUT.toc, ...parsed.layout?.toc },
         // Fusion NIVEAU PAR NIVEAU : un ancien fichier (ou un fichier édité
         // à la main) peut n'avoir que certains niveaux définis — les
         // niveaux manquants retombent sur leur défaut individuellement,
