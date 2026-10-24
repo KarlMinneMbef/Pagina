@@ -52,3 +52,44 @@
  * aux erreurs/actions dangereuses — voir tokens.ts. */
 
 
+
+.toc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--toc-label);
+}
+.toc-field select,
+.toc-field input[type="number"] {
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid #b9b9b7;
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--toc-text);
+}
+.toc-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--toc-text);
+}
+.toc-check input {
+  accent-color: #24ac6e;
+}
+.toc-color-trigger {
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid #b9b9b7;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+}
+.toc-color-swatch {
+  display: block;
+  width: 46px;
+  height: 18px;
+  border-radius: 2px;
+}

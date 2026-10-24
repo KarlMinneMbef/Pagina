@@ -684,6 +684,16 @@ function App() {
               tocPanelOpen &&
               actions && (
                 <TocPanel
+                  toc={activeTab.layout.toc}
+                  onChangeToc={(patch) => {
+                    // Lecture du style COURANT dans le store (jamais une closure périmée).
+                    const state = useTabsStore.getState();
+                    const current = state.tabs.find((t) => t.path === activeTab.path)?.layout.toc;
+                    if (!current) return;
+                    state.patchLayout(activeTab.path, { toc: { ...current, ...patch } });
+                    // La profondeur n'est lue qu'à la génération : régénérer une fois le réglage appliqué.
+                    if (patch.maxLevel !== undefined) setTimeout(() => actions?.updateTocAtCursor(), 150);
+                  }}
                   onUpdate={() => actions?.updateTocAtCursor()}
                   onDelete={() => actions?.deleteTocAtCursor()}
                   onClose={() => setTocPanelOpen(false)}
