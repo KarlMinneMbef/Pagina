@@ -430,6 +430,16 @@ math-virtual-keyboard {
   margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-paragraph-spacing, 8pt) 0;
 }
 
+/* Texte justifié (layout.justify) : seulement les paragraphes hors cellules ;
+ * un alignement posé à la main (style en ligne) l'emporte. */
+.xmd-prosemirror p {
+  text-align: var(--xmd-text-align, start);
+}
+.xmd-prosemirror td p,
+.xmd-prosemirror th p {
+  text-align: inherit;
+}
+
 /* Les paragraphes À L'INTÉRIEUR d'un item de liste ne doivent pas cumuler
  * l'espacement "après paragraphe" — sinon chaque puce/numéro se retrouve
  * avec un grand vide en dessous, contrairement à une liste Word (serrée,
@@ -457,10 +467,18 @@ math-virtual-keyboard {
   color: var(--xmd-h1-color);
   font-weight: var(--xmd-h1-weight);
   font-style: var(--xmd-h1-style);
+  text-decoration: var(--xmd-h1-decoration, none);
+  text-transform: var(--xmd-h1-transform, none);
+  letter-spacing: var(--xmd-h1-letter-spacing, 0);
+  text-align: var(--xmd-h1-align, left);
+  background: var(--xmd-h1-bg, transparent);
+  padding: var(--xmd-h1-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h1-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h1-spacing) 0;
+  margin: var(--xmd-h1-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h1-spacing) 0;
+  margin-left: var(--xmd-h1-indent, 0mm);
+  margin-right: var(--xmd-h1-mr, 0mm);
 }
 .xmd-prosemirror h2 {
   font-family: var(--xmd-h2-font);
@@ -468,10 +486,18 @@ math-virtual-keyboard {
   color: var(--xmd-h2-color);
   font-weight: var(--xmd-h2-weight);
   font-style: var(--xmd-h2-style);
+  text-decoration: var(--xmd-h2-decoration, none);
+  text-transform: var(--xmd-h2-transform, none);
+  letter-spacing: var(--xmd-h2-letter-spacing, 0);
+  text-align: var(--xmd-h2-align, left);
+  background: var(--xmd-h2-bg, transparent);
+  padding: var(--xmd-h2-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h2-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h2-spacing) 0;
+  margin: var(--xmd-h2-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h2-spacing) 0;
+  margin-left: var(--xmd-h2-indent, 0mm);
+  margin-right: var(--xmd-h2-mr, 0mm);
 }
 .xmd-prosemirror h3 {
   font-family: var(--xmd-h3-font);
@@ -479,10 +505,18 @@ math-virtual-keyboard {
   color: var(--xmd-h3-color);
   font-weight: var(--xmd-h3-weight);
   font-style: var(--xmd-h3-style);
+  text-decoration: var(--xmd-h3-decoration, none);
+  text-transform: var(--xmd-h3-transform, none);
+  letter-spacing: var(--xmd-h3-letter-spacing, 0);
+  text-align: var(--xmd-h3-align, left);
+  background: var(--xmd-h3-bg, transparent);
+  padding: var(--xmd-h3-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h3-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h3-spacing) 0;
+  margin: var(--xmd-h3-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h3-spacing) 0;
+  margin-left: var(--xmd-h3-indent, 0mm);
+  margin-right: var(--xmd-h3-mr, 0mm);
 }
 .xmd-prosemirror h4 {
   font-family: var(--xmd-h4-font);
@@ -490,10 +524,18 @@ math-virtual-keyboard {
   color: var(--xmd-h4-color);
   font-weight: var(--xmd-h4-weight);
   font-style: var(--xmd-h4-style);
+  text-decoration: var(--xmd-h4-decoration, none);
+  text-transform: var(--xmd-h4-transform, none);
+  letter-spacing: var(--xmd-h4-letter-spacing, 0);
+  text-align: var(--xmd-h4-align, left);
+  background: var(--xmd-h4-bg, transparent);
+  padding: var(--xmd-h4-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h4-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h4-spacing) 0;
+  margin: var(--xmd-h4-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h4-spacing) 0;
+  margin-left: var(--xmd-h4-indent, 0mm);
+  margin-right: var(--xmd-h4-mr, 0mm);
 }
 .xmd-prosemirror h5 {
   font-family: var(--xmd-h5-font);
@@ -501,10 +543,18 @@ math-virtual-keyboard {
   color: var(--xmd-h5-color);
   font-weight: var(--xmd-h5-weight);
   font-style: var(--xmd-h5-style);
+  text-decoration: var(--xmd-h5-decoration, none);
+  text-transform: var(--xmd-h5-transform, none);
+  letter-spacing: var(--xmd-h5-letter-spacing, 0);
+  text-align: var(--xmd-h5-align, left);
+  background: var(--xmd-h5-bg, transparent);
+  padding: var(--xmd-h5-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h5-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h5-spacing) 0;
+  margin: var(--xmd-h5-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h5-spacing) 0;
+  margin-left: var(--xmd-h5-indent, 0mm);
+  margin-right: var(--xmd-h5-mr, 0mm);
 }
 .xmd-prosemirror h6 {
   font-family: var(--xmd-h6-font);
@@ -512,10 +562,18 @@ math-virtual-keyboard {
   color: var(--xmd-h6-color);
   font-weight: var(--xmd-h6-weight);
   font-style: var(--xmd-h6-style);
+  text-decoration: var(--xmd-h6-decoration, none);
+  text-transform: var(--xmd-h6-transform, none);
+  letter-spacing: var(--xmd-h6-letter-spacing, 0);
+  text-align: var(--xmd-h6-align, left);
+  background: var(--xmd-h6-bg, transparent);
+  padding: var(--xmd-h6-padding, 0);
   /* Interligne + espacement propres au niveau (roadmap 2.2, variables
    * posees par MarkdownEditor pageVars, repli = valeurs du document). */
   line-height: var(--xmd-h6-line-height);
-  margin: var(--xmd-paragraph-spacing-before, 0pt) 0 var(--xmd-h6-spacing) 0;
+  margin: var(--xmd-h6-before, var(--xmd-paragraph-spacing-before, 0pt)) 0 var(--xmd-h6-spacing) 0;
+  margin-left: var(--xmd-h6-indent, 0mm);
+  margin-right: var(--xmd-h6-mr, 0mm);
 }
 
 /* Encart du marqueur de sommaire (voir extensions/TocMarker.ts) — discret
@@ -1093,4 +1151,34 @@ math-virtual-keyboard {
 }
 .xmd-prosemirror ul[data-toc] > li > p a {
   font-weight: var(--xmd-toc-first-weight, normal);
+}
+
+/* Numéros de page du sommaire (style du sommaire > « Numéros de page ») : la
+ * place est réservée à droite de chaque entrée (aussi dans l'éditeur invisible,
+ * pour un retour à la ligne identique) ; le numéro (span ajouté à la peinture,
+ * voir paintPages.ts) est en position absolue. Points de conduite : un fond
+ * pointillé en bas de l'entrée, masqué par le fond blanc du lien et du numéro. */
+.xmd-prosemirror ul[data-toc] li > p {
+  position: relative;
+  padding-right: var(--xmd-toc-pageno-pad, 0mm);
+}
+.xmd-prosemirror ul[data-toc] .xmd-toc-pageno {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding-left: 3px;
+  background: #ffffff;
+  color: var(--xmd-toc-color, #343334);
+  font-weight: normal;
+  pointer-events: none;
+}
+.xmd-prosemirror ul[data-toc] li > p:has(.xmd-toc-pageno) {
+  background-image: radial-gradient(circle, #6b6b69 0.6px, transparent 0.8px);
+  background-size: 4px 4px;
+  background-repeat: repeat-x;
+  background-position: 0 calc(100% - 2px);
+}
+.xmd-prosemirror ul[data-toc] li > p:has(.xmd-toc-pageno) a {
+  background: #ffffff;
+  padding-right: 3px;
 }

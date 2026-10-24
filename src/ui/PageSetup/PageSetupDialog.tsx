@@ -419,6 +419,14 @@ export function PageSetupDialog({
                 </fieldset>
 
                 <fieldset className="ps-group">
+                  <legend>Texte</legend>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={!!draft.justify} onChange={(e) => setDraft((d) => ({ ...d, justify: e.target.checked }))} />
+                    Texte justifié (paragraphes)
+                  </label>
+                </fieldset>
+
+                <fieldset className="ps-group">
                   <legend>Style du sommaire</legend>
                   <label className="ps-num ps-select">
                     <span>Niveaux listés :</span>
@@ -441,6 +449,10 @@ export function PageSetupDialog({
                   <label className="ps-check">
                     <input type="checkbox" checked={draft.toc.boldFirstLevel} onChange={(e) => setToc({ boldFirstLevel: e.target.checked })} />
                     Premier niveau en gras
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={draft.toc.pageNumbers} onChange={(e) => setToc({ pageNumbers: e.target.checked })} />
+                    Numéros de page avec points de conduite
                   </label>
                   <div className="ps-margins-grid ps-indent">
                     <label className="ps-num">

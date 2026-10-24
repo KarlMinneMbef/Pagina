@@ -21,7 +21,7 @@ export const STYLE_PARTS: { id: StylePartId; label: string; hint: string; keys: 
     id: "font",
     label: "Police et paragraphes",
     hint: "police, taille, interligne, espacement",
-    keys: ["fontFamily", "fontSize", "lineHeight", "paragraphSpacingPt", "spacingBeforePt"],
+    keys: ["fontFamily", "fontSize", "lineHeight", "paragraphSpacingPt", "spacingBeforePt", "justify"],
   },
   {
     id: "page",
@@ -161,7 +161,7 @@ export function builtinDocumentStyles(): DocumentStyle[] {
         footer: footer("{{filename}} — Page {{page}} / {{pages}}"),
         pageBorder: { ...b.pageBorder, enabled: false },
         headingStyles: headings({ 1: "#003f2b", 2: "#2f52a0", 3: "#2f52a0", 4: "#343334", 5: "#343334", 6: "#343334" }, "none"),
-        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#2f52a0", underline: false, boldFirstLevel: true },
+        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#2f52a0", underline: false, boldFirstLevel: true, pageNumbers: false },
       },
     },
     {
@@ -191,7 +191,71 @@ export function builtinDocumentStyles(): DocumentStyle[] {
           5: "10pt",
           6: "10pt",
         }),
-        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#343334", underline: false, boldFirstLevel: true },
+        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#343334", underline: false, boldFirstLevel: true, pageNumbers: false },
+      },
+    },
+    {
+      name: "CCTP — parties à bandeau (modèle Word)",
+      builtin: true,
+      description:
+        "Cahier des charges façon Word : en-tête société + projet/référence, pied de page à 4 lignes avec « n / N », parties sur page à bandeau gris pleine largeur, titres numérotés soulignés en majuscules, sommaire à 4 niveaux avec numéros de page, texte justifié. Champs à créer dans Propriétés du document : Societe, Adresse, Contact, Mentions, Projet, Reference.",
+      layout: {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "10pt",
+        lineHeight: 1.05,
+        paragraphSpacingPt: 6,
+        spacingBeforePt: 0,
+        justify: true,
+        paperSize: "A4",
+        orientation: "portrait",
+        marginTopMm: 26,
+        marginBottomMm: 30,
+        marginLeftMm: 15,
+        marginRightMm: 15,
+        header: {
+          ...b.header,
+          heightMm: 14,
+          fromEdgeMm: 8,
+          showOnFirstPage: false,
+          text:
+            '<table style="width:100%;border:none;border-collapse:collapse"><tr><td style="border:none;padding:0"><b style="font-size:18pt;color:#003f2b">{{Societe}}</b></td><td style="border:none;padding:0;width:62mm;font-size:8pt;color:#4f6228">Projet : {{Projet}}<br>Référence : <b>{{Reference}}</b></td></tr></table>',
+        },
+        footer: {
+          ...b.footer,
+          heightMm: 22,
+          fromEdgeMm: 5,
+          showOnFirstPage: false,
+          text:
+            '<div style="font-size:8pt;color:#343334"><p style="text-align:center;margin:0"><b>{{Societe}}</b><br>{{Adresse}}<br>{{Contact}}<br>{{Mentions}}</p><p style="text-align:right;margin:0"><b>{{page}} / {{pages}}</b></p></div>',
+        },
+        pageBorder: { enabled: true, style: "solid", widthPt: 1, color: "#000000", offsetMm: 8, appliesTo: "cover" },
+        headingStyles: {
+          // Titre 1 = « PARTIE n : … » (page de bandeau gris, non numéroté).
+          1: {
+            fontFamily: "Georgia, serif",
+            fontSize: "20pt",
+            color: "#595959",
+            bold: true,
+            italic: false,
+            numbering: "none",
+            uppercase: true,
+            centered: true,
+            letterSpacingPt: 4,
+            background: "#d9d9d9",
+            fullWidth: true,
+            spacingBeforePt: 230,
+            spacingAfterPt: 0,
+          },
+          // Titre 2 = « 1. PRESENTATION DU PROJET » : gras, souligné, majuscules.
+          2: { fontFamily: "Arial, sans-serif", fontSize: "10pt", color: "#000000", bold: true, italic: false, numbering: "decimal", underline: true, uppercase: true, spacingBeforePt: 10, spacingAfterPt: 6 },
+          // Titre 3 = « 1.1. Objet » : gras, souligné, légèrement en retrait.
+          3: { fontFamily: "Arial, sans-serif", fontSize: "10pt", color: "#000000", bold: true, italic: false, numbering: "decimal", underline: true, indentMm: 6, spacingBeforePt: 10, spacingAfterPt: 6 },
+          // Titre 4 = « 12.3.1. Tuyauterie » : gras, non souligné, plus en retrait.
+          4: { fontFamily: "Arial, sans-serif", fontSize: "10pt", color: "#000000", bold: true, italic: false, numbering: "decimal", indentMm: 10, spacingBeforePt: 8, spacingAfterPt: 6 },
+          5: { fontFamily: "Arial, sans-serif", fontSize: "10pt", color: "#000000", bold: true, italic: false, numbering: "none", indentMm: 10 },
+          6: { fontFamily: "Arial, sans-serif", fontSize: "10pt", color: "#000000", bold: false, italic: true, numbering: "none", indentMm: 10 },
+        },
+        toc: { maxLevel: 4, bullets: false, indentMm: 6, color: "#000000", underline: false, boldFirstLevel: true, pageNumbers: true },
       },
     },
     {
@@ -221,7 +285,7 @@ export function builtinDocumentStyles(): DocumentStyle[] {
           5: "11pt",
           6: "11pt",
         }),
-        toc: { maxLevel: 2, bullets: true, indentMm: 6, color: "", underline: true, boldFirstLevel: false },
+        toc: { maxLevel: 2, bullets: true, indentMm: 6, color: "", underline: true, boldFirstLevel: false, pageNumbers: false },
       },
     },
     {
@@ -238,7 +302,7 @@ export function builtinDocumentStyles(): DocumentStyle[] {
         footer: { ...b.footer, text: "Page {{page}} / {{pages}}", showOnFirstPage: false },
         pageBorder: { ...b.pageBorder, enabled: false },
         headingStyles: headings({ 1: "#000000", 2: "#000000", 3: "#000000", 4: "#000000", 5: "#000000", 6: "#000000" }, "none"),
-        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#000000", underline: false, boldFirstLevel: true },
+        toc: { maxLevel: 3, bullets: false, indentMm: 8, color: "#000000", underline: false, boldFirstLevel: true, pageNumbers: false },
       },
     },
   ];

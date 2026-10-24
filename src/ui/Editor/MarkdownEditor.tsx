@@ -1570,6 +1570,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           header: { ...layout.header, html: mdToHtml(layout.header.text) },
           footer: { ...layout.footer, html: mdToHtml(layout.footer.text) },
           pageBorder: layout.pageBorder,
+          tocPageNumbers: layout.toc.pageNumbers,
           context: {
             date: formatTodayForHeaderFooter(),
             filename: documentTitleRef.current,
@@ -2706,6 +2707,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       "--xmd-line-height": layout.lineHeight,
       "--xmd-paragraph-spacing": `${layout.paragraphSpacingPt}pt`,
       "--xmd-paragraph-spacing-before": `${layout.spacingBeforePt}pt`,
+      ...(layout.justify ? { "--xmd-text-align": "justify" } : {}),
       "--xmd-zoom": zoom,
       "--xmd-page-height": `${pageHeightMm}mm`,
       "--xmd-page-width": `${pageWidthMm}mm`,
@@ -2726,6 +2728,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       "--xmd-toc-top-padding": layout.toc.bullets ? "40px" : "0px",
       "--xmd-toc-decoration": layout.toc.underline ? "underline" : "none",
       "--xmd-toc-first-weight": layout.toc.boldFirstLevel ? "bold" : "normal",
+      // Place réservée à droite des entrées pour les numéros de page : posée
+      // aussi sur l'éditeur invisible (même retour à la ligne que la page peinte).
+      "--xmd-toc-pageno-pad": layout.toc.pageNumbers ? "12mm" : "0mm",
       ...(layout.toc.color ? { "--xmd-toc-color": layout.toc.color } : {}),
       // Style par niveau de titre (voir pageLayout.ts) — une variable par
       // propriété et par niveau, consommées par les règles `.xmd-prosemirror
@@ -2746,6 +2751,26 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             // valeurs du document, le CSS n'a pas besoin de repli spécial).
             [`--xmd-h${level}-line-height`, String(style.lineHeight ?? layout.lineHeight)],
             [`--xmd-h${level}-spacing`, `${style.spacingAfterPt ?? layout.paragraphSpacingPt}pt`],
+            // Mise en forme « Word » (soulignement, majuscules, retrait, bandeau…).
+            [`--xmd-h${level}-decoration`, style.underline ? "underline" : "none"],
+            [`--xmd-h${level}-transform`, style.uppercase ? "uppercase" : "none"],
+            [
+              `--xmd-h${level}-indent`,
+              style.background && style.fullWidth ? "calc(0mm - var(--xmd-margin-left, 20mm))" : `${style.indentMm ?? 0}mm`,
+            ],
+            [`--xmd-h${level}-mr`, style.background && style.fullWidth ? "calc(0mm - var(--xmd-margin-right, 20mm))" : "0mm"],
+            [`--xmd-h${level}-letter-spacing`, `${style.letterSpacingPt ?? 0}pt`],
+            [`--xmd-h${level}-align`, style.centered ? "center" : "left"],
+            [`--xmd-h${level}-bg`, style.background || "transparent"],
+            [
+              `--xmd-h${level}-padding`,
+              !style.background
+                ? "0"
+                : style.fullWidth
+                  ? "6mm calc(var(--xmd-margin-right, 20mm) + 4mm) 6mm calc(var(--xmd-margin-left, 20mm) + 4mm)"
+                  : "6mm 4mm",
+            ],
+            [`--xmd-h${level}-before`, `${style.spacingBeforePt ?? layout.spacingBeforePt ?? 0}pt`],
           ];
         }),
       ),

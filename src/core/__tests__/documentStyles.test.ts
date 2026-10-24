@@ -92,4 +92,18 @@ describe("styles de document", () => {
     expect(parseDocumentStyleFile('{"kind":"pagina-document-style","name":"","layout":{}}')).toBeNull();
     expect(parseDocumentStyleFile('{"kind":"pagina-document-style","name":"x","layout":[]}')).toBeNull();
   });
+  it("style « CCTP (modèle Word) » : titres soulignés en majuscules, sommaire paginé, texte justifié", () => {
+    const cctp = builtinDocumentStyles().find((s) => s.name.includes("modèle Word"))!;
+    expect(cctp).toBeDefined();
+    const l = applyStyleToLayout(base(), cctp, ALL_STYLE_PARTS);
+    expect(l.justify).toBe(true);
+    expect(l.toc.pageNumbers).toBe(true);
+    expect(l.headingStyles[2]).toMatchObject({ underline: true, uppercase: true, numbering: "decimal" });
+    expect(l.headingStyles[1]).toMatchObject({ centered: true, background: "#d9d9d9", fullWidth: true, numbering: "none" });
+    expect(l.footer.text).toContain("{{page}} / {{pages}}");
+    // Les nouveaux réglages survivent à l'écriture/relecture du fichier et ne sont pas actifs par défaut.
+    expect(base().toc.pageNumbers).toBe(false);
+    expect(base().justify).toBeUndefined();
+    expect(parseDocumentStyleFile(serializeDocumentStyle(cctp))?.layout.headingStyles?.[3]?.indentMm).toBe(6);
+  });
 });

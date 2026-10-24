@@ -179,6 +179,8 @@ export interface PaintPagesOptions {
   footer: PaintHeaderFooterSettings;
   /** Cadre autour des pages (absent = aucun). */
   pageBorder?: PageBorderSettings;
+  /** Numéro de page (avec points de conduite) à droite des entrées du sommaire. */
+  tocPageNumbers?: boolean;
   /** Tout le contexte de substitution des variables SAUF `page`/`pages`,
    * qui dépendent de la page en cours de peinture — calculés ici. */
   context: Omit<HeaderFooterContext, "page" | "pages">;
@@ -670,5 +672,30 @@ export function paintPages(view: EditorView, canvas: HTMLElement, options: Paint
     }),
   );
 
+  if (options.tocPageNumbers) addTocPageNumbers(canvas);
+
   return { pageCount, cloneIndex };
+}
+
+/** Numéros de page du sommaire : chaque lien `#slug` d'un sommaire généré reçoit,
+ *  à droite, le numéro de la page peinte où se trouve son titre. Posé APRÈS la
+ *  peinture (il faut connaître la page de chaque titre) et sans effet sur la
+ *  pagination : le numéro est en position absolue dans la place réservée par
+ *  `--xmd-toc-pageno-pad` (aussi appliquée à l'éditeur invisible). */
+function addTocPageNumbers(canvas: HTMLElement): void {
+  const pageOfId = new Map<string, number>();
+  canvas.querySelectorAll<HTMLElement>(".xmd-page").forEach((pageEl, index) => {
+    pageEl.querySelectorAll<HTMLElement>("[id]").forEach((el) => {
+      if (!pageOfId.has(el.id)) pageOfId.set(el.id, index + 1);
+    });
+  });
+  canvas.querySelectorAll<HTMLAnchorElement>("ul[data-toc] a[href^='#']").forEach((link) => {
+    const page = pageOfId.get(decodeURIComponent((link.getAttribute("href") ?? "").slice(1)));
+    const host = link.closest("p");
+    if (!page || !host) return;
+    const span = document.createElement("span");
+    span.className = "xmd-toc-pageno";
+    span.textContent = String(page);
+    host.appendChild(span);
+  });
 }

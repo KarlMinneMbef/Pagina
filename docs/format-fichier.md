@@ -107,7 +107,8 @@ page et le cadre ; `appliesTo` : `all` (toutes les pages), `first` (première pa
 #### `toc` — style du sommaire
 
 `{"maxLevel":6,"bullets":true,"indentMm":8,"color":"","underline":true,"boldFirstLevel":false}`
-— `maxLevel` : niveau de titre le plus profond listé (1 à 6) ; `color` vide = couleur des liens.
+— `maxLevel` : niveau de titre le plus profond listé (1 à 6) ; `color` vide = couleur des liens ;
+`pageNumbers` (défaut `false`) : numéro de page et points de conduite à droite de chaque entrée.
 Appliqué à tout sommaire généré (à régénérer pour changer `maxLevel`).
 
 ### Règles de cohérence

@@ -159,3 +159,21 @@
 .hs-btn-primary:hover {
   filter: brightness(1.05);
 }
+
+/* Deuxième ligne par niveau : mise en forme « Word » (souligné, majuscules…). */
+.hs-extra-row td {
+  padding-top: 0;
+  padding-bottom: 8px;
+  border-top: none;
+}
+.hs-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 14px;
+  font-size: 11px;
+  color: #343334;
+}
+.hs-extra .hs-size-input {
+  width: 52px;
+}

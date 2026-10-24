@@ -83,6 +83,9 @@ export interface TocStyleSettings {
   underline: boolean;
   /** Entrées de premier niveau en gras. */
   boldFirstLevel: boolean;
+  /** Numéro de page à droite de chaque entrée, avec points de conduite
+   * (calculé à la peinture, voir paintPages.ts). */
+  pageNumbers: boolean;
 }
 
 /** MISE EN PAGE complète d'un document : marges, papier, police de base,
@@ -105,6 +108,9 @@ export interface PageLayoutSettings {
   /** Espace AVANT chaque paragraphe, en points (roadmap 2.2, 2026-10-21 —
    * « Espacement avant » de Word, 0 par défaut comme Word). */
   spacingBeforePt: number;
+  /** Texte des paragraphes JUSTIFIÉ (comme un CCTP Word) — absent/faux = aligné à
+   * gauche ; un paragraphe aligné à la main garde son alignement. */
+  justify?: boolean;
   /** Marges de page, en millimètres. */
   marginTopMm: number;
   marginBottomMm: number;
@@ -193,6 +199,25 @@ export interface HeadingLevelStyle {
    * `undefined` = suivre l'espacement des paragraphes du document
    * (`layout.paragraphSpacingPt`). */
   spacingAfterPt?: number;
+  /** Mise en forme « Word » supplémentaire (2026-10-24, reproduction d'un CCTP) —
+   * tout est optionnel : absent = comportement historique. */
+  underline?: boolean;
+  /** Affichage en MAJUSCULES (CSS `text-transform` : le texte du fichier garde
+   * sa casse, le sommaire aussi — comme les styles de titre de Word). */
+  uppercase?: boolean;
+  /** Retrait gauche du titre, en millimètres. */
+  indentMm?: number;
+  /** Espacement des lettres, en points (« PARTIE 1 : GENERALITES »). */
+  letterSpacingPt?: number;
+  /** Titre centré. */
+  centered?: boolean;
+  /** Bandeau de fond derrière le titre (couleur CSS, vide = aucun). */
+  background?: string;
+  /** Bandeau PLEINE LARGEUR de page (déborde des marges jusqu'aux bords) ; sans
+   * effet si `background` est vide. */
+  fullWidth?: boolean;
+  /** Espacement AVANT chaque titre de ce niveau, en points (absent = celui du document). */
+  spacingBeforePt?: number;
 }
 
 const HEADING_LEVEL_DEFAULT_SIZES: Record<HeadingLevel, string> = {
@@ -303,7 +328,7 @@ const DEFAULT_PAGE_LAYOUT: PageLayoutSettings = {
   documentProperties: { title: "", subject: "", createdDate: "", modifiedDate: "", keywords: "", comments: "", custom: [] },
   headingStyles: DEFAULT_HEADING_STYLES,
   pageBorder: { enabled: false, style: "solid", widthPt: 1, color: "#000000", offsetMm: 10, appliesTo: "all" },
-  toc: { maxLevel: 6, bullets: true, indentMm: 8, color: "", underline: true, boldFirstLevel: false },
+  toc: { maxLevel: 6, bullets: true, indentMm: 8, color: "", underline: true, boldFirstLevel: false, pageNumbers: false },
 };
 
 /** Dimensions "portrait" des formats papier supportés, en millimètres. */

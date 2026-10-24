@@ -10,7 +10,7 @@
  * comme un besoin futur) : PAS implémenté ici, volontairement — à construire
  * plus tard une fois ce dialogue validé en pratique.
  */
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { HeadingLevel, HeadingLevelStyle, NumberingScheme, PageLayoutSettings } from "../../core/pageLayout";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import "./HeadingStyleDialog.css";
@@ -95,7 +95,8 @@ export function HeadingStyleDialog({
               {LEVELS.map((level) => {
                 const style = headingStyles[level];
                 return (
-                  <tr key={level}>
+                  <Fragment key={level}>
+                  <tr>
                     <td className="hs-level-label">Titre {level}</td>
                     <td>
                       <select value={style.fontFamily} onChange={(e) => setLevel(level, { fontFamily: e.target.value })}>
@@ -183,6 +184,72 @@ export function HeadingStyleDialog({
                       />
                     </td>
                   </tr>
+                  {/* Mise en forme « Word » du niveau (soulignement, majuscules,
+                   * retrait, centrage, bandeau de fond). */}
+                  <tr className="hs-extra-row">
+                    <td />
+                    <td colSpan={8}>
+                      <label className="hs-extra">
+                        <input type="checkbox" checked={!!style.underline} onChange={(e) => setLevel(level, { underline: e.target.checked })} /> Souligné
+                      </label>
+                      <label className="hs-extra">
+                        <input type="checkbox" checked={!!style.uppercase} onChange={(e) => setLevel(level, { uppercase: e.target.checked })} /> Majuscules
+                      </label>
+                      <label className="hs-extra">
+                        <input type="checkbox" checked={!!style.centered} onChange={(e) => setLevel(level, { centered: e.target.checked })} /> Centré
+                      </label>
+                      <label className="hs-extra">
+                        Retrait (mm)
+                        <input
+                          type="number"
+                          min={0}
+                          max={60}
+                          className="hs-size-input"
+                          value={style.indentMm ?? 0}
+                          onChange={(e) => setLevel(level, { indentMm: Math.max(0, Number(e.target.value) || 0) })}
+                        />
+                      </label>
+                      <label className="hs-extra">
+                        Espacement lettres (pt)
+                        <input
+                          type="number"
+                          min={0}
+                          max={20}
+                          step={0.5}
+                          className="hs-size-input"
+                          value={style.letterSpacingPt ?? 0}
+                          onChange={(e) => setLevel(level, { letterSpacingPt: Math.max(0, Number(e.target.value) || 0) })}
+                        />
+                      </label>
+                      <label className="hs-extra">
+                        Espace avant (pt)
+                        <input
+                          type="number"
+                          min={0}
+                          max={600}
+                          className="hs-size-input"
+                          value={style.spacingBeforePt ?? ""}
+                          placeholder="doc."
+                          onChange={(e) => setLevel(level, { spacingBeforePt: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value) || 0) })}
+                        />
+                      </label>
+                      <label className="hs-extra" title="Le bandeau de couleur déborde des marges, d'un bord à l'autre de la page">
+                        <input type="checkbox" checked={!!style.fullWidth} onChange={(e) => setLevel(level, { fullWidth: e.target.checked })} /> Bandeau pleine largeur
+                      </label>
+                      <span className="hs-extra">
+                        Bandeau
+                        <ColorPicker
+                          value={style.background || "#d9d9d9"}
+                          title="Couleur du bandeau de fond du titre"
+                          triggerClassName="hs-color-trigger"
+                          trigger={<span className="hs-color-swatch" style={{ background: style.background || "transparent" }} />}
+                          onAutomatic={() => setLevel(level, { background: "" })}
+                          onChange={(color) => setLevel(level, { background: color })}
+                        />
+                      </span>
+                    </td>
+                  </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
