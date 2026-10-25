@@ -383,15 +383,15 @@
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-  font-weight: 700;
   line-height: 1;
   padding: 0 3px;
+  margin-left: 2px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 .tb-group-launcher:hover:not(:disabled) {
   color: #ffffff;
-  transform: translateX(1px);
 }
 .tb-group-launcher:disabled {
   cursor: default;
@@ -648,17 +648,24 @@
 }
 
 .tb-linespacing-trigger {
+  /* Même aspect que les boutons à icône du ruban (voir .tb-btn-icon), avec chevron. */
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
+  height: 26px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid transparent;
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 0 4px;
   color: #ffffff;
   font-family: Arial, sans-serif;
   font-size: 12px;
   cursor: pointer;
+}
+.tb-linespacing-trigger svg {
+  width: 16px;
+  height: 16px;
 }
 
 .tb-linespacing-trigger:hover {

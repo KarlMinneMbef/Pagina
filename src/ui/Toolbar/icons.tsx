@@ -224,6 +224,47 @@ export function IconIndentDecrease({ size, className }: IconProps) {
   );
 }
 
+// --- Interligne (2026-10-25) : double flèche verticale à gauche, trois barres de
+// texte à droite — comme l'icône « Interligne et espacement des paragraphes » de Word. ---
+export function IconLineSpacing({ size, className }: IconProps) {
+  const bar = (y: number, w: number) => (
+    <rect key={y} x={12} y={y} width={w} height={1.8} rx="0.9" fill="currentColor" stroke="none" />
+  );
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 5v14" />
+      <path d="M3.5 7.5L6 5l2.5 2.5" />
+      <path d="M3.5 16.5L6 19l2.5-2.5" />
+      {bar(6, 9)}
+      {bar(11.1, 9)}
+      {bar(16.2, 9)}
+    </Svg24>
+  );
+}
+
+// --- Lanceur de boîte de dialogue (coin d'un groupe du ruban, façon Word) : petit
+// carré ouvert avec une flèche vers le bas à droite. ---
+export function IconDialogLauncher({ size = 10, className }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 10 10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.1}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M1 1h4M1 1v4" />
+      <path d="M4 4l5 5" />
+      <path d="M9 5.5V9H5.5" />
+    </svg>
+  );
+}
+
 // --- Propriétés du document (roadmap 1.3) : page avec lignes
 // d'informations — même famille que IconPageSetup. ---
 export function IconDocumentProperties({ size, className }: IconProps) {

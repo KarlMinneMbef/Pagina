@@ -35,6 +35,8 @@ import {
   IconAlignJustify,
   IconIndentDecrease,
   IconIndentIncrease,
+  IconLineSpacing,
+  IconDialogLauncher,
   IconDocumentProperties,
   IconAlignLeft,
   IconAlignRight,
@@ -670,10 +672,10 @@ export function Toolbar({
               {/* Tabulation ± (roadmap 2.1) : retrait du paragraphe courant
                * d'un pas de 1,25 cm, comme les boutons Increase/Decrease
                * Indent de Word/Casual. Raccourcis : Ctrl+M / Ctrl+Shift+M. */}
-              <button disabled={disabled} onClick={() => actions?.decreaseIndent()} title="Diminuer le retrait (Tabulation −, Ctrl+Shift+M)">
+              <button className={activeBtnClass(false)} disabled={disabled} onClick={() => actions?.decreaseIndent()} title="Diminuer le retrait (Tabulation −, Ctrl+Shift+M)">
                 <IconIndentDecrease size={16} />
               </button>
-              <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
+              <button className={activeBtnClass(false)} disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
                 <IconIndentIncrease size={16} />
               </button>
             </div>
@@ -699,10 +701,10 @@ export function Toolbar({
                   type="button"
                   className="tb-linespacing-trigger"
                   disabled={disabled}
-                  title="Interligne et espacement du paragraphe"
+                  title={`Interligne et espacement du paragraphe (actuel : ${fmtLineSpacing(lineSpacing)})`}
                   onClick={() => setLineSpacingMenuOpen((o) => !o)}
                 >
-                  <span className="tb-linespacing-value">{fmtLineSpacing(lineSpacing)}</span>
+                  <IconLineSpacing size={16} />
                   <span className="tb-linespacing-caret">▾</span>
                 </button>
                 {lineSpacingMenuOpen && (
@@ -1056,7 +1058,7 @@ function RibbonGroup({
             disabled={!launcher.onClick}
             title={launcher.title}
           >
-            ›
+            <IconDialogLauncher size={10} />
           </button>
         )}
       </div>
