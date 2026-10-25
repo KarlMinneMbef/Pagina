@@ -1182,3 +1182,28 @@ math-virtual-keyboard {
   background: #ffffff;
   padding-right: 3px;
 }
+
+/* Correction orthographique (extensions/Spellcheck.ts) : trait rouge ondulé sous les
+ * mots inconnus. Repère d'édition seulement — jamais imprimé ni exporté en PDF. */
+.xmd-prosemirror .xmd-spell-error {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 3' fill='none' stroke='%23eb5b1f' stroke-width='1' stroke-linecap='round'><path d='M0 1.5 Q1.5 0 3 1.5 T6 1.5'/></svg>");
+  background-repeat: repeat-x;
+  background-position: bottom left;
+  background-size: 6px 3px;
+}
+@media print {
+  .xmd-prosemirror .xmd-spell-error {
+    background-image: none;
+  }
+}
+
+/* Suggestions orthographiques en tête du menu clic droit. */
+.xmd-table-ctx-suggestion {
+  font-weight: 700;
+}
+.xmd-table-ctx-note {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-style: italic;
+  color: #75766f;
+}

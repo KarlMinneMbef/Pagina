@@ -207,6 +207,17 @@ Comme dans Word (lanceur du groupe Paragraphe, ou « Options d'interligne… » 
 
 ---
 
+## Correction orthographique
+
+Les mots inconnus du dictionnaire **français** sont soulignés d'un trait rouge ondulé (jamais imprimé ni exporté en PDF).
+
+- **Clic droit** sur un mot souligné : jusqu'à 5 suggestions en gras (un clic remplace le mot en gardant sa mise en forme), **Ignorer** (jusqu'à la fermeture de l'application) ou **Ajouter au dictionnaire** (définitif sur ce poste).
+- Le mot en cours de frappe n'est souligné qu'une fois le curseur parti.
+- Ne sont **pas** signalés : sigles de 5 lettres et moins en majuscules (CTA, DRV, PPSPS), unités (mm, kW, dBA), références collées à un chiffre (R32, DN50), variables `{{…}}`, adresses web et courriels, blocs de code, formules, diagrammes et sommaires.
+- Activer/désactiver : **Paramétrage** (⚙) > Édition > « Correction orthographique (français) ». Activée par défaut.
+
+---
+
 ## Rechercher et remplacer
 
 - Le champ **Rechercher** de la barre de titre filtre en direct ; **Ctrl+F** ouvre le panneau latéral **Rechercher** (même requête, champ pleine largeur).

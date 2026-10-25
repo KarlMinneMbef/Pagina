@@ -1,5 +1,6 @@
 mod fs_commands;
 mod print_commands;
+mod spell_commands;
 mod startup_files;
 mod watcher;
 
@@ -23,6 +24,7 @@ pub fn run() {
             &std::env::args().collect::<Vec<_>>(),
         ))))
         .manage(watcher::WatcherState::default())
+        .manage(spell_commands::SpellState::default())
         .invoke_handler(tauri::generate_handler![
             fs_commands::read_workspace_tree,
             fs_commands::read_text_file,
@@ -34,6 +36,9 @@ pub fn run() {
             fs_commands::duplicate_path,
             watcher::watch_workspace,
             watcher::unwatch_workspace,
+            spell_commands::spell_languages,
+            spell_commands::spell_check,
+            spell_commands::spell_suggest,
             print_commands::print_window,
             print_commands::export_pdf,
             startup_files::pending_open_files,

@@ -68,6 +68,10 @@ import {
 import { DocField, setDocFieldContext, refreshAllDocFields } from "./extensions/DocField";
 import { CoverTheme } from "./extensions/CoverTheme";
 import { TocStyle } from "./extensions/TocStyle";
+import { useSettingsStore } from "../../core/store/settingsStore";
+import { Spellcheck, spellErrorAt, refreshSpellcheck } from "./extensions/Spellcheck";
+import { addUserWord, ignoreWord } from "../../core/spellcheck/userDictionary";
+import { suggestWord } from "../../persistence/spellService";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { InlineMath, BlockMath } from "./extensions/Math";
@@ -503,7 +507,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // état React classique plutôt qu'en impératif/DOM direct : c'est un
     // simple overlay ponctuel, sans lien avec la mécanique de repaint, donc
     // sans risque pour l'architecture "tout en refs" du reste du fichier.
-    const [tableContextMenu, setTableContextMenu] = useState<{ x: number; y: number; inTable: boolean } | null>(null);
+    const [tableContextMenu, setTableContextMenu] = useState<{
+      x: number;
+      y: number;
+      inTable: boolean;
+      /** Mot mal orthographié sous le clic (suggestions chargées à l'ouverture). */
+      spell?: { from: number; to: number; word: string; suggestions: string[] | null };
+    } | null>(null);
     // Mini-barre flottante de mise en forme à la sélection (voir
     // SelectionBar.tsx / effet `selBarSync` plus bas). `rev` change à chaque
     // synchro pour rafraîchir l'état actif des boutons (gras déjà appliqué…).
@@ -708,6 +718,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         CoverZoneEnd,
         CoverTheme,
         TocStyle,
+        // Correction orthographique : la couche peinte est redessinée quand les soulignements changent.
+        Spellcheck.configure({ onChanged: () => repaintRef.current() }),
         // Champ de document {{variable}} inline — valeur résolue affichée
         // (comme les en-têtes/pieds), variable gardée dans le .md.
         DocField,
@@ -2540,7 +2552,21 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           editor.commands.focus(undefined, { scrollIntoView: false });
           editor.commands.setTextSelection(pos);
         }
-        setTableContextMenu({ x: e.clientX, y: e.clientY, inTable: cellPos !== null });
+        const spell = spellErrorAt(editor.state, pos);
+        setTableContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          inTable: cellPos !== null,
+          spell: spell ? { ...spell, suggestions: null } : undefined,
+        });
+        if (spell) {
+          // Les suggestions (recherche Hunspell) arrivent après l'ouverture du menu.
+          void suggestWord(useSettingsStore.getState().spellLanguage, spell.word, 5)
+            .catch(() => [] as string[])
+            .then((suggestions) =>
+              setTableContextMenu((m) => (m?.spell && m.spell.from === spell.from ? { ...m, spell: { ...m.spell, suggestions } } : m)),
+            );
+        }
       };
 
       canvas.addEventListener("mousedown", onMouseDown);
@@ -2843,6 +2869,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             x={tableContextMenu.x}
             y={tableContextMenu.y}
             inTable={tableContextMenu.inTable}
+            spell={tableContextMenu.spell}
             editable={!readOnly}
             hasSelection={editor.state.selection.from !== editor.state.selection.to}
             onClose={() => setTableContextMenu(null)}
@@ -2871,6 +2898,7 @@ function TableContextMenu({
   x,
   y,
   inTable,
+  spell,
   editable,
   hasSelection,
   onAction,
@@ -2878,6 +2906,8 @@ function TableContextMenu({
 }: {
   x: number;
   y: number;
+  /** Mot mal orthographié sous le clic : suggestions, « Ignorer », « Ajouter au dictionnaire ». */
+  spell?: { from: number; to: number; word: string; suggestions: string[] | null };
   /** Le clic est dans un tableau : ajoute les actions de tableau. */
   inTable: boolean;
   editable: boolean;
@@ -2949,6 +2979,30 @@ function TableContextMenu({
       style={pos}
       role="menu"
     >
+      {/* Correction orthographique (inspirée du menu de suggestions de CasualOffice/docs). */}
+      {spell && editable && (
+        <>
+          {spell.suggestions === null && <div className="xmd-table-ctx-note">Recherche de suggestions…</div>}
+          {spell.suggestions?.length === 0 && <div className="xmd-table-ctx-note">Aucune suggestion</div>}
+          {spell.suggestions?.map((sug) => (
+            <button
+              key={sug}
+              type="button"
+              className="xmd-table-ctx-item xmd-table-ctx-suggestion"
+              onMouseDown={keepEditorFocus}
+              onClick={() =>
+                // insertText conserve les marques (gras, couleur…) du mot remplacé.
+                onAction((ed) => ed.view.dispatch(ed.state.tr.insertText(sug, spell.from, spell.to)))
+              }
+            >
+              <span>{sug}</span>
+            </button>
+          ))}
+          {item("Ignorer", (ed) => { ignoreWord(spell.word); refreshSpellcheck(ed.view); })}
+          {item("Ajouter au dictionnaire", (ed) => { addUserWord(spell.word); refreshSpellcheck(ed.view); })}
+          <div className="xmd-table-ctx-sep" />
+        </>
+      )}
       {/* Édition de texte (inspiré du menu de CasualOffice/docs — sans
        * « Traduire » ni « Commenter », volontairement : commentaires prévus
        * plus tard avec le format .xmd). */}

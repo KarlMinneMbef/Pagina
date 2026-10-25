@@ -24,7 +24,12 @@ interface SettingsState {
   autoSave: boolean;
   /** Intervalle d'auto-sauvegarde, en secondes (voir AUTO_SAVE_INTERVALS_SEC). */
   autoSaveIntervalSec: number;
+  /** Correction orthographique (soulignement rouge + suggestions au clic droit). */
+  spellcheck: boolean;
+  /** Langue du dictionnaire (code de `spell_languages` côté Rust) — « fr » pour l'instant. */
+  spellLanguage: string;
   setShowRulers: (value: boolean) => void;
+  setSpellcheck: (value: boolean) => void;
   setAutoSave: (value: boolean) => void;
   setAutoSaveIntervalSec: (value: number) => void;
 }
@@ -35,6 +40,8 @@ const DEFAULT_SETTINGS = {
   showRulers: true,
   autoSave: false,
   autoSaveIntervalSec: 60,
+  spellcheck: true,
+  spellLanguage: "fr",
 };
 
 /** Charge les réglages persistés — silencieux si absents/corrompus. */
@@ -50,6 +57,8 @@ function loadSettings(): typeof DEFAULT_SETTINGS {
         typeof parsed.autoSaveIntervalSec === "number" && AUTO_SAVE_INTERVALS_SEC.includes(parsed.autoSaveIntervalSec as never)
           ? parsed.autoSaveIntervalSec
           : DEFAULT_SETTINGS.autoSaveIntervalSec,
+      spellcheck: typeof parsed.spellcheck === "boolean" ? parsed.spellcheck : DEFAULT_SETTINGS.spellcheck,
+      spellLanguage: typeof parsed.spellLanguage === "string" && parsed.spellLanguage ? parsed.spellLanguage : DEFAULT_SETTINGS.spellLanguage,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
@@ -61,7 +70,13 @@ function persistSettings(settings: SettingsState): void {
   try {
     localStorage.setItem(
       SETTINGS_STORAGE_KEY,
-      JSON.stringify({ showRulers: settings.showRulers, autoSave: settings.autoSave, autoSaveIntervalSec: settings.autoSaveIntervalSec })
+      JSON.stringify({
+        showRulers: settings.showRulers,
+        autoSave: settings.autoSave,
+        autoSaveIntervalSec: settings.autoSaveIntervalSec,
+        spellcheck: settings.spellcheck,
+        spellLanguage: settings.spellLanguage,
+      })
     );
   } catch {
     /* localStorage indisponible : réglages vivants mais non persistés. */
@@ -77,6 +92,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
   setAutoSave: (value) => {
     set({ autoSave: value });
+    persistSettings(get());
+  },
+  setSpellcheck: (value) => {
+    set({ spellcheck: value });
     persistSettings(get());
   },
   setAutoSaveIntervalSec: (value) => {

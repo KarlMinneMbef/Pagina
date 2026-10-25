@@ -26,6 +26,8 @@ tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 notify = "6"
+# Correction orthographique (spell_commands.rs) : Hunspell en Rust pur.
+spellbook = "0.4"
 
 # Uniquement pour print_commands.rs (ShowPrintUI natif WebView2 — voir ce
 # fichier pour le pourquoi) : versions alignées sur celles déjà résolues
@@ -43,3 +45,12 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# En développement (opt-level 0) le chargement du dictionnaire français est ~100x plus lent :
+# on optimise uniquement ces petites dépendances.
+[profile.dev.package.spellbook]
+opt-level = 3
+[profile.dev.package.hashbrown]
+opt-level = 3
+[profile.dev.package.foldhash]
+opt-level = 3

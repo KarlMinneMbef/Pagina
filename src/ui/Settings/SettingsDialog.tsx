@@ -38,11 +38,13 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   // Brouillon local : rien n'est appliqué avant OK (même ergonomie que
   // les autres dialogues de l'app — Annuler repart sans rien changer).
   const [showRulers, setShowRulers] = useState(settings.showRulers);
+  const [spellcheck, setSpellcheck] = useState(settings.spellcheck);
   const [autoSave, setAutoSave] = useState(settings.autoSave);
   const [autoSaveIntervalSec, setAutoSaveIntervalSec] = useState(settings.autoSaveIntervalSec);
 
   const handleApply = () => {
     settings.setShowRulers(showRulers);
+    settings.setSpellcheck(spellcheck);
     settings.setAutoSave(autoSave);
     settings.setAutoSaveIntervalSec(autoSaveIntervalSec);
     onClose();
@@ -91,6 +93,10 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
 
           <section className="st-section">
             <h4 className="st-section-title">Édition</h4>
+            <label className="st-check" title="Souligne en rouge les mots inconnus du dictionnaire ; clic droit pour corriger, ignorer ou ajouter au dictionnaire">
+              <input type="checkbox" checked={spellcheck} onChange={(e) => setSpellcheck(e.target.checked)} />
+              Correction orthographique (français)
+            </label>
             <label className="st-check" title="Guillemets intelligents, majuscule en début de phrase… (à venir)">
               <input type="checkbox" checked={false} disabled />
               Correction automatique (à venir)
