@@ -651,110 +651,116 @@ export function Toolbar({
              * en page — celle-ci reste au grand bouton Mise en page. */
             launcher={leger ? undefined : { onClick: onOpenParagraphDialog, title: "Paragraphe (alignement, retrait, espacement, interligne)" }}
           >
-            <button className={activeBtnClass(activeList === "bullet")} disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
-              <IconBulletList size={16} />
-            </button>
-            <button className={activeBtnClass(activeList === "ordered")} disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
-              <IconOrderedList size={16} />
-            </button>
-            <button className={activeBtnClass(activeList === "task")} disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
-              <IconTaskList size={16} />
-            </button>
-            <button className={activeBtnClass(activeList === "blockquote")} disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
-              <IconBlockquote size={16} />
-            </button>
-            {/* Ordre demandé par l'utilisateur (2026-10-17) :
-             * gauche, droite, centré, justifié. */}
-            <button className={activeBtnClass(activeAlign === "left")} disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
-              <IconAlignLeft size={16} />
-            </button>
-            <button className={activeBtnClass(activeAlign === "right")} disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
-              <IconAlignRight size={16} />
-            </button>
-            <button className={activeBtnClass(activeAlign === "center")} disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
-              <IconAlignCenter size={16} />
-            </button>
-            <button className={activeBtnClass(activeAlign === "justify")} disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
-              <IconAlignJustify size={16} />
-            </button>
-            {/* Tabulation ± (roadmap 2.1) : retrait du paragraphe courant
-             * d'un pas de 1,25 cm, comme les boutons Increase/Decrease
-             * Indent de Word/Casual. Raccourcis : Ctrl+M / Ctrl+Shift+M. */}
-            <button disabled={disabled} onClick={() => actions?.decreaseIndent()} title="Diminuer le retrait (Tabulation −, Ctrl+Shift+M)">
-              <IconIndentDecrease size={16} />
-            </button>
-            <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
-              <IconIndentIncrease size={16} />
-            </button>
-            {/* Menu Interligne façon Word (2026-10-21) : préréglages,
-             * « Options d'interligne… » (fenêtre Paragraphe), ajout/
-             * suppression d'espace — comme le menu du même nom de Word. */}
-            <div className="tb-linespacing" ref={lineSpacingMenuRef}>
-              <button
-                type="button"
-                className="tb-linespacing-trigger"
-                disabled={disabled}
-                title="Interligne et espacement du paragraphe"
-                onClick={() => setLineSpacingMenuOpen((o) => !o)}
-              >
-                <span className="tb-linespacing-value">{fmtLineSpacing(lineSpacing)}</span>
-                <span className="tb-linespacing-caret">▾</span>
+            {/* Disposition de Word (2026-10-25) : ligne 1 = listes puis retraits,
+             * ligne 2 = alignements (gauche, centré, droite, justifié) puis interligne. */}
+            <div className="tb-group-row">
+              <button className={activeBtnClass(activeList === "bullet")} disabled={disabled} onClick={() => actions?.toggleBulletList()} title="Liste à puces">
+                <IconBulletList size={16} />
               </button>
-              {lineSpacingMenuOpen && (
-                <div className="tb-linespacing-menu">
-                  {(LINE_SPACINGS.includes(lineSpacing) ? LINE_SPACINGS : [...LINE_SPACINGS, lineSpacing])
-                    .slice()
-                    .sort((a, b) => a - b)
-                    .map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`tb-linespacing-item${v === lineSpacing ? " tb-linespacing-item-active" : ""}`}
-                        onClick={() => {
-                          actions?.setLineSpacing(v);
-                          setLineSpacingMenuOpen(false);
-                        }}
-                      >
-                        <span className="tb-linespacing-check">{v === lineSpacing ? "✓" : ""}</span>
-                        {fmtLineSpacing(v)}
-                      </button>
-                    ))}
-                  <div className="tb-linespacing-sep" />
-                  <button
-                    type="button"
-                    className="tb-linespacing-item"
-                    onClick={() => {
-                      setLineSpacingMenuOpen(false);
-                      onOpenParagraphDialog();
-                    }}
-                  >
-                    <span className="tb-linespacing-check" />
-                    Options d'interligne…
-                  </button>
-                  <button
-                    type="button"
-                    className="tb-linespacing-item"
-                    onClick={() => {
-                      actions?.setParagraphSpacingBefore(spacingBeforePt + 6);
-                      setLineSpacingMenuOpen(false);
-                    }}
-                  >
-                    <span className="tb-linespacing-check" />
-                    Ajouter de l'espace avant le paragraphe
-                  </button>
-                  <button
-                    type="button"
-                    className="tb-linespacing-item"
-                    onClick={() => {
-                      actions?.setParagraphSpacingAfter(0);
-                      setLineSpacingMenuOpen(false);
-                    }}
-                  >
-                    <span className="tb-linespacing-check" />
-                    Supprimer l'espace après le paragraphe
-                  </button>
-                </div>
-              )}
+              <button className={activeBtnClass(activeList === "ordered")} disabled={disabled} onClick={() => actions?.toggleOrderedList()} title="Liste numérotée">
+                <IconOrderedList size={16} />
+              </button>
+              <button className={activeBtnClass(activeList === "task")} disabled={disabled} onClick={() => actions?.toggleTaskList()} title="Liste de tâches (case à cocher)">
+                <IconTaskList size={16} />
+              </button>
+              <button className={activeBtnClass(activeList === "blockquote")} disabled={disabled} onClick={() => actions?.toggleBlockquote()} title="Citation">
+                <IconBlockquote size={16} />
+              </button>
+              <span className="tb-row-sep" />
+              {/* Tabulation ± (roadmap 2.1) : retrait du paragraphe courant
+               * d'un pas de 1,25 cm, comme les boutons Increase/Decrease
+               * Indent de Word/Casual. Raccourcis : Ctrl+M / Ctrl+Shift+M. */}
+              <button disabled={disabled} onClick={() => actions?.decreaseIndent()} title="Diminuer le retrait (Tabulation −, Ctrl+Shift+M)">
+                <IconIndentDecrease size={16} />
+              </button>
+              <button disabled={disabled} onClick={() => actions?.increaseIndent()} title="Augmenter le retrait (Tabulation +, Ctrl+M)">
+                <IconIndentIncrease size={16} />
+              </button>
+            </div>
+            <div className="tb-group-row">
+              <button className={activeBtnClass(activeAlign === "left")} disabled={disabled} onClick={() => actions?.setTextAlign("left")} title="Aligner à gauche">
+                <IconAlignLeft size={16} />
+              </button>
+              <button className={activeBtnClass(activeAlign === "center")} disabled={disabled} onClick={() => actions?.setTextAlign("center")} title="Centrer">
+                <IconAlignCenter size={16} />
+              </button>
+              <button className={activeBtnClass(activeAlign === "right")} disabled={disabled} onClick={() => actions?.setTextAlign("right")} title="Aligner à droite">
+                <IconAlignRight size={16} />
+              </button>
+              <button className={activeBtnClass(activeAlign === "justify")} disabled={disabled} onClick={() => actions?.setTextAlign("justify")} title="Justifier">
+                <IconAlignJustify size={16} />
+              </button>
+              <span className="tb-row-sep" />
+              {/* Menu Interligne façon Word (2026-10-21) : préréglages,
+               * « Options d'interligne… » (fenêtre Paragraphe), ajout/
+               * suppression d'espace — comme le menu du même nom de Word. */}
+              <div className="tb-linespacing" ref={lineSpacingMenuRef}>
+                <button
+                  type="button"
+                  className="tb-linespacing-trigger"
+                  disabled={disabled}
+                  title="Interligne et espacement du paragraphe"
+                  onClick={() => setLineSpacingMenuOpen((o) => !o)}
+                >
+                  <span className="tb-linespacing-value">{fmtLineSpacing(lineSpacing)}</span>
+                  <span className="tb-linespacing-caret">▾</span>
+                </button>
+                {lineSpacingMenuOpen && (
+                  <div className="tb-linespacing-menu">
+                    {(LINE_SPACINGS.includes(lineSpacing) ? LINE_SPACINGS : [...LINE_SPACINGS, lineSpacing])
+                      .slice()
+                      .sort((a, b) => a - b)
+                      .map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className={`tb-linespacing-item${v === lineSpacing ? " tb-linespacing-item-active" : ""}`}
+                          onClick={() => {
+                            actions?.setLineSpacing(v);
+                            setLineSpacingMenuOpen(false);
+                          }}
+                        >
+                          <span className="tb-linespacing-check">{v === lineSpacing ? "✓" : ""}</span>
+                          {fmtLineSpacing(v)}
+                        </button>
+                      ))}
+                    <div className="tb-linespacing-sep" />
+                    <button
+                      type="button"
+                      className="tb-linespacing-item"
+                      onClick={() => {
+                        setLineSpacingMenuOpen(false);
+                        onOpenParagraphDialog();
+                      }}
+                    >
+                      <span className="tb-linespacing-check" />
+                      Options d'interligne…
+                    </button>
+                    <button
+                      type="button"
+                      className="tb-linespacing-item"
+                      onClick={() => {
+                        actions?.setParagraphSpacingBefore(spacingBeforePt + 6);
+                        setLineSpacingMenuOpen(false);
+                      }}
+                    >
+                      <span className="tb-linespacing-check" />
+                      Ajouter de l'espace avant le paragraphe
+                    </button>
+                    <button
+                      type="button"
+                      className="tb-linespacing-item"
+                      onClick={() => {
+                        actions?.setParagraphSpacingAfter(0);
+                        setLineSpacingMenuOpen(false);
+                      }}
+                    >
+                      <span className="tb-linespacing-check" />
+                      Supprimer l'espace après le paragraphe
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </RibbonGroup>
 

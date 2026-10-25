@@ -56,7 +56,7 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 
 ### Paragraphe
 - Listes à puces, numérotées, de tâches (`[x]`), citation.
-- Alignements **gauche, droite, centré, justifié** (dans cet ordre).
+- Disposition comme Word, sur deux lignes : listes (puces, numérotée, tâches, citation) puis retraits **Tabulation − / +** ; puis alignements **gauche, centré, droite, justifié** et menu d'interligne.
 - **Tabulation − / +** : réduisent/augmentent le retrait du paragraphe courant (pas de 1,25 cm, comme Word).
 - **Menu Interligne** : préréglages 1,0 / 1,15 / 1,5 / 2,0 / 2,5 / 3,0 (coche sur la valeur active) ; « Options d'interligne… » ouvre la fenêtre [Paragraphe](#fenêtre-paragraphe--retrait-et-espacement) ; « Ajouter de l'espace avant » (+6 pt) ; « Supprimer l'espace après ».
 - Lanceur **⌄** (coin du groupe) : ouvre la fenêtre [Paragraphe](#fenêtre-paragraphe--retrait-et-espacement).

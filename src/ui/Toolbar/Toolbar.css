@@ -754,3 +754,13 @@
   height: 14px;
 }
 
+
+/* Séparateur vertical fin entre deux blocs de boutons d'une même ligne de groupe
+ * (groupe Paragraphe : listes | retraits, alignements | interligne — comme Word). */
+.tb-row-sep {
+  align-self: center;
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: rgba(255, 255, 255, 0.28);
+}
