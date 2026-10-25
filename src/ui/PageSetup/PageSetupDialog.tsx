@@ -86,16 +86,17 @@ function PagePreview({ layout }: { layout: PageLayoutSettings }) {
   const lineH = (heightMm - layout.marginTopMm - layout.marginBottomMm) / (lines * 1.9);
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="ps-preview" aria-hidden="true">
-      <rect x="0.5" y="0.5" width={w - 1} height={h - 1} fill="#ffffff" stroke="#8a8a8a" />
-      {/* marges (pointillés) */}
+      {/* Contrastes (palette MBEF) : marges en azur, zone de texte blanche cernée d'un
+       * trait océan, en-tête/pied en prairie, lignes de texte en gris soutenu. */}
+      <rect x="0.5" y="0.5" width={w - 1} height={h - 1} fill="#dfeff8" stroke="#343334" />
       <rect
         x={mx(layout.marginLeftMm)}
         y={mx(layout.marginTopMm)}
         width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)}
         height={Math.max(h - mx(layout.marginTopMm) - mx(layout.marginBottomMm), 0)}
-        fill="none"
-        stroke="#b9b9b7"
-        strokeDasharray="2 2"
+        fill="#ffffff"
+        stroke="#2f52a0"
+        strokeWidth="1"
       />
       {/* cadre de page */}
       {layout.pageBorder.enabled && (
@@ -112,10 +113,10 @@ function PagePreview({ layout }: { layout: PageLayoutSettings }) {
       )}
       {/* zones en-tête / pied de page */}
       {layout.header.text && (
-        <rect x={mx(layout.marginLeftMm)} y={mx(layout.header.fromEdgeMm)} width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)} height={mx(layout.header.heightMm)} fill="#e8e8e6" />
+        <rect x={mx(layout.marginLeftMm)} y={mx(layout.header.fromEdgeMm)} width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)} height={mx(layout.header.heightMm)} fill="#24ac6e" fillOpacity="0.45" stroke="#24ac6e" />
       )}
       {layout.footer.text && (
-        <rect x={mx(layout.marginLeftMm)} y={h - mx(layout.footer.fromEdgeMm) - mx(layout.footer.heightMm)} width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)} height={mx(layout.footer.heightMm)} fill="#e8e8e6" />
+        <rect x={mx(layout.marginLeftMm)} y={h - mx(layout.footer.fromEdgeMm) - mx(layout.footer.heightMm)} width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0)} height={mx(layout.footer.heightMm)} fill="#24ac6e" fillOpacity="0.45" stroke="#24ac6e" />
       )}
       {/* lignes de texte simulées */}
       {Array.from({ length: lines }, (_, i) => (
@@ -125,7 +126,7 @@ function PagePreview({ layout }: { layout: PageLayoutSettings }) {
           y={mx(layout.marginTopMm) + (i + 0.4) * mx(lineH) * 1.9}
           width={Math.max(w - mx(layout.marginLeftMm) - mx(layout.marginRightMm), 0) * (i % 3 === 2 ? 0.72 : 1)}
           height={Math.max(mx(lineH), 1)}
-          fill="#c9c9c7"
+          fill="#7d8183"
         />
       ))}
     </svg>
