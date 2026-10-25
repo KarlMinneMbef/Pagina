@@ -325,6 +325,68 @@ export function PageSetupDialog({
                     />
                   </div>
                 </fieldset>
+              </div>
+
+              <div className="ps-col-preview">
+                <fieldset className="ps-group">
+                  <legend>Aperçu</legend>
+                  <PagePreview layout={draft} />
+                </fieldset>
+                <label className="ps-num ps-disabled-field">
+                  <span>Appliquer à :</span>
+                  <select disabled>
+                    <option>À tout le document</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {tab === "papier" && (
+            <div className="ps-cols">
+              <div className="ps-col-main">
+                <fieldset className="ps-group">
+                  <legend>Format du papier</legend>
+                  <label className="ps-num ps-select">
+                    <span>Format du papier :</span>
+                    <select
+                      value={draft.paperSize}
+                      onChange={(e) => {
+                        // Choisir un format remplace les dimensions
+                        // personnalisées par celles du format.
+                        setDraft((d) => ({ ...d, paperSize: e.target.value as PageLayoutSettings["paperSize"], widthMm: undefined, heightMm: undefined }));
+                      }}
+                    >
+                      {(Object.keys(PAPER_SIZES_MM) as PageLayoutSettings["paperSize"][]).map((p) => (
+                        <option key={p} value={p}>
+                          {PAPER_SIZE_LABELS[p]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="ps-margins-grid">
+                    <CmField
+                      label="Largeur :"
+                      valueMm={pageDims.widthMm}
+                      max={500}
+                      onChange={(mm) =>
+                        setDraft((d) =>
+                          d.orientation === "landscape" ? { ...d, heightMm: mm } : { ...d, widthMm: mm },
+                        )
+                      }
+                    />
+                    <CmField
+                      label="Hauteur :"
+                      valueMm={pageDims.heightMm}
+                      max={500}
+                      onChange={(mm) =>
+                        setDraft((d) =>
+                          d.orientation === "landscape" ? { ...d, widthMm: mm } : { ...d, heightMm: mm },
+                        )
+                      }
+                    />
+                  </div>
+                </fieldset>
 
                 <fieldset className="ps-group">
                   <legend>Alimentation papier</legend>
