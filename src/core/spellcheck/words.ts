@@ -31,6 +31,8 @@ const IGNORED_SEGMENTS_RE = /\{\{[^}]*\}\}|https?:\/\/\S+|www\.\S+|[^\s@]+@[^\s@
 const KNOWN_UNITS = new Set([
   "mm", "cm", "dm", "km", "kg", "mg", "ml", "cl", "dl", "kw", "kwh", "mw", "mwh", "hz", "khz",
   "pa", "kpa", "mpa", "bar", "db", "min", "tr", "ppm", "etc",
+  // Mots courants d'un bureau d'études, absents du dictionnaire (« ok » dans une colonne de validation…).
+  "ok", "pdf", "html", "url", "docx", "xlsx", "dwg",
 ]);
 
 /** Ce mot mérite-t-il d'être soumis au dictionnaire ? `before`/`after` sont les
