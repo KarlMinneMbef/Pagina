@@ -46,7 +46,18 @@ export const FootnoteReference = Node.create({
   selectable: true,
 
   addAttributes() {
-    return { id: { default: "1" } };
+    // L'identifiant est TOUJOURS une chaîne : Tiptap convertit sinon « 1 » en nombre quand le HTML porte un
+    // attribut `id="1"` (cas d'un tableau écrit en HTML contenant une note), et un nombre n'est pas un
+    // enfant valide de renderHTML (« Invalid array passed to renderSpec » : écran blanc au chargement du
+    // document, 2026-10-26). On le lit donc dans `data-id` et on n'écrit pas d'attribut HTML `id` (il
+    // entrerait en collision avec les ancres des titres).
+    return {
+      id: {
+        default: "1",
+        parseHTML: (el: HTMLElement) => el.getAttribute("data-id") ?? el.getAttribute("id") ?? "1",
+        renderHTML: () => ({}),
+      },
+    };
   },
 
   parseHTML() {
@@ -74,8 +85,8 @@ export const FootnoteReference = Node.create({
   renderHTML({ node, HTMLAttributes }) {
     return [
       "sup",
-      mergeAttributes(HTMLAttributes, { "data-type": "footnote-ref", "data-id": node.attrs.id, class: "xmd-footnote-ref" }),
-      node.attrs.id,
+      mergeAttributes(HTMLAttributes, { "data-type": "footnote-ref", "data-id": String(node.attrs.id), class: "xmd-footnote-ref" }),
+      String(node.attrs.id),
     ];
   },
 
@@ -135,7 +146,18 @@ export const FootnoteDefinition = Node.create({
   content: "inline*",
 
   addAttributes() {
-    return { id: { default: "1" } };
+    // L'identifiant est TOUJOURS une chaîne : Tiptap convertit sinon « 1 » en nombre quand le HTML porte un
+    // attribut `id="1"` (cas d'un tableau écrit en HTML contenant une note), et un nombre n'est pas un
+    // enfant valide de renderHTML (« Invalid array passed to renderSpec » : écran blanc au chargement du
+    // document, 2026-10-26). On le lit donc dans `data-id` et on n'écrit pas d'attribut HTML `id` (il
+    // entrerait en collision avec les ancres des titres).
+    return {
+      id: {
+        default: "1",
+        parseHTML: (el: HTMLElement) => el.getAttribute("data-id") ?? el.getAttribute("id") ?? "1",
+        renderHTML: () => ({}),
+      },
+    };
   },
 
   parseHTML() {
@@ -145,7 +167,7 @@ export const FootnoteDefinition = Node.create({
   renderHTML({ node, HTMLAttributes }) {
     return [
       "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "footnote-def", "data-id": node.attrs.id, class: "xmd-footnote-def" }),
+      mergeAttributes(HTMLAttributes, { "data-type": "footnote-def", "data-id": String(node.attrs.id), class: "xmd-footnote-def" }),
       0,
     ];
   },
