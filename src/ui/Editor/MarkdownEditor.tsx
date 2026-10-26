@@ -2974,12 +2974,19 @@ function TableContextMenu({
     });
   }, [x, y, inTable]);
 
+  // Fermeture lue par RÉFÉRENCE : `onClose` est une fonction inline, nouvelle à chaque rendu. L'avoir
+  // en dépendance de l'effet retirait puis reposait les écouteurs à chaque rendu — un clic dans le
+  // texte (qui change la sélection, donc redessine l'éditeur de façon synchrone) arrivait pendant la
+  // fenêtre où l'écouteur n'existait pas et le menu restait ouvert (bug du 2026-10-26).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onClose();
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) onCloseRef.current();
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     // `setTimeout` : le `contextmenu` natif qui a ouvert ce menu déclenche
     // aussi, juste après, un `mousedown`/`click` fantôme sur certains
@@ -2988,15 +2995,16 @@ function TableContextMenu({
     // `Toolbar.tsx`, mais ici sur l'évènement d'OUVERTURE plutôt que sur un
     // clic d'option).
     const t = setTimeout(() => {
-      document.addEventListener("mousedown", onMouseDown);
+      // Phase de CAPTURE : le menu se ferme avant que la page ne traite le clic.
+      document.addEventListener("mousedown", onMouseDown, true);
       document.addEventListener("keydown", onKeyDown);
     }, 0);
     return () => {
       clearTimeout(t);
-      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousedown", onMouseDown, true);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   const item = (label: string, run: (editor: Editor) => void, danger?: boolean, shortcut?: string, disabled?: boolean) => (
     <button
