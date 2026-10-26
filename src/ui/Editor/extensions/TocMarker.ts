@@ -73,9 +73,12 @@ function collectAllTargets(doc: any): (TocTarget & { pos: number })[] {
 }
 
 /** Cibles d'un sommaire posé à `tocPos` (portée par section, 2026-10-22) :
- *  - AVANT la première section : les SECTIONS elles-mêmes (vue d'ensemble
- *    du document en parties, comme la table d'un recueil) — ou tous les
- *    titres s'il n'y a AUCUNE section (comportement historique) ;
+ *  - AVANT la première section : les titres qui précèdent la première section
+ *    (ils n'appartiennent à aucune section) PUIS les SECTIONS elles-mêmes (vue
+ *    d'ensemble du document en parties, comme la table d'un recueil) — ou tous les
+ *    titres s'il n'y a AUCUNE section (comportement historique). Avant le
+ *    2026-10-26 seules les sections étaient listées : un document de 13 chapitres
+ *    suivis d'UNE section donnait un sommaire d'une ligne ;
  *  - DANS une section : uniquement les titres de cette section (entre le
  *    saut de section qui la commence et le suivant) — son « sommaire
  *    dédié », numérotation comprise (voir HeadingAutoNumber.ts). */
@@ -86,7 +89,7 @@ export function setTocMaxLevel(level: number): void {
   tocMaxLevel = Number.isFinite(level) ? Math.max(1, Math.min(6, Math.round(level))) : 6;
 }
 
-function collectTocTargets(doc: any, tocPos: number): TocTarget[] {
+export function collectTocTargets(doc: any, tocPos: number): TocTarget[] {
   return collectTocTargetsAllLevels(doc, tocPos).filter((t) => t.level <= tocMaxLevel);
 }
 
@@ -104,7 +107,12 @@ function collectTocTargetsAllLevels(doc: any, tocPos: number): TocTarget[] {
   }
   if (!containing) {
     // Sommaire GLOBAL : les sections (ou tous les titres sans sections).
-    if (sections.length > 0) return sections.map(({ level, text, slug }) => ({ level, text, slug }));
+    if (sections.length > 0) {
+      const firstSectionPos = sections[0].pos;
+      return all
+        .filter((t) => doc.nodeAt(t.pos)?.type.name === "sectionBreak" || t.pos < firstSectionPos)
+        .map(({ level, text, slug }) => ({ level, text, slug }));
+    }
     return all
       .filter((t) => doc.nodeAt(t.pos)?.type.name === "heading")
       .map(({ level, text, slug }) => ({ level, text, slug }));
