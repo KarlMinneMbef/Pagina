@@ -34,6 +34,8 @@ import { CoverPagePanel } from "./ui/Cover/CoverPagePanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { SettingsDialog } from "./ui/Settings/SettingsDialog";
 import { DocumentCheckDialog } from "./ui/DocumentCheck/DocumentCheckDialog";
+import { PromptHost } from "./ui/dialogs/PromptHost";
+import { askNewFileName } from "./ui/dialogs/prompts";
 import { UserDialog } from "./ui/User/UserDialog";
 import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
 import { resolvePageSizeMm } from "./core/pageLayout";
@@ -378,16 +380,16 @@ function App() {
 
   const handleNewFile = async () => {
     if (!workspaceRoot) {
-      window.alert("Ouvrez d'abord un dossier de travail.");
+      await messageDialog("Ouvrez d'abord un dossier de travail.", { title: "Pagina", kind: "warning" });
       return;
     }
-    const name = window.prompt("Nom du nouveau fichier :", "Nouveau document.md");
+    const name = await askNewFileName();
     if (!name) return;
     try {
       const path = await createNewFile(name.trim());
       await openFile(path);
     } catch (e) {
-      window.alert(`Impossible de créer le fichier : ${e}`);
+      await messageDialog(`Impossible de créer le fichier : ${e}`, { title: "Pagina", kind: "error" });
     }
   };
 
@@ -829,6 +831,7 @@ function App() {
         />
       )}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      <PromptHost />
       {documentCheckOpen && activeTab && (
         <DocumentCheckDialog path={activeTab.path} onClose={() => setDocumentCheckOpen(false)} />
       )}

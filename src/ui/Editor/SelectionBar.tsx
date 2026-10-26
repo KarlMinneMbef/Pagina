@@ -15,6 +15,7 @@ import { ColorPicker } from "../ColorPicker/ColorPicker";
 import { IconLink } from "../Toolbar/icons";
 import "./SelectionBar.css";
 import { keepEditorFocus } from "../focusGuard";
+import { askLinkUrl } from "../dialogs/prompts";
 import { useColorMemory } from "../colorMemory";
 
 const run = (editor: Editor) => editor.chain().focus(undefined, { scrollIntoView: false });
@@ -35,15 +36,15 @@ export function SelectionBar({ editor, left, top }: { editor: Editor; left: numb
     </button>
   );
 
-  const setLink = () => {
+  const setLink = async () => {
     const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("URL du lien :", previous ?? "https://");
+    const url = await askLinkUrl(previous);
     if (url === null) return;
-    if (url === "") {
+    if (url.trim() === "") {
       run(editor).extendMarkRange("link").unsetLink().run();
       return;
     }
-    run(editor).extendMarkRange("link").setLink({ href: url }).run();
+    run(editor).extendMarkRange("link").setLink({ href: url.trim() }).run();
   };
 
   const textColor = (editor.getAttributes("textStyle").color as string | undefined) ?? undefined;

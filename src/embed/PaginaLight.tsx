@@ -17,6 +17,7 @@ import { MarkdownEditor, type MarkdownEditorHandle, type EditorStats } from "../
 import { Toolbar, type ToolbarActions } from "../ui/Toolbar/Toolbar";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../core/pageLayout";
 import "./embed.css";
+import { PromptHost } from "../ui/dialogs/PromptHost";
 
 /** Props du composant embarqué — chaque champ est documenté dans
  *  l'interface (contenu contrôlé, mise en page, événements, accroches DOM). */
@@ -149,6 +150,7 @@ export function PaginaLight({ value, onChange, onSave, documentTitle = "Document
       onCutCapture={marquerInteraction}
       onDropCapture={marquerInteraction}
     >
+      <PromptHost />
       <div onMouseDownCapture={marquerInteraction}>
         <Toolbar
           leger

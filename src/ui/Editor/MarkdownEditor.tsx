@@ -72,6 +72,7 @@ import { TocStyle } from "./extensions/TocStyle";
 import { useSettingsStore } from "../../core/store/settingsStore";
 import { Spellcheck, spellErrorAt, refreshSpellcheck } from "./extensions/Spellcheck";
 import { AutoCorrect } from "./extensions/AutoCorrect";
+import { askLinkUrl, askBookmarkName, askCrossReference } from "../dialogs/prompts";
 import { addUserWord, ignoreWord } from "../../core/spellcheck/userDictionary";
 import { suggestWord } from "../../persistence/spellService";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -874,16 +875,16 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       toggleBlockquote: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleBlockquote().run(),
       toggleCodeBlock: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCodeBlock().run(),
       toggleCode: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).toggleCode().run(),
-      setLink: () => {
+      setLink: async () => {
         if (!editor) return;
         const previous = editor.getAttributes("link").href as string | undefined;
-        const url = window.prompt("URL du lien :", previous ?? "https://");
+        const url = await askLinkUrl(previous);
         if (url === null) return;
-        if (url === "") {
+        if (url.trim() === "") {
           editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").unsetLink().run();
           return;
         }
-        editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").setLink({ href: url }).run();
+        editor.chain().focus(undefined, { scrollIntoView: false }).extendMarkRange("link").setLink({ href: url.trim() }).run();
       },
       // --- Presse-papiers : sérialisation Markdown de la sélection via
       // tiptap-markdown (storage.markdown.serializer), puis API Clipboard
@@ -1371,21 +1372,27 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         return matches.length;
       },
       // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
-      insertBookmark: () => {
+      insertBookmark: async () => {
         if (!editor) return;
-        const name = window.prompt("Nom du signet (ancre invisible à cette position du document) :", "signet");
+        const name = await askBookmarkName();
         if (!name) return;
         const id = slugifyBookmark(name);
         if (!id) return;
         editor.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "bookmark", attrs: { id } }).run();
       },
-      insertCrossReference: () => {
+      insertCrossReference: async () => {
         if (!editor) return;
-        const name = window.prompt("Nom du signet visé (celui donné à la création du signet) :", "signet");
-        if (!name) return;
+        // Signets existants du document, proposés dans la fenêtre (saisie libre possible).
+        const existing: string[] = [];
+        editor.state.doc.descendants((node) => {
+          if (node.type.name === "bookmark" && typeof node.attrs.id === "string") existing.push(node.attrs.id);
+        });
+        const answer = await askCrossReference(existing);
+        if (!answer) return;
+        const name = answer.target;
         const id = slugifyBookmark(name);
         if (!id) return;
-        const label = window.prompt("Texte affiché pour le renvoi :", name) ?? name;
+        const label = answer.label || name;
         // Lien Markdown standard vers l'ancre : [texte](#id) — cliquable
         // dans tout moteur de rendu, et le saut vers l'ancre <a id> posée
         // par « Signet » fonctionne à l'écran comme à l'impression.

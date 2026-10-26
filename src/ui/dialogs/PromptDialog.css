@@ -1,0 +1,103 @@
+/*
+ * Dialogue de saisie (voir PromptHost.tsx) — charte MBEF : sapin (titre), prairie (valider), carotte (erreur).
+ * Autonome (pas de dépendance aux feuilles de l'explorateur) : la version légère l'embarque aussi.
+ */
+.pd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+}
+
+.pd-dialog {
+  background: #ffffff;
+  color: #343334;
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  width: min(400px, calc(100vw - 32px));
+  overflow: hidden;
+}
+
+.pd-title {
+  background: #003f2b;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 16px;
+}
+
+.pd-message {
+  margin: 12px 16px 0;
+  font-size: 12px;
+  color: #6b6b69;
+  line-height: 1.4;
+}
+
+.pd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 16px 0;
+  font-size: 12px;
+}
+
+.pd-input {
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: #343334;
+  background: #ffffff;
+}
+
+.pd-input:focus {
+  outline: 1px solid #24ac6e;
+  border-color: #24ac6e;
+}
+
+.pd-error {
+  margin: 8px 16px 0;
+  font-size: 12px;
+  color: #eb5b1f;
+}
+
+.pd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.pd-btn {
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #343334;
+  font-size: 12px;
+  padding: 5px 16px;
+  cursor: pointer;
+}
+
+.pd-btn:hover {
+  background: #f0f0ee;
+}
+
+.pd-btn-primary {
+  background: #24ac6e;
+  border-color: #24ac6e;
+  color: #ffffff;
+}
+
+.pd-btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+@media print {
+  .pd-overlay {
+    display: none;
+  }
+}
