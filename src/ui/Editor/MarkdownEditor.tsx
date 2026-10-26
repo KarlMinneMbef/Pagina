@@ -71,6 +71,7 @@ import { CoverTheme } from "./extensions/CoverTheme";
 import { TocStyle } from "./extensions/TocStyle";
 import { useSettingsStore } from "../../core/store/settingsStore";
 import { Spellcheck, spellErrorAt, refreshSpellcheck } from "./extensions/Spellcheck";
+import { AutoCorrect } from "./extensions/AutoCorrect";
 import { addUserWord, ignoreWord } from "../../core/spellcheck/userDictionary";
 import { suggestWord } from "../../persistence/spellService";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -727,6 +728,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         TocStyle,
         // Correction orthographique : la couche peinte est redessinée quand les soulignements changent.
         Spellcheck.configure({ onChanged: () => repaintRef.current() }),
+        // Correction automatique à la frappe : guillemets français, majuscule en début de phrase.
+        AutoCorrect,
         // Champ de document {{variable}} inline — valeur résolue affichée
         // (comme les en-têtes/pieds), variable gardée dans le .md.
         DocField,

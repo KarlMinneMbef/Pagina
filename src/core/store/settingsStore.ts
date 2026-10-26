@@ -26,10 +26,16 @@ interface SettingsState {
   autoSaveIntervalSec: number;
   /** Correction orthographique (soulignement rouge + suggestions au clic droit). */
   spellcheck: boolean;
+  /** Correction automatique à la frappe : guillemets français « » (voir core/autocorrect.ts). */
+  autoCorrectQuotes: boolean;
+  /** Correction automatique à la frappe : majuscule en début de phrase. */
+  autoCorrectCapitals: boolean;
   /** Langue du dictionnaire (code de `spell_languages` côté Rust) — « fr » pour l'instant. */
   spellLanguage: string;
   setShowRulers: (value: boolean) => void;
   setSpellcheck: (value: boolean) => void;
+  setAutoCorrectQuotes: (value: boolean) => void;
+  setAutoCorrectCapitals: (value: boolean) => void;
   setAutoSave: (value: boolean) => void;
   setAutoSaveIntervalSec: (value: number) => void;
 }
@@ -41,6 +47,8 @@ const DEFAULT_SETTINGS = {
   autoSave: false,
   autoSaveIntervalSec: 60,
   spellcheck: true,
+  autoCorrectQuotes: true,
+  autoCorrectCapitals: true,
   spellLanguage: "fr",
 };
 
@@ -58,6 +66,8 @@ function loadSettings(): typeof DEFAULT_SETTINGS {
           ? parsed.autoSaveIntervalSec
           : DEFAULT_SETTINGS.autoSaveIntervalSec,
       spellcheck: typeof parsed.spellcheck === "boolean" ? parsed.spellcheck : DEFAULT_SETTINGS.spellcheck,
+      autoCorrectQuotes: typeof parsed.autoCorrectQuotes === "boolean" ? parsed.autoCorrectQuotes : DEFAULT_SETTINGS.autoCorrectQuotes,
+      autoCorrectCapitals: typeof parsed.autoCorrectCapitals === "boolean" ? parsed.autoCorrectCapitals : DEFAULT_SETTINGS.autoCorrectCapitals,
       spellLanguage: typeof parsed.spellLanguage === "string" && parsed.spellLanguage ? parsed.spellLanguage : DEFAULT_SETTINGS.spellLanguage,
     };
   } catch {
@@ -75,6 +85,8 @@ function persistSettings(settings: SettingsState): void {
         autoSave: settings.autoSave,
         autoSaveIntervalSec: settings.autoSaveIntervalSec,
         spellcheck: settings.spellcheck,
+        autoCorrectQuotes: settings.autoCorrectQuotes,
+        autoCorrectCapitals: settings.autoCorrectCapitals,
         spellLanguage: settings.spellLanguage,
       })
     );
@@ -96,6 +108,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
   setSpellcheck: (value) => {
     set({ spellcheck: value });
+    persistSettings(get());
+  },
+  setAutoCorrectQuotes: (value) => {
+    set({ autoCorrectQuotes: value });
+    persistSettings(get());
+  },
+  setAutoCorrectCapitals: (value) => {
+    set({ autoCorrectCapitals: value });
     persistSettings(get());
   },
   setAutoSaveIntervalSec: (value) => {

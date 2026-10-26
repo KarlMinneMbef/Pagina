@@ -39,12 +39,16 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
   // les autres dialogues de l'app — Annuler repart sans rien changer).
   const [showRulers, setShowRulers] = useState(settings.showRulers);
   const [spellcheck, setSpellcheck] = useState(settings.spellcheck);
+  const [autoCorrectQuotes, setAutoCorrectQuotes] = useState(settings.autoCorrectQuotes);
+  const [autoCorrectCapitals, setAutoCorrectCapitals] = useState(settings.autoCorrectCapitals);
   const [autoSave, setAutoSave] = useState(settings.autoSave);
   const [autoSaveIntervalSec, setAutoSaveIntervalSec] = useState(settings.autoSaveIntervalSec);
 
   const handleApply = () => {
     settings.setShowRulers(showRulers);
     settings.setSpellcheck(spellcheck);
+    settings.setAutoCorrectQuotes(autoCorrectQuotes);
+    settings.setAutoCorrectCapitals(autoCorrectCapitals);
     settings.setAutoSave(autoSave);
     settings.setAutoSaveIntervalSec(autoSaveIntervalSec);
     onClose();
@@ -97,9 +101,13 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <input type="checkbox" checked={spellcheck} onChange={(e) => setSpellcheck(e.target.checked)} />
               Correction orthographique (français)
             </label>
-            <label className="st-check" title="Guillemets intelligents, majuscule en début de phrase… (à venir)">
-              <input type="checkbox" checked={false} disabled />
-              Correction automatique (à venir)
+            <label className="st-check" title={'Le guillemet droit (") devient « ouvrant ou » fermant, avec une espace insécable à l\'intérieur'}>
+              <input type="checkbox" checked={autoCorrectQuotes} onChange={(e) => setAutoCorrectQuotes(e.target.checked)} />
+              Correction automatique : guillemets français « »
+            </label>
+            <label className="st-check" title="Majuscule à la première lettre d'un paragraphe et après . ! ? (sauf abréviations : ex., etc., cf.…)">
+              <input type="checkbox" checked={autoCorrectCapitals} onChange={(e) => setAutoCorrectCapitals(e.target.checked)} />
+              Correction automatique : majuscule en début de phrase
             </label>
           </section>
 

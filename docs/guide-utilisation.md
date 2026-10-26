@@ -207,6 +207,14 @@ Comme dans Word (lanceur du groupe Paragraphe, ou « Options d'interligne… » 
 
 ---
 
+## Correction automatique
+
+Pendant la frappe (Paramétrage > Édition, activée par défaut, chaque règle se coupe séparément) :
+
+- **Guillemets français** : le guillemet droit `"` devient « ouvrant ou » fermant, avec une espace insécable à l'intérieur (« comme ceci »).
+- **Majuscule en début de phrase** : à la première lettre d'un paragraphe, d'un titre ou d'un élément de liste, et après un point, un point d'exclamation ou d'interrogation suivi d'une espace. Pas de majuscule après une abréviation (ex., etc., cf., M., Fig.…), un nombre (« 1.2. ») ni en début de cellule de tableau ; jamais dans un bloc de code ou un texte en code.
+- Un Ctrl+Z annule le texte tapé ET sa correction d'un seul coup.
+
 ## Correction orthographique
 
 Les mots inconnus du dictionnaire **français** sont soulignés d'un trait rouge ondulé (jamais imprimé ni exporté en PDF).
