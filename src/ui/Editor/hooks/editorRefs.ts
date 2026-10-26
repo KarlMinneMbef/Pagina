@@ -41,4 +41,6 @@ export interface EditorRefs {
   mathEditRef: MutableRefObject<{ host: HTMLDivElement; mf: MathfieldElement; mathPos: number; detach: () => void } | null>;
   pendingMathLatexRef: MutableRefObject<string | null>;
   cloneIndexRef: MutableRefObject<CloneIndex | null>;
+  /** Dernier Markdown posé dans l'éditeur (évite de rappeler setContent() sur chaque frappe, voir onUpdate). */
+  loadedContentRef: MutableRefObject<string>;
 }
