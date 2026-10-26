@@ -30,6 +30,7 @@ import { ColorPicker } from "../ColorPicker/ColorPicker";
 import type { GridLine } from "../Editor/editorTableOps";
 import { FONT_SIZE_STEPS } from "../Editor/editorUtils";
 import { TableSizePicker } from "./TableSizePicker";
+import { useColorMemory } from "../colorMemory";
 import {
   IconAlignCenter,
   IconAlignJustify,
@@ -393,38 +394,18 @@ export function Toolbar({
   const disabled = actions === null;
   const [tab, setTab] = useState<RibbonTab>("accueil");
 
-  // Dernières couleurs choisies (roadmap 2.3, comme Word : le bouton
-  // APPLIQUE, le chevron choisit) — persistées en localStorage pour
-  // survivre à la fermeture de l'application.
-  const [lastTextColor, setLastTextColor] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem("pagina.derniereCouleurTexte") ?? null;
-    } catch {
-      return null;
-    }
-  });
-  const [lastHighlightColor, setLastHighlightColor] = useState<string>(() => {
-    try {
-      return localStorage.getItem("pagina.derniereCouleurSurlignage") ?? "#FFFF00";
-    } catch {
-      return "#FFFF00";
-    }
-  });
+  // Dernières couleurs choisies (roadmap 2.3, comme Word : le bouton APPLIQUE, le chevron
+  // choisit) — mémoire PARTAGÉE avec la mini-barre de sélection (ui/colorMemory.ts).
+  const lastTextColor = useColorMemory((m) => m.lastTextColor);
+  const lastHighlightColor = useColorMemory((m) => m.lastHighlightColor);
+  const rememberTextColor = useColorMemory((m) => m.rememberTextColor);
+  const rememberHighlightColor = useColorMemory((m) => m.rememberHighlightColor);
   // Menu Interligne façon Word (2026-10-21) : préréglages + Options
   // d'interligne… + ajout/suppression d'espace — rempli à la demande,
   // refermé au clic extérieur (même comportement que le ColorPicker).
   const [lineSpacingMenuOpen, setLineSpacingMenuOpen] = useState(false);
   const lineSpacingMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(lineSpacingMenuRef, lineSpacingMenuOpen, () => setLineSpacingMenuOpen(false));
-
-  const memoriserCouleur = (cle: string, setter: (v: string) => void, couleur: string) => {
-    setter(couleur);
-    try {
-      localStorage.setItem(cle, couleur);
-    } catch {
-      /* localStorage indisponible : mémoire de session seulement */
-    }
-  };
 
   const showAccueil = leger || tab === "accueil";
 
@@ -619,7 +600,7 @@ export function Toolbar({
                 onAutomatic={() => actions?.unsetColor()}
                 automaticSwatch="#343334"
                 onChange={(color) => {
-                  memoriserCouleur("pagina.derniereCouleurTexte", (v) => setLastTextColor(v), color);
+                  rememberTextColor(color);
                   actions?.setColor(color);
                 }}
               />
@@ -639,7 +620,7 @@ export function Toolbar({
                 onApplyLast={() => actions?.setHighlightColor(lastHighlightColor)}
                 applyLastTitle={`Surligner avec ${lastHighlightColor}`}
                 onChange={(color) => {
-                  memoriserCouleur("pagina.derniereCouleurSurlignage", (v) => setLastHighlightColor(v), color);
+                  rememberHighlightColor(color);
                   actions?.setHighlightColor(color);
                 }}
               />

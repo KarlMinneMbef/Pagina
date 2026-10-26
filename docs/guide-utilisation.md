@@ -37,7 +37,7 @@ Comme dans Word, une règle **horizontale** en haut et une règle **verticale** 
 
 ![Mini-barre](images/capture-minibar.png)
 
-Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la sélection (G I S, barré, exposant/indice, lien, couleur, surlignage) — même esprit que la barre contextuelle de Word. Le clic droit sur du texte ouvre aussi un menu (couper/copier/coller, mise en forme).
+Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la sélection (G I S, barré, exposant/indice, lien, couleur, surlignage) — comme dans le ruban, les boutons **A** et **S** réappliquent la dernière couleur choisie (le petit chevron ▾ ouvre le nuancier) ; **S** sur du texte déjà surligné retire le surlignage — même esprit que la barre contextuelle de Word. Le clic droit sur du texte ouvre aussi un menu (couper/copier/coller, mise en forme).
 
 ---
 

@@ -15,6 +15,7 @@ import { ColorPicker } from "../ColorPicker/ColorPicker";
 import { IconLink } from "../Toolbar/icons";
 import "./SelectionBar.css";
 import { keepEditorFocus } from "../focusGuard";
+import { useColorMemory } from "../colorMemory";
 
 const run = (editor: Editor) => editor.chain().focus(undefined, { scrollIntoView: false });
 
@@ -46,6 +47,12 @@ export function SelectionBar({ editor, left, top }: { editor: Editor; left: numb
   };
 
   const textColor = (editor.getAttributes("textStyle").color as string | undefined) ?? undefined;
+  // Comme le ruban (roadmap 2.3) : le bouton APPLIQUE la dernière couleur, le chevron ouvre le nuancier.
+  const lastTextColor = useColorMemory((m) => m.lastTextColor);
+  const lastHighlightColor = useColorMemory((m) => m.lastHighlightColor);
+  const rememberTextColor = useColorMemory((m) => m.rememberTextColor);
+  const rememberHighlightColor = useColorMemory((m) => m.rememberHighlightColor);
+  const highlighted = editor.isActive("highlight");
 
   return (
     <div className="xmd-selbar" style={{ left, top }} role="toolbar" aria-label="Mise en forme rapide" onMouseDown={keepEditorFocus}>
@@ -61,24 +68,36 @@ export function SelectionBar({ editor, left, top }: { editor: Editor; left: numb
       <ColorPicker
         title="Couleur du texte"
         triggerClassName="xmd-selbar-btn xmd-selbar-btn-color"
+        caretClassName="xmd-selbar-btn xmd-selbar-btn-caret"
         trigger={
           <>
             <span className="xmd-selbar-letter">A</span>
-            <span className="xmd-selbar-colorbar" style={{ background: textColor ?? "#343334" }} />
-            <span className="xmd-selbar-caret">▾</span>
+            <span className="xmd-selbar-colorbar" style={{ background: textColor ?? lastTextColor ?? "#343334" }} />
           </>
         }
         value={textColor}
+        onApplyLast={lastTextColor ? () => run(editor).setColor(lastTextColor).run() : undefined}
+        applyLastTitle={lastTextColor ? `Appliquer la dernière couleur choisie (${lastTextColor})` : "Couleur du texte"}
         onAutomatic={() => run(editor).unsetColor().run()}
         automaticSwatch="#343334"
-        onChange={(color) => run(editor).setColor(color).run()}
+        onChange={(color) => {
+          rememberTextColor(color);
+          run(editor).setColor(color).run();
+        }}
       />
-      {mark(
-        "highlight",
-        <span className="xmd-selbar-letter xmd-selbar-highlight">S</span>,
-        "Surlignage",
-        () => run(editor).toggleHighlight().run(),
-      )}
+      <ColorPicker
+        title="Couleur de surlignage"
+        triggerClassName={`xmd-selbar-btn${highlighted ? " xmd-selbar-btn-active" : ""}`}
+        caretClassName="xmd-selbar-btn xmd-selbar-btn-caret"
+        trigger={<span className="xmd-selbar-letter xmd-selbar-highlight" style={{ background: lastHighlightColor }}>S</span>}
+        // Le bouton surligne avec la dernière couleur (ou retire le surlignage s'il est déjà posé).
+        onApplyLast={() => (highlighted ? run(editor).unsetHighlight().run() : run(editor).setHighlight({ color: lastHighlightColor }).run())}
+        applyLastTitle={highlighted ? "Retirer le surlignage" : `Surligner avec ${lastHighlightColor}`}
+        onChange={(color) => {
+          rememberHighlightColor(color);
+          run(editor).setHighlight({ color }).run();
+        }}
+      />
     </div>
   );
 }

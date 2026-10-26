@@ -93,3 +93,11 @@
     display: none !important;
   }
 }
+
+/* Petit chevron qui ouvre le nuancier (à droite de « A » et de « S »). */
+.xmd-selbar-btn-caret {
+  min-width: 14px;
+  padding: 0 1px;
+  font-size: 9px;
+  margin-left: -2px;
+}
