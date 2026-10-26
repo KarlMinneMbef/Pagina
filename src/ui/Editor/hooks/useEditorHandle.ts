@@ -6,7 +6,7 @@
  */
 import { useImperativeHandle, type ForwardedRef } from "react";
 import type { Editor } from "@tiptap/react";
-import type { MarkdownEditorHandle } from "../MarkdownEditor";
+import type { MarkdownEditorHandle } from "../editorTypes";
 import { findCoverZoneAround, coverZoneIndexAt, extractCoverZoneMarkdown } from "../extensions/CoverZone";
 import { askLinkUrl, askBookmarkName, askCrossReference } from "../../dialogs/prompts";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";

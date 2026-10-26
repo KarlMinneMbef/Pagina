@@ -9,3 +9,8 @@ import { Extension } from "@tiptap/core";
 /** Nœud factice : les diagrammes restent des blocs de code Mermaid dans le
  *  .md, sans moteur de rendu dans la version légère. */
 export const MermaidDiagram = Extension.create({ name: "mermaidDiagramAbsent" });
+
+/** La version légère n'affiche aucun diagramme : rien à re-rendre quand le thème change. */
+export function setMermaidRenderedCallback(_callback: (() => void) | null): void {
+  /* sans effet */
+}

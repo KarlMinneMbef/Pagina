@@ -8,7 +8,7 @@ import type { Editor } from "@tiptap/core";
 import type { MathfieldElement } from "mathlive";
 import type { CloneIndex } from "../pagination/cloneIndex";
 import type { PageLayoutSettings } from "../../../core/pageLayout";
-import type { EditorStats } from "../MarkdownEditor";
+import type { EditorStats } from "../editorTypes";
 
 export interface EditorRefs {
   // Éléments DOM de la couche peinte
