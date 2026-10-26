@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useTabsStore } from "../store/tabsStore";
+import { blankTabData, useTabsStore } from "../store/tabsStore";
 import { extractDocumentConfig } from "../pageLayout";
 
 const PATH = "C:\docs\a.md";
 
 function seed(content: string, dirty = false) {
   useTabsStore.setState({
-    tabs: [{ path: PATH, title: "a.md", content, dirty, layout: extractDocumentConfig("").layout, issues: [], revision: 0 }],
+    tabs: [{ path: PATH, title: "a.md", content, dirty, layout: extractDocumentConfig("").layout, issues: [], revision: 0, ...blankTabData() }],
     activePath: PATH,
     pendingContent: { [PATH]: content },
   });

@@ -207,3 +207,37 @@ function fromRustNode(n: RustFileNode): FileNode {
     children: n.children ? n.children.map(fromRustNode) : undefined,
   };
 }
+
+/** Lit un fichier en octets bruts (`.xmd`, images). */
+export async function readBinaryFile(path: string): Promise<Uint8Array> {
+  return new Uint8Array(await invoke<ArrayBuffer>("read_binary_file", { path }));
+}
+
+/** Écrit un fichier en octets bruts, de façon ATOMIQUE (fichier temporaire puis renommage) ; crée les dossiers
+ *  manquants. Les octets voyagent en corps de requête, le chemin en en-tête (voir `write_binary_file`). */
+export async function writeBinaryFile(path: string, bytes: Uint8Array): Promise<void> {
+  await invoke("write_binary_file", bytes, { headers: { path: encodeURIComponent(path) } });
+}
+
+/** Le chemin existe-t-il (fichier ou dossier) ? */
+export async function pathExists(path: string): Promise<boolean> {
+  return invoke<boolean>("path_exists", { path });
+}
+
+const IMAGE_FILTERS = [{ name: "Images", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"] }];
+
+/** Sélecteur natif pour choisir une ou plusieurs images à insérer ; liste vide si annulé. */
+export async function pickImageFiles(): Promise<string[]> {
+  const selected = await open({ directory: false, multiple: true, filters: IMAGE_FILTERS, title: "Insérer une image" });
+  if (!selected) return [];
+  return Array.isArray(selected) ? selected : [selected];
+}
+
+/** « Enregistrer sous » au format `.xmd` (création d'un conteneur) ; null si annulé. */
+export async function pickXmdSaveLocation(defaultName: string): Promise<string | null> {
+  return save({
+    defaultPath: defaultName,
+    filters: [{ name: "Document Pagina (.xmd)", extensions: ["xmd"] }],
+    title: "Enregistrer au format .xmd",
+  });
+}

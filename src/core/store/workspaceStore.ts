@@ -3,6 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import type { FileNode } from "../types";
 import { loadDefaultPageLayout, withDocumentConfig } from "../pageLayout";
 import { useTabsStore } from "./tabsStore";
+import { saveDocument } from "../../persistence/documentIO";
+import { EMPTY_COMMENTS, EMPTY_HISTORY } from "../xmd/container";
 import {
   pickWorkspaceFolder,
   readWorkspaceTree,
@@ -175,7 +177,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     // dans tout autre outil Markdown (voir pageLayout.ts). « Définir par
     // défaut » du dialogue Mise en page peut avoir remplacé les défauts
     // usine (loadDefaultPageLayout, voir pageLayout.ts).
-    await createFile(path, withDocumentConfig(loadDefaultPageLayout(), "\n"));
+    const raw = withDocumentConfig(loadDefaultPageLayout(), "\n");
+    // Un nouveau `.xmd` est un vrai conteneur ZIP (jamais du texte renommé) : document + commentaires + historique vides.
+    if (name.toLowerCase().endsWith(".xmd")) {
+      await saveDocument(path, { raw, assets: {}, comments: EMPTY_COMMENTS, history: EMPTY_HISTORY, extras: {} });
+    } else {
+      await createFile(path, raw);
+    }
     await get().refreshTree();
     return path;
   },

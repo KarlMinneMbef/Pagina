@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import type { FileNode } from "../../../core/types";
 import { useWorkspaceStore } from "../../../core/store/workspaceStore";
-import { useTabsStore } from "../../../core/store/tabsStore";
+import { blankTabData, useTabsStore } from "../../../core/store/tabsStore";
 import { FileExplorer } from "../FileExplorer";
 import { TabBar } from "../../TabBar/TabBar";
 
@@ -153,6 +153,7 @@ describe("workspaceStore — rafraîchissement disque robuste", () => {
           layout: {} as never,
           issues: [],
           revision: 0,
+          ...blankTabData(),
           missing: true,
         },
       ],

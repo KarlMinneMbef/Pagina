@@ -5,7 +5,8 @@
  */
 import { create } from "zustand";
 import { isEditableDocument } from "../types";
-import { readTextFile, writeTextFile } from "../../persistence/fileService";
+import { loadDocument, saveDocument, type DocumentFormat } from "../../persistence/documentIO";
+import { assetPathFor, EMPTY_COMMENTS, EMPTY_HISTORY, type XmdAsset } from "../xmd/container";
 import { checkDocument, repairDocument, backupPathFor, type Problem } from "../documentCheck";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../pageLayout";
 
@@ -27,6 +28,19 @@ export interface EditorTab {
   /** Vrai quand le fichier a disparu du disque (rafraîchissement de
    * l'arbre) : l'onglet reste ouvert, marqué « (introuvable) ». */
   missing?: boolean;
+  /** `md` : fichier texte ; `xmd` : conteneur ZIP (document + images + commentaires + historique, voir core/xmd/container.ts). */
+  format: DocumentFormat;
+  /** Images du document par chemin relatif (`images/plan-3fa9c1d2.png`) : celles embarquées dans le `.xmd`, ou lues à côté d'un `.md`. */
+  assets: Record<string, XmdAsset>;
+  /** JSON brut des commentaires / de l'historique (conservés tels quels), fichiers inconnus du conteneur (réécrits à l'identique). */
+  comments: string;
+  history: string;
+  extras: Record<string, Uint8Array>;
+}
+
+/** Valeurs par défaut des champs « conteneur » d'un onglet (document texte sans image) — utile aux tests et aux nouveaux onglets. */
+export function blankTabData(): Pick<EditorTab, "format" | "assets" | "comments" | "history" | "extras"> {
+  return { format: "md", assets: {}, comments: EMPTY_COMMENTS, history: EMPTY_HISTORY, extras: {} };
 }
 
 const LAST_TABS_KEY = "xmd.openTabs";
@@ -36,6 +50,10 @@ const LAST_ACTIVE_KEY = "xmd.activeTab";
 // openFile (ex. double-clic, ou double montage des effets en StrictMode) :
 // deux appels sur le même chemin partagent la même promesse de lecture.
 const inFlightOpens = new Map<string, Promise<void>>();
+
+function formatOfPath(path: string): DocumentFormat {
+  return path.toLowerCase().endsWith(".xmd") ? "xmd" : "md";
+}
 
 function titleFromPath(path: string): string {
   const parts = path.split(/[\\/]/);
@@ -69,6 +87,9 @@ interface TabsState {
    * quels, `dirty:false` puisqu'on vient de l'écrire) — l'ancien onglet
    * reste ouvert inchangé, comme dans la plupart des éditeurs. */
   saveTabAs: (path: string, newPath: string) => Promise<void>;
+  /** Ajoute une image au document (octets bruts) et renvoie son chemin RELATIF (`images/<nom>-<empreinte>.<ext>`). Un
+   * contenu identique réutilise le même chemin. Le texte du document est modifié par l'appelant (nœud image). */
+  addAsset: (path: string, fileName: string, bytes: Uint8Array, mime: string) => Promise<string>;
   /** Renommage disque d'un fichier OU d'un dossier : met à jour le chemin de
    * tout onglet sous `from` (le fichier lui-même, ou les fichiers contenus
    * dans le dossier) vers `to`, en conservant contenu, dirty et mise en
@@ -106,7 +127,8 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     }
 
     const loadPromise = (async () => {
-      const raw = await readTextFile(path);
+      const doc = await loadDocument(path);
+      const raw = doc.raw;
       // Revérifier après l'attente : un appel concurrent a pu créer l'onglet entre-temps.
       if (get().tabs.some((t) => t.path === path)) return;
       // Le commentaire de config (voir pageLayout.ts) est extrait ICI, avant
@@ -122,6 +144,11 @@ export const useTabsStore = create<TabsState>((set, get) => ({
         layout,
         issues: checkDocument(raw),
         revision: 0,
+        format: doc.format,
+        assets: doc.assets,
+        comments: doc.comments,
+        history: doc.history,
+        extras: doc.extras,
       };
       set((s) => ({
         tabs: [...s.tabs, tab],
@@ -206,7 +233,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     // Le commentaire de config est réinjecté ICI, juste avant l'écriture
     // disque — jamais porté par l'éditeur (voir pageLayout.ts).
     const raw = withDocumentConfig(tab.layout, content);
-    await writeTextFile(path, raw);
+    await saveDocument(path, { raw, assets: tab.assets, comments: tab.comments, history: tab.history, extras: tab.extras });
     const issues = checkDocument(raw);
     set((s) => ({
       tabs: s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: false, issues } : t)),
@@ -216,12 +243,26 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   reloadTab: async (path: string) => {
     const tab = get().tabs.find((t) => t.path === path);
     if (!tab) return;
-    const raw = await readTextFile(path);
+    const doc = await loadDocument(path);
+    const raw = doc.raw;
     const { layout, content } = extractDocumentConfig(raw);
     set((s) => ({
       tabs: s.tabs.map((t) =>
         t.path === path
-          ? { ...t, content, layout, dirty: false, missing: false, issues: checkDocument(raw), revision: t.revision + 1 }
+          ? {
+              ...t,
+              content,
+              layout,
+              dirty: false,
+              missing: false,
+              issues: checkDocument(raw),
+              revision: t.revision + 1,
+              format: doc.format,
+              assets: doc.assets,
+              comments: doc.comments,
+              history: doc.history,
+              extras: doc.extras,
+            }
           : t
       ),
       pendingContent: { ...s.pendingContent, [path]: content },
@@ -231,18 +272,19 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   repairTabFile: async (path: string) => {
     const tab = get().tabs.find((t) => t.path === path);
     if (!tab) throw new Error("Document introuvable.");
-    const raw = await readTextFile(path);
-    const { applied } = repairDocument(raw);
+    const disk = await loadDocument(path);
+    const { applied } = repairDocument(disk.raw);
     if (applied.length === 0) return { applied, backup: null };
     // La copie d'abord, de l'état du disque tel qu'il est : si la suite échoue, rien n'est perdu.
     const backup = backupPathFor(path);
-    await writeTextFile(backup, raw);
+    await saveDocument(backup, disk);
     // Un onglet modifié est enregistré d'abord (le bouton le dit) : l'éditeur normalise déjà
     // une partie des défauts (zone de garde refermée, commentaires en double…), et la
     // réparation du disque ne doit pas écraser les modifications en cours.
     if (tab.dirty) await get().saveTab(path);
-    const rest = repairDocument(await readTextFile(path));
-    if (rest.applied.length > 0) await writeTextFile(path, rest.text);
+    const after = await loadDocument(path);
+    const rest = repairDocument(after.raw);
+    if (rest.applied.length > 0) await saveDocument(path, { ...after, raw: rest.text });
     await get().reloadTab(path);
     return { applied, backup };
   },
@@ -252,7 +294,13 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     const content = pendingContent[path];
     const tab = tabs.find((t) => t.path === path);
     if (content === undefined || !tab) return;
-    await writeTextFile(newPath, withDocumentConfig(tab.layout, content));
+    await saveDocument(newPath, {
+      raw: withDocumentConfig(tab.layout, content),
+      assets: tab.assets,
+      comments: tab.comments,
+      history: tab.history,
+      extras: tab.extras,
+    });
     const newTab: EditorTab = {
       path: newPath,
       title: titleFromPath(newPath),
@@ -261,6 +309,11 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       layout: tab.layout,
       issues: [],
       revision: 0,
+      format: formatOfPath(newPath),
+      assets: tab.assets,
+      comments: tab.comments,
+      history: tab.history,
+      extras: tab.extras,
     };
     set((s) => ({
       tabs: [...s.tabs.filter((t) => t.path !== newPath), newTab],
@@ -268,6 +321,14 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       activePath: newPath,
     }));
     persist(get());
+  },
+
+  addAsset: async (path: string, fileName: string, bytes: Uint8Array, mime: string) => {
+    const name = await assetPathFor(fileName, bytes);
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.path === path && !t.assets[name] ? { ...t, assets: { ...t.assets, [name]: { bytes, mime } } } : t)),
+    }));
+    return name;
   },
 
   renameTabPaths: (from: string, to: string) => {
