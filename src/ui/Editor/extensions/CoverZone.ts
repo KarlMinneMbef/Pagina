@@ -22,7 +22,8 @@
  * invisibles : la page de garde est une page « comme les autres » dans le
  * fichier aussi.
  */
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Extension, Node, mergeAttributes } from "@tiptap/core";
+import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
 /** Propriétés portées par le marqueur de début d'une zone page de garde. Les
@@ -396,5 +397,62 @@ export const CoverZoneEnd = Node.create({
         },
       },
     };
+  },
+});
+
+/** Positions (dans le document) où insérer un marqueur de FIN pour refermer les zones page de garde
+ *  restées OUVERTES : une zone s'arrête au premier saut de page qui suit (une page de garde = une page),
+ *  à défaut à l'ouverture d'une autre zone, à défaut en fin de document. */
+export function unclosedCoverZoneEnds(doc: ProseMirrorNode): number[] {
+  const inserts: number[] = [];
+  let open = false;
+  doc.forEach((node, offset) => {
+    const type = node.type.name;
+    if (type === "coverZoneStart") {
+      if (open) inserts.push(offset); // la zone précédente n'a jamais été refermée
+      open = true;
+    } else if (type === "coverZoneEnd") {
+      open = false;
+    } else if (open && type === "pageBreak") {
+      inserts.push(offset);
+      open = false;
+    }
+  });
+  if (open) inserts.push(doc.content.size);
+  return inserts;
+}
+
+function coverZoneRepair(state: EditorState): Transaction | null {
+  const inserts = unclosedCoverZoneEnds(state.doc);
+  const endType = state.schema.nodes.coverZoneEnd;
+  if (inserts.length === 0 || !endType) return null;
+  const tr = state.tr;
+  // Du dernier au premier : les positions déjà calculées restent valides.
+  for (const pos of [...inserts].reverse()) tr.insert(pos, endType.create());
+  return tr.setMeta("addToHistory", false);
+}
+
+/** Garde-fou : un marqueur de début SANS marqueur de fin fait de TOUTES les pages suivantes des pages de garde
+ *  (en-tête/pied masqués, cadre « pages de garde » étendu au document entier — bug du 2026-10-26 : le marqueur
+ *  de fin, invisible et collé au texte, avait été supprimé par une simple touche Suppr). Les repères étant
+ *  invisibles, on ne peut pas compter sur l'utilisateur : la zone est refermée automatiquement, à l'ouverture
+ *  d'un fichier déjà abîmé comme pendant l'édition. */
+export const CoverZoneRepair = Extension.create({
+  name: "coverZoneRepair",
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("coverZoneRepair"),
+        appendTransaction: (_transactions, _oldState, newState) => coverZoneRepair(newState),
+        view: (view) => {
+          // À la création : répare un document déjà chargé avec une zone non refermée.
+          queueMicrotask(() => {
+            const tr = coverZoneRepair(view.state);
+            if (tr && (view as unknown as { docView: unknown }).docView) view.dispatch(tr);
+          });
+          return {};
+        },
+      }),
+    ];
   },
 });

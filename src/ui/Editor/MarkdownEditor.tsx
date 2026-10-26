@@ -64,6 +64,7 @@ import {
   coverZoneIndexAt,
   extractCoverZoneMarkdown,
   type CoverZoneInfo,
+  CoverZoneRepair,
 } from "./extensions/CoverZone";
 import { DocField, setDocFieldContext, refreshAllDocFields } from "./extensions/DocField";
 import { CoverTheme } from "./extensions/CoverTheme";
@@ -721,6 +722,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // fonctionne (ruban, tableaux, champs de document inline).
         CoverZoneStart,
         CoverZoneEnd,
+        CoverZoneRepair,
         CoverTheme,
         TocStyle,
         // Correction orthographique : la couche peinte est redessinée quand les soulignements changent.
