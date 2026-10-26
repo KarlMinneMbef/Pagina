@@ -480,6 +480,12 @@
   position: relative;
 }
 
+/* Bouton déroulant à grande icône (Tableau) : centré verticalement dans son groupe,
+ * comme les autres grands boutons (le menu reste collé sous le bouton). */
+.tb-picker-centered {
+  align-self: center;
+}
+
 .tb-heading-picker-trigger {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }

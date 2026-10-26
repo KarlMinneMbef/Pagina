@@ -36,7 +36,7 @@ export function TableSizePicker({
   };
 
   return (
-    <div className="tb-heading-picker" ref={rootRef}>
+    <div className="tb-heading-picker tb-picker-centered" ref={rootRef}>
       <button
         type="button"
         className="tb-big-btn tb-btn-with-caret"

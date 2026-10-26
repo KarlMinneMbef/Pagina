@@ -817,13 +817,6 @@ export function Toolbar({
               />
               <StackButton
                 disabled={disabled}
-                onClick={() => actions?.insertFootnote()}
-                title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
-                icon={<IconFootnote size={15} />}
-                label="Note de bas de page"
-              />
-              <StackButton
-                disabled={disabled}
                 onClick={onInsertSectionBreak}
                 title="Saut de section — commence une nouvelle partie : numérotation des titres et sommaire dédiés"
                 icon={<IconSectionBreak size={15} />}
@@ -844,8 +837,8 @@ export function Toolbar({
           </RibbonGroup>
 
           <RibbonGroup label="Éléments" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
-            {/* Une seule pile, 3 lignes (demande 2026-10-17) :
-             * Séparateur, Emoji, Bloc de code. */}
+            {/* Une seule pile, 3 lignes : Séparateur, Bloc de code, Note de bas de
+             * page (déplacée ici le 2026-10-26 : ce n'est pas une commande de page). */}
             <div className="tb-stack">
               <StackButton
                 disabled={disabled}
@@ -860,6 +853,13 @@ export function Toolbar({
                 title="Bloc de code"
                 icon={<IconCodeBlock size={15} />}
                 label="Bloc de code"
+              />
+              <StackButton
+                disabled={disabled}
+                onClick={() => actions?.insertFootnote()}
+                title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
+                icon={<IconFootnote size={15} />}
+                label="Note de bas de page"
               />
             </div>
           </RibbonGroup>
