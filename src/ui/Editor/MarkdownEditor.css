@@ -20,7 +20,10 @@
    * de .xmd-ruler-h (Ruler.css) — un padding-top ici décalait la règle
    * vers le bas, le sticky ne « tirant » jamais un élément vers le haut.
    * L'impression force déjà padding: 0 sur ce conteneur (App.css). */
-  padding: 0 16px 32px;
+  /* Pas de retrait à GAUCHE : la règle verticale doit être collée au bord du panneau voisin
+   * (explorateur), comme Word — 16 px de padding la décalaient de l'explorateur (retour
+   * utilisateur 2026-10-26). Les pages sont centrées, elles n'ont pas besoin de ce retrait. */
+  padding: 0 16px 32px 0;
   position: relative;
   /* `paintPages.ts` fait un `canvas.replaceChildren(...)` à CHAQUE frappe —
    * tout l'arbre des pages (y compris celles visibles à l'écran) est détruit
