@@ -151,3 +151,68 @@ pub fn duplicate_path(path: String) -> Result<String, String> {
         counter += 1;
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Fichiers BINAIRES (format .xmd : conteneur ZIP, images) — octets bruts par l'IPC, sans passer par du JSON/base64.
+// ---------------------------------------------------------------------------------------------------------------
+
+/// Lit un fichier en octets bruts (renvoyés tels quels au frontend sous forme d'ArrayBuffer).
+#[tauri::command]
+pub fn read_binary_file(path: String) -> Result<tauri::ipc::Response, String> {
+    let bytes = fs::read(&path).map_err(|e| format!("Impossible de lire {}: {}", path, e))?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// Décode un texte « pourcentage » (`encodeURIComponent` côté JS) : le chemin voyage dans un en-tête HTTP.
+fn percent_decode(s: &str) -> Result<String, String> {
+    let bytes = s.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            if i + 2 >= bytes.len() {
+                return Err("Chemin invalide (séquence % incomplète)".to_string());
+            }
+            let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).map_err(|_| "Chemin invalide")?;
+            out.push(u8::from_str_radix(hex, 16).map_err(|_| "Chemin invalide (hexadécimal)".to_string())?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).map_err(|_| "Chemin invalide (UTF-8)".to_string())
+}
+
+/// Écrit un fichier en octets bruts : le contenu est le CORPS de la requête, le chemin l'en-tête `path`
+/// (encodé par `encodeURIComponent`). L'écriture est ATOMIQUE (fichier temporaire puis renommage) : un
+/// `.xmd` à moitié écrit — coupure, disque plein — ne remplace jamais l'ancien. Crée les dossiers manquants
+/// (extraction des images dans `images/` à côté d'un `.md`).
+#[tauri::command]
+pub fn write_binary_file(request: tauri::ipc::Request<'_>) -> Result<(), String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("Contenu binaire manquant".to_string());
+    };
+    let header = request
+        .headers()
+        .get("path")
+        .and_then(|v| v.to_str().ok())
+        .ok_or_else(|| "Chemin manquant".to_string())?;
+    let path = percent_decode(header)?;
+    let target = Path::new(&path);
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Impossible de créer {}: {}", parent.display(), e))?;
+    }
+    let tmp = format!("{}.pagina-tmp", path);
+    fs::write(&tmp, bytes).map_err(|e| format!("Impossible d'écrire {}: {}", path, e))?;
+    fs::rename(&tmp, target).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        format!("Impossible d'écrire {}: {}", path, e)
+    })
+}
+
+/// Le chemin existe-t-il (fichier ou dossier) ? — pour proposer un nom libre sans écraser.
+#[tauri::command]
+pub fn path_exists(path: String) -> bool {
+    Path::new(&path).exists()
+}
