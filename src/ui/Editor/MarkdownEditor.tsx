@@ -2212,10 +2212,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       };
 
       /** Clic dans une zone VIDE d'une page peinte (aucun bloc sous la souris) : position du
-       *  document la plus proche, ou "append" quand le clic tombe SOUS le dernier bloc du
-       *  document et que ce bloc n'accepte pas de curseur (tableau, saut de section/de page,
-       *  diagramme, formule en bloc…) — un paragraphe vide doit alors être ajouté. */
-      const resolveBlankClick = (e: MouseEvent): number | "append" | null => {
+       *  document la plus proche, ou { insertAt } quand le clic tombe SOUS un bloc qui n'accepte pas
+       *  de curseur (tableau, diagramme, formule en bloc…) et n'est suivi d'aucun texte où aller
+       *  (fin du document, saut de page ou de section, autre tableau…) — un paragraphe vide doit
+       *  alors être ajouté à cet endroit, comme après un tableau dans Word. */
+      const resolveBlankClick = (e: MouseEvent): number | { insertAt: number } | null => {
         const target = e.target as HTMLElement | null;
         const page = target?.closest<HTMLElement>(".xmd-page");
         const content = page?.querySelector<HTMLElement>(".xmd-page-content");
@@ -2234,12 +2235,20 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           }
         }
         const rect = best.getBoundingClientRect();
-        const isLastPage = Array.from(canvas.querySelectorAll(".xmd-page")).pop() === page;
-        const below = e.clientY > rect.bottom;
-        if (isLastPage && below && best === blocks[blocks.length - 1]) {
-          const last = editor.state.doc.lastChild;
-          if (last && !last.isTextblock && last.type.name !== "bulletList" && last.type.name !== "orderedList" && last.type.name !== "taskList") {
-            return "append";
+        if (e.clientY > rect.bottom) {
+          const doc = editor.state.doc;
+          const accepteTexte = (n: ProseMirrorNode | null | undefined) =>
+            !!n && (n.isTextblock || n.type.name === "bulletList" || n.type.name === "orderedList" || n.type.name === "taskList");
+          const srcAttr = best.getAttribute(SRC_POS_ATTR);
+          const node = srcAttr !== null ? doc.nodeAt(Number(srcAttr)) : null;
+          if (srcAttr !== null && node && !accepteTexte(node)) {
+            const end = Number(srcAttr) + node.nodeSize;
+            // Un tableau coupé sur plusieurs pages : seul son DERNIER morceau est « sous le tableau ».
+            const pages = Array.from(canvas.querySelectorAll<HTMLElement>(".xmd-page"));
+            const nextFirst = pages[pages.indexOf(page) + 1]?.querySelector<HTMLElement>(".xmd-page-content")?.children[0];
+            const continuesOnNextPage =
+              best === blocks[blocks.length - 1] && nextFirst?.getAttribute(SRC_POS_ATTR) === srcAttr;
+            if (!continuesOnNextPage && !accepteTexte(doc.nodeAt(end))) return { insertAt: end };
           }
         }
         // Ailleurs : on résout dans le bloc le plus proche, point ramené à l'intérieur du bloc.
@@ -2504,13 +2513,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           if (blank === null) return;
           e.preventDefault();
           editor.commands.focus(undefined, { scrollIntoView: false });
-          if (blank === "append") {
-            // Le document se termine par un bloc dans lequel on ne tape pas (tableau, saut de
-            // section, saut de page…) : comme Word, on ouvre un paragraphe vide après lui.
+          if (typeof blank === "object") {
+            // Sous un bloc dans lequel on ne tape pas (tableau, formule, diagramme…) et que rien
+            // ne suit où mettre le curseur : comme Word, on ouvre un paragraphe vide juste après lui.
             const { state } = editor;
-            const end = state.doc.content.size;
-            const tr = state.tr.insert(end, state.schema.nodes.paragraph.create());
-            editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, end + 1)));
+            const tr = state.tr.insert(blank.insertAt, state.schema.nodes.paragraph.create());
+            editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, blank.insertAt + 1)));
             return;
           }
           pos = blank;
