@@ -29,6 +29,7 @@
  */
 import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { IconCog } from "../Toolbar/icons";
 import "./TitleBar.css";
 
 const appWindow = getCurrentWindow();
@@ -161,9 +162,10 @@ export function TitleBar({
         <button
           className="tbar-icon-btn tbar-settings"
           onClick={onOpenSettings}
-          title="Paramétrage (règles, langue, auto-sauvegarde…)"
+          title="Paramétrage (règles, correction orthographique, auto-sauvegarde…)"
+          aria-label="Paramétrage"
         >
-          ⚙
+          <IconCog size={18} />
         </button>
         {/* Avatar = profil utilisateur (roadmap 1.5) : initiales du
          * prénom + nom (fenêtre Utilisateur au clic). */}

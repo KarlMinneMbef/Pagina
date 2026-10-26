@@ -162,7 +162,16 @@
 }
 
 .tbar-settings {
-  font-size: 13px;
+  /* Bien visible : icône d'engrenage de 18 px dans un rond translucide cerclé. */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.tbar-settings:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: #ffffff;
 }
 
 .tbar-window-btn {
