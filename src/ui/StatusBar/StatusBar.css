@@ -100,3 +100,35 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* « Vérifier le document » : discret quand tout va bien, sable quand des problèmes sont relevés. */
+.sb-check {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #6b6b69;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sb-check:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #d9d9d7;
+}
+
+.sb-check:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sb-check-warn {
+  background: #f7ae37;
+  color: #343334;
+  font-weight: 600;
+}
+
+.sb-check-warn:hover:not(:disabled) {
+  background: #f9bd5f;
+  border-color: #f7ae37;
+}

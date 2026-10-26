@@ -246,6 +246,16 @@ Deux fenêtres **globales** (rien n'est enregistré dans les documents, tout res
 
 ---
 
+## Vérifier et réparer un document
+
+Le bouton **✔ Vérifier** de la barre d'état (devenu **⚠ N problèmes** en sable quand le fichier en contient) ouvre la fenêtre « Vérifier le document ». Elle contrôle le fichier **tel qu'il est sur le disque** :
+
+- zone « page de garde » non refermée (toutes les pages suivantes seraient traitées comme des pages de garde, sans en-tête ni pied de page) ou marqueur de fin orphelin ;
+- réglages de mise en page présents en double, illisibles, ou écrits dans un ancien format abîmé ;
+- saut de section aux options illisibles.
+
+**Réparer** (ou **Enregistrer et réparer** si le document a des modifications non enregistrées) écrit d'abord une copie de l'ancienne version à côté du fichier (`nom.avant-reparation-AAAAMMJJ-HHMM.md`), corrige, puis recharge le document. Les défauts sans risque (zone de garde non refermée) sont de toute façon corrigés automatiquement à l'ouverture.
+
 ## Raccourcis clavier
 
 | Raccourci | Action |

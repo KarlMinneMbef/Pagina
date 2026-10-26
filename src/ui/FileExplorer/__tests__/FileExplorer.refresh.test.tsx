@@ -151,6 +151,8 @@ describe("workspaceStore — rafraîchissement disque robuste", () => {
           content: "# x\n",
           dirty: false,
           layout: {} as never,
+          issues: [],
+          revision: 0,
           missing: true,
         },
       ],

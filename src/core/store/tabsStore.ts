@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import { isEditableDocument } from "../types";
 import { readTextFile, writeTextFile } from "../../persistence/fileService";
+import { checkDocument, repairDocument, backupPathFor, type Problem } from "../documentCheck";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../pageLayout";
 
 /** Un onglet document ouvert : chemin, contenu Markdown courant, mise en
@@ -16,6 +17,13 @@ export interface EditorTab {
   content: string; // dernier contenu markdown sauvegardé (ou chargé) — SANS le commentaire de config (voir pageLayout.ts)
   dirty: boolean;
   layout: PageLayoutSettings;
+  /** Problèmes relevés dans le fichier tel qu'il est SUR LE DISQUE (voir
+   * `documentCheck`) — recalculés à l'ouverture, à l'enregistrement et après
+   * réparation. Sert au badge de la barre d'état. */
+  issues: Problem[];
+  /** Incrémenté quand le contenu est rechargé depuis le disque : fait remonter
+   * l'éditeur (clé du composant), qui ne relit son contenu initial qu'au montage. */
+  revision: number;
   /** Vrai quand le fichier a disparu du disque (rafraîchissement de
    * l'arbre) : l'onglet reste ouvert, marqué « (introuvable) ». */
   missing?: boolean;
@@ -46,6 +54,13 @@ interface TabsState {
   patchLayout: (path: string, patch: Partial<PageLayoutSettings>) => void;
   updateLayout: (path: string, layout: PageLayoutSettings) => void;
   saveTab: (path: string) => Promise<void>;
+  /** Relit le fichier sur le disque (contenu, mise en page, problèmes) et remonte l'éditeur.
+   * Écrase l'état mémoire de l'onglet : à n'appeler que sur un onglet non modifié. */
+  reloadTab: (path: string) => Promise<void>;
+  /** « Vérifier le document » : répare le fichier du disque (copie de sauvegarde écrite
+   * AVANT), puis recharge l'onglet. Un onglet modifié est enregistré d'abord.
+   * `backup` vaut null quand il n'y avait rien à réparer. */
+  repairTabFile: (path: string) => Promise<{ applied: string[]; backup: string | null }>;
   /** "Enregistrer sous" : écrit le contenu actuel de `path` à `newPath`, puis
    * bascule sur un onglet pour `newPath` (contenu/mise en page repris tels
    * quels, `dirty:false` puisqu'on vient de l'écrire) — l'ancien onglet
@@ -96,7 +111,15 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       // n'a pas de nœud de schéma dédié et disparaîtrait silencieusement au
       // premier aller-retour markdown si on le laissait dans `content`.
       const { layout, content } = extractDocumentConfig(raw);
-      const tab: EditorTab = { path, title: titleFromPath(path), content, dirty: false, layout };
+      const tab: EditorTab = {
+        path,
+        title: titleFromPath(path),
+        content,
+        dirty: false,
+        layout,
+        issues: checkDocument(raw),
+        revision: 0,
+      };
       set((s) => ({
         tabs: [...s.tabs, tab],
         activePath: path,
@@ -168,10 +191,46 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     if (content === undefined || !tab) return;
     // Le commentaire de config est réinjecté ICI, juste avant l'écriture
     // disque — jamais porté par l'éditeur (voir pageLayout.ts).
-    await writeTextFile(path, withDocumentConfig(tab.layout, content));
-    set({
-      tabs: tabs.map((t) => (t.path === path ? { ...t, content, dirty: false } : t)),
-    });
+    const raw = withDocumentConfig(tab.layout, content);
+    await writeTextFile(path, raw);
+    const issues = checkDocument(raw);
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: false, issues } : t)),
+    }));
+  },
+
+  reloadTab: async (path: string) => {
+    const tab = get().tabs.find((t) => t.path === path);
+    if (!tab) return;
+    const raw = await readTextFile(path);
+    const { layout, content } = extractDocumentConfig(raw);
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.path === path
+          ? { ...t, content, layout, dirty: false, missing: false, issues: checkDocument(raw), revision: t.revision + 1 }
+          : t
+      ),
+      pendingContent: { ...s.pendingContent, [path]: content },
+    }));
+  },
+
+  repairTabFile: async (path: string) => {
+    const tab = get().tabs.find((t) => t.path === path);
+    if (!tab) throw new Error("Document introuvable.");
+    const raw = await readTextFile(path);
+    const { applied } = repairDocument(raw);
+    if (applied.length === 0) return { applied, backup: null };
+    // La copie d'abord, de l'état du disque tel qu'il est : si la suite échoue, rien n'est perdu.
+    const backup = backupPathFor(path);
+    await writeTextFile(backup, raw);
+    // Un onglet modifié est enregistré d'abord (le bouton le dit) : l'éditeur normalise déjà
+    // une partie des défauts (zone de garde refermée, commentaires en double…), et la
+    // réparation du disque ne doit pas écraser les modifications en cours.
+    if (tab.dirty) await get().saveTab(path);
+    const rest = repairDocument(await readTextFile(path));
+    if (rest.applied.length > 0) await writeTextFile(path, rest.text);
+    await get().reloadTab(path);
+    return { applied, backup };
   },
 
   saveTabAs: async (path: string, newPath: string) => {
@@ -180,7 +239,15 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     const tab = tabs.find((t) => t.path === path);
     if (content === undefined || !tab) return;
     await writeTextFile(newPath, withDocumentConfig(tab.layout, content));
-    const newTab: EditorTab = { path: newPath, title: titleFromPath(newPath), content, dirty: false, layout: tab.layout };
+    const newTab: EditorTab = {
+      path: newPath,
+      title: titleFromPath(newPath),
+      content,
+      dirty: false,
+      layout: tab.layout,
+      issues: [],
+      revision: 0,
+    };
     set((s) => ({
       tabs: [...s.tabs.filter((t) => t.path !== newPath), newTab],
       pendingContent: { ...s.pendingContent, [newPath]: content },

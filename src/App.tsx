@@ -33,6 +33,7 @@ import { addUserCoverTemplate } from "./core/coverTemplates";
 import { CoverPagePanel } from "./ui/Cover/CoverPagePanel";
 import { HeadingStylesPanel } from "./ui/HeadingStyles/HeadingStylesPanel";
 import { SettingsDialog } from "./ui/Settings/SettingsDialog";
+import { DocumentCheckDialog } from "./ui/DocumentCheck/DocumentCheckDialog";
 import { UserDialog } from "./ui/User/UserDialog";
 import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
 import { resolvePageSizeMm } from "./core/pageLayout";
@@ -100,6 +101,7 @@ function App() {
   // Fenêtre « Paramétrage » (préférences globales, roadmap 1.4) —
   // indépendante des documents, peut s'ouvrir sans onglet actif.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [documentCheckOpen, setDocumentCheckOpen] = useState(false);
   // Fenêtre « Utilisateur » (prénom + nom, roadmap 1.5 V1) — idem.
   const [userOpen, setUserOpen] = useState(false);
   // Panneau latéral contextuel de mise en forme de tableau (voir
@@ -579,7 +581,7 @@ function App() {
                   style={{ display: viewMode === "pages" ? "contents" : "none" }}
                 >
                   <MarkdownEditor
-                    key={activeTab.path}
+                    key={`${activeTab.path}#${activeTab.revision}`}
                     ref={editorRef}
                     initialContent={pendingContent[activeTab.path] ?? activeTab.content}
                     onChange={(md) => updateContent(activeTab.path, md)}
@@ -618,6 +620,8 @@ function App() {
             disabled={!activeTab}
             zoom={zoom}
             onZoomChange={(z) => setZoom(clampZoom(z))}
+            issueCount={activeTab?.issues.length ?? 0}
+            onOpenCheck={() => setDocumentCheckOpen(true)}
           />
         </div>
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
@@ -817,6 +821,9 @@ function App() {
         />
       )}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {documentCheckOpen && activeTab && (
+        <DocumentCheckDialog path={activeTab.path} onClose={() => setDocumentCheckOpen(false)} />
+      )}
       {sectionBreakDialogOpen && activeTab && (
         <SectionBreakDialog
           onApply={({ title, restart }) => editorRef.current?.insertSectionBreak(title, restart)}

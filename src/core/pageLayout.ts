@@ -645,7 +645,7 @@ export function extractDocumentConfig(markdown: string): { layout: PageLayoutSet
  * comme du texte visible. On cherche le premier `-->` suivant qui donne un
  * JSON valide. Retourne `null` si le JSON lu tel quel est déjà valide.
  */
-function repairTruncatedConfig(content: string, firstPayload: string): { full: string; payload: string } | null {
+export function repairTruncatedConfig(content: string, firstPayload: string): { full: string; payload: string } | null {
   try {
     JSON.parse(firstPayload);
     return null;

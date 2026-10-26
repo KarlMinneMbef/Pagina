@@ -18,7 +18,12 @@ export function StatusBar({
   disabled,
   zoom,
   onZoomChange,
+  issueCount,
+  onOpenCheck,
 }: {
+  /** Problèmes relevés dans le fichier du disque (voir core/documentCheck). */
+  issueCount: number;
+  onOpenCheck: () => void;
   words: number;
   currentPage: number;
   pageCount: number;
@@ -35,6 +40,19 @@ export function StatusBar({
       </span>
       <span className="sb-sep" />
       <span className="sb-item">{words} mot{words !== 1 ? "s" : ""}</span>
+      <span className="sb-sep" />
+      <button
+        className={`sb-check${issueCount > 0 ? " sb-check-warn" : ""}`}
+        disabled={disabled}
+        onClick={onOpenCheck}
+        title={
+          issueCount > 0
+            ? "Des problèmes ont été relevés dans le fichier — cliquer pour les voir et les réparer"
+            : "Vérifier le fichier du document (aucun problème connu)"
+        }
+      >
+        {issueCount > 0 ? `⚠ ${issueCount} problème${issueCount > 1 ? "s" : ""}` : "✔ Vérifier"}
+      </button>
       <span className="sb-spacer" />
       {viewMode === "pages" && (
         <div className="sb-zoom">
