@@ -75,3 +75,38 @@
 .xmd-preview-content .xmd-page-start-label {
   display: none;
 }
+
+/* Cases à cocher : sans les puces de liste, case et texte sur la même ligne (comme dans l'éditeur). */
+.xmd-preview-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.xmd-preview-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.xmd-preview-content ul[data-type="taskList"] li > label {
+  margin-top: 3px;
+}
+
+.xmd-preview-content ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+.xmd-preview-content ul[data-type="taskList"] li > div > p {
+  margin: 0;
+}
+
+.xmd-preview-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: #9a9a9a;
+  text-decoration: line-through;
+}
+
+/* Champ de document encore vide : son libellé en grisé. */
+.xmd-preview-empty-field {
+  color: #9a9a9a;
+  font-style: italic;
+}

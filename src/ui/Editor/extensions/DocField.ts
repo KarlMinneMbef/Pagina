@@ -84,7 +84,7 @@ export function refreshAllDocFields(): void {
  *  en-têtes/pieds ({{title}}, {{author}}, champs personnalisés…) ; une
  *  variable inconnue reste affichée telle quelle — repérable, comme dans
  *  les en-têtes/pieds. */
-function renderFieldValue(name: string): string {
+export function renderFieldValue(name: string): string {
   const ctx = docFieldContextProvider?.() ?? null;
   if (!ctx) return `{{${name}}}`;
   return resolveHeaderFooterText(`{{${name}}}`, ctx);
