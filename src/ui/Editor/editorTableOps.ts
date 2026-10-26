@@ -166,6 +166,81 @@ export function applyBorderPreset(editor: Editor, preset: "all" | "outside" | "i
   editor.view.dispatch(tr);
 }
 
+/** État RÉEL d'une ligne de grille de la sélection : « on » = bordure visible sur toute la ligne,
+ *  « off » = aucune, « mixed » = présente sur une partie seulement. `css` = trait posé explicitement
+ *  (ex. « 2px dashed #ff0000 »), `null` = bordure PAR DÉFAUT du tableau (grise, 1px). */
+export interface GridLineInfo {
+  state: "on" | "off" | "mixed";
+  css: string | null;
+}
+
+/** `none`/`hidden` posés sur une cellule = « sans bordure » explicite. */
+function isNoBorder(v: unknown): boolean {
+  return typeof v === "string" && /^\s*(none|hidden)\b/i.test(v);
+}
+
+type SideKind = { kind: "none" } | { kind: "default" } | { kind: "css"; css: string };
+
+function sideKind(v: unknown): SideKind {
+  if (v === null || v === undefined || v === "") return { kind: "default" };
+  if (isNoBorder(v)) return { kind: "none" };
+  return { kind: "css", css: String(v) };
+}
+
+/** Bordure visible entre deux cellules adjacentes (modèle `border-collapse` : un trait explicite
+ *  l'emporte, puis la bordure par défaut, « sans bordure » perd contre tout le reste). */
+function collapseSides(a: SideKind, b: SideKind): SideKind {
+  if (a.kind === "css") return a;
+  if (b.kind === "css") return b;
+  if (a.kind === "default" || b.kind === "default") return { kind: "default" };
+  return { kind: "none" };
+}
+
+/** Lit dans le DOCUMENT l'état des lignes de grille de la sélection courante (4 côtés + lignes
+ *  internes), clé `row-<i>` / `col-<j>` comme le schéma du panneau Tableau. Le schéma le reflète : avant
+ *  (2026-10-26) il repartait vierge à chaque sélection et ne montrait jamais l'état réel. */
+export function readGridBorderState(editor: Editor): Map<string, GridLineInfo> | null {
+  const cellSel = resolveCellSelection(editor);
+  if (!cellSel) return null;
+  const table = cellSel.$anchorCell.node(-1);
+  const tableStart = cellSel.$anchorCell.start(-1);
+  const map = TableMap.get(table);
+  const rect = map.rectBetween(cellSel.$anchorCell.pos - tableStart, cellSel.$headCell.pos - tableStart);
+  const attrAt = (row: number, col: number, side: BorderSide): unknown => table.nodeAt(map.map[row * map.width + col])?.attrs[side];
+  const rows = rect.bottom - rect.top;
+  const cols = rect.right - rect.left;
+
+  const summarize = (segments: SideKind[]): GridLineInfo => {
+    const visible = segments.filter((k) => k.kind !== "none");
+    const explicit = segments.find((k): k is { kind: "css"; css: string } => k.kind === "css");
+    const state = visible.length === segments.length ? "on" : visible.length === 0 ? "off" : "mixed";
+    return { state, css: explicit ? explicit.css : null };
+  };
+
+  const out = new Map<string, GridLineInfo>();
+  for (let i = 0; i <= rows; i++) {
+    const segments: SideKind[] = [];
+    for (let c = rect.left; c < rect.right; c++) {
+      const r = rect.top + i;
+      if (i === 0) segments.push(sideKind(attrAt(rect.top, c, "borderTop")));
+      else if (i === rows) segments.push(sideKind(attrAt(rect.bottom - 1, c, "borderBottom")));
+      else segments.push(collapseSides(sideKind(attrAt(r - 1, c, "borderBottom")), sideKind(attrAt(r, c, "borderTop"))));
+    }
+    out.set(`row-${i}`, summarize(segments));
+  }
+  for (let j = 0; j <= cols; j++) {
+    const segments: SideKind[] = [];
+    for (let r = rect.top; r < rect.bottom; r++) {
+      const c = rect.left + j;
+      if (j === 0) segments.push(sideKind(attrAt(r, rect.left, "borderLeft")));
+      else if (j === cols) segments.push(sideKind(attrAt(r, rect.right - 1, "borderRight")));
+      else segments.push(collapseSides(sideKind(attrAt(r, c - 1, "borderRight")), sideKind(attrAt(r, c, "borderLeft"))));
+    }
+    out.set(`col-${j}`, summarize(segments));
+  }
+  return out;
+}
+
 /** Dimensions (en cellules) du rectangle actuellement sélectionné dans un
  * tableau — `{rows:1, cols:1}` pour un simple curseur dans une cellule
  * (toujours au moins 1×1), `null` hors tableau. Pilote le schéma de

@@ -14,7 +14,7 @@
  */
 import { useEffect, useState } from "react";
 import type { ToolbarActions } from "../Toolbar/Toolbar";
-import type { GridLine } from "../Editor/editorTableOps";
+import type { GridLine, GridLineInfo } from "../Editor/editorTableOps";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import {
   IconClearCell,
@@ -41,18 +41,21 @@ import { keepEditorFocus } from "../focusGuard";
  * pouvoir vivre dans un `Set<string>` React state. */
 const lineKey = (l: GridLine) => `${l.axis}-${l.index}`;
 
-/** Reconstruit la liste des `GridLine` actives d'un `Set` de clés, bornée à
- * la forme courante de la sélection (rows+1 lignes horizontales,
- * cols+1 verticales). */
-function linesOfSet(set: Set<string>, shape: { rows: number; cols: number }): GridLine[] {
-  const out: GridLine[] = [];
-  for (let i = 0; i <= shape.rows; i++) {
-    if (set.has(lineKey({ axis: "row", index: i }))) out.push({ axis: "row", index: i });
-  }
-  for (let j = 0; j <= shape.cols; j++) {
-    if (set.has(lineKey({ axis: "col", index: j }))) out.push({ axis: "col", index: j });
-  }
-  return out;
+/** Clé `row-3` / `col-0` -> ligne de grille. */
+function keyToLine(key: string): GridLine {
+  const [axis, index] = key.split("-");
+  return { axis: axis === "col" ? "col" : "row", index: Number(index) };
+}
+
+/** Décompose un trait CSS posé sur une cellule (« 2px dashed #ff0000 », « 1px solid rgb(1, 2, 3) »)
+ *  en style / épaisseur (1, 2 ou 3 px) / couleur pour synchroniser les réglages du panneau. */
+function parseBorderCss(css: string): { style: string; width: string; color: string } | null {
+  const m = /^\s*(\S+)\s+(\S+)\s+(.+?)\s*$/.exec(css);
+  if (!m) return null;
+  const px = parseFloat(m[1]);
+  const style = ["solid", "dashed", "dotted", "double"].includes(m[2]) ? m[2] : "solid";
+  const width = px >= 2.5 ? "3px" : px >= 1.5 ? "2px" : "1px";
+  return { style, width, color: m[3] };
 }
 
 const BORDER_STYLES = [
@@ -94,55 +97,44 @@ export function TablePropertiesPanel({
 }) {
   const inactive = disabled || actions === null;
   const effectiveShape = shape ?? { rows: 1, cols: 1 };
-  /** Lignes de grille actives dans le schéma — en ÉDITION DIRECTE : chaque
-   * clic ajoute/retire immédiatement la bordure correspondante dans le
-   * tableau (plus de bouton « Appliquer »). Le schéma reflète donc les
-   * bascules de CETTE session, pas une lecture de l'état du document. */
-  const [lines, setLines] = useState<Set<string>>(() => new Set());
+  // Le schéma LIT les bordures réelles de la sélection (document) à chaque rendu : le panneau est redessiné à
+  // chaque changement de sélection ou de contenu. Avant (2026-10-26) il repartait vierge et ne reflétait que
+  // les clics de la session — jamais l'état du tableau.
+  const gridState = (!inactive ? actions?.getGridBorderState?.() : null) ?? new Map<string, GridLineInfo>();
   const [style, setStyle] = useState("solid");
   const [width, setWidth] = useState("1px");
   const [color, setColor] = useState("#343334");
   const borderCss = `${width} ${style} ${color}`;
 
-  // La forme de la sélection peut changer PENDANT que le panneau reste
-  // ouvert (glisser-sélectionner plusieurs cellules sans jamais ressortir
-  // du tableau) — on repart d'un schéma vierge cohérent avec la nouvelle
-  // forme plutôt que de garder d'anciens index qui n'auraient plus de sens.
+  // Le pinceau (Style/Épaisseur/Couleur) suit le trait réellement posé sur la sélection.
+  const brushSource = [...gridState.values()].find((i) => i.state !== "off" && i.css)?.css ?? null;
   useEffect(() => {
-    setLines(new Set());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveShape.rows, effectiveShape.cols]);
+    const parsed = brushSource ? parseBorderCss(brushSource) : null;
+    if (!parsed) return;
+    setStyle(parsed.style);
+    setWidth(parsed.width);
+    setColor(parsed.color);
+  }, [brushSource]);
 
-  /** Clic sur une ligne du schéma : application IMMÉDIATE au tableau —
-   * ligne absente → ajoute la bordure avec le pinceau courant (style/
-   * épaisseur/couleur), ligne active → la retire. */
+  /** Lignes actuellement visibles dans la sélection. */
+  const onLines = (): GridLine[] =>
+    [...gridState.entries()].filter(([, i]) => i.state === "on").map(([k]) => keyToLine(k));
+
+  /** Clic sur une ligne du schéma : application IMMÉDIATE au tableau — ligne visible → « sans bordure »
+   * (explicite : la retirer ferait revenir la bordure par défaut), absente ou partielle → pose le trait. */
   const toggleLine = (line: GridLine) => {
-    const key = lineKey(line);
-    const active = lines.has(key);
-    if (active) {
-      actions?.setGridLineBorder([line], null);
-    } else {
-      actions?.setGridLineBorder([line], borderCss);
-    }
-    setLines((prev) => {
-      const next = new Set(prev);
-      if (active) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    const info = gridState.get(lineKey(line));
+    actions?.setGridLineBorder([line], info?.state === "on" ? "none" : borderCss);
   };
 
-  /** Changement de Style/Épaisseur/Couleur : re-application IMMÉDIATE aux
-   * lignes actuellement actives du schéma (édition directe, plus de
-   * bouton « Appliquer ») — et mise à jour du pinceau pour les prochains
-   * clics s'il n'y a pas de ligne active. */
-  useEffect(() => {
-    if (lines.size === 0 || !actions || inactive) return;
-    actions.setGridLineBorder(linesOfSet(lines, effectiveShape), borderCss);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, width, color]);
-
-
+  /** Changement de Style/Épaisseur/Couleur : le nouveau trait est appliqué aux lignes visibles. */
+  const applyBrush = (nextStyle: string, nextWidth: string, nextColor: string) => {
+    setStyle(nextStyle);
+    setWidth(nextWidth);
+    setColor(nextColor);
+    const lines = onLines();
+    if (lines.length && actions && !inactive) actions.setGridLineBorder(lines, `${nextWidth} ${nextStyle} ${nextColor}`);
+  };
 
   return (
     <div className="tp-panel">
@@ -304,7 +296,7 @@ export function TablePropertiesPanel({
                 className="tp-preset-btn"
                 title={title}
                 disabled={inactive}
-                onClick={() => actions?.setCellBorderPreset(key, key === "none" ? null : borderCss)}
+                onClick={() => actions?.setCellBorderPreset(key, key === "none" ? "none" : borderCss)}
               >
                 {label}
               </button>
@@ -313,17 +305,14 @@ export function TablePropertiesPanel({
 
           <BorderDiagram
             shape={effectiveShape}
-            lines={lines}
-            color={color}
-            style={style}
-            width={width}
+            states={gridState}
             onToggle={toggleLine}
             disabled={inactive}
           />
 
           <label className="tp-field">
             Style
-            <select value={style} onChange={(e) => setStyle(e.target.value)}>
+            <select value={style} onChange={(e) => applyBrush(e.target.value, width, color)}>
               {BORDER_STYLES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -333,7 +322,7 @@ export function TablePropertiesPanel({
           </label>
           <label className="tp-field">
             Épaisseur
-            <select value={width} onChange={(e) => setWidth(e.target.value)}>
+            <select value={width} onChange={(e) => applyBrush(style, e.target.value, color)}>
               {BORDER_WIDTHS.map((w) => (
                 <option key={w.value} value={w.value}>
                   {w.label}
@@ -348,7 +337,7 @@ export function TablePropertiesPanel({
               title="Couleur de bordure"
               triggerClassName="tp-field-color-trigger"
               trigger={<span className="tp-field-color-swatch" style={{ background: color }} />}
-              onChange={setColor}
+              onChange={(c) => applyBrush(style, width, c)}
             />
           </div>
 
@@ -404,18 +393,13 @@ function ActionButton({
  * natif). */
 function BorderDiagram({
   shape,
-  lines,
-  color,
-  style,
-  width,
+  states,
   onToggle,
   disabled,
 }: {
   shape: { rows: number; cols: number };
-  lines: Set<string>;
-  color: string;
-  style: string;
-  width: string;
+  /** État RÉEL de chaque ligne (voir `readGridBorderState`). */
+  states: Map<string, GridLineInfo>;
   onToggle: (line: GridLine) => void;
   disabled?: boolean;
 }) {
@@ -427,23 +411,33 @@ function BorderDiagram({
   const cellW = (x2 - x1) / cols;
   const cellH = (y2 - y1) / rows;
 
-  const strokeWidth = width === "1px" ? 1.5 : width === "2px" ? 2.5 : 3.5;
-  const dashArray = style === "dashed" ? "6 3" : style === "dotted" ? "1.5 3" : undefined;
-  const isDouble = style === "double";
-
-  const inactiveColor = "#d0d3d4";
+  const inactiveColor = "#d9d9d7";
+  const widthToStroke = (w: string) => (w === "1px" ? 1.5 : w === "2px" ? 2.5 : 3.5);
 
   /** Une ligne de grille = une ligne invisible épaisse (cible de clic
    * confortable, même si le trait visible est fin) + la ligne visible
    * par-dessus. Le style "double" ajoute un second trait parallèle
    * légèrement décalé. */
   const renderLine = (line: GridLine, x1e: number, y1e: number, x2e: number, y2e: number) => {
-    const active = lines.has(lineKey(line));
-    const stroke = active ? color : inactiveColor;
-    const sw = active ? strokeWidth : 1;
-    const dash = active ? dashArray : undefined;
+    const info = states.get(lineKey(line));
+    const state = info?.state ?? "off";
+    // Trait réellement posé sur la ligne (sinon bordure par défaut du tableau : grise, 1 px).
+    const own = info?.css ? parseBorderCss(info.css) : null;
+    const isDouble = state === "on" && own?.style === "double";
+    let stroke = inactiveColor;
+    let sw = 1;
+    let dash: string | undefined = "1.5 3"; // absente : pointillé très clair
+    if (state === "on") {
+      stroke = own ? own.color : "#8a8a88";
+      sw = own ? widthToStroke(own.width) : 1.2;
+      dash = own ? (own.style === "dashed" ? "6 3" : own.style === "dotted" ? "1.5 3" : undefined) : undefined;
+    } else if (state === "mixed") {
+      stroke = "#f7ae37"; // sable : présente sur une partie de la ligne seulement
+      sw = 1.8;
+      dash = "4 2";
+    }
     const horizontal = y1e === y2e;
-    const offset = active && isDouble ? 1.6 : 0;
+    const offset = isDouble ? 1.6 : 0;
 
     const isOuter = line.axis === "row" ? line.index === 0 || line.index === rows : line.index === 0 || line.index === cols;
     const positionLabel = isOuter
@@ -459,7 +453,7 @@ function BorderDiagram({
         onMouseDown={keepEditorFocus}
         onClick={() => !disabled && onToggle(line)}
       >
-        <title>{`${positionLabel} ${active ? "(bordure posée — cliquer pour la retirer du tableau)" : "(absente — cliquer pour la poser dans le tableau)"}`}</title>
+        <title>{`${positionLabel} ${state === "on" ? "(bordure visible — cliquer pour la supprimer)" : state === "mixed" ? "(bordure sur une partie seulement — cliquer pour la poser partout)" : "(sans bordure — cliquer pour la poser)"}`}</title>
         <line x1={x1e} y1={y1e} x2={x2e} y2={y2e} stroke="transparent" strokeWidth={10} className="tp-bd-hit" />
         {offset > 0 ? (
           <>

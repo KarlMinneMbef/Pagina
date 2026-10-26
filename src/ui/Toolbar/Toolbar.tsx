@@ -27,7 +27,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
-import type { GridLine } from "../Editor/editorTableOps";
+import type { GridLine, GridLineInfo } from "../Editor/editorTableOps";
 import { FONT_SIZE_STEPS } from "../Editor/editorUtils";
 import { TableSizePicker } from "./TableSizePicker";
 import { useColorMemory } from "../colorMemory";
@@ -273,6 +273,8 @@ export interface ToolbarActions {
   setCellBorder: (sides: ("top" | "right" | "bottom" | "left")[], css: string | null) => void;
   setCellBorderPreset: (preset: "all" | "outside" | "inside" | "none", css: string | null) => void;
   setGridLineBorder: (lines: GridLine[], css: string | null) => void;
+  /** État RÉEL des lignes de grille de la sélection (schéma du panneau Tableau), `null` hors tableau. */
+  getGridBorderState: () => Map<string, GridLineInfo> | null;
   setCellVerticalAlign: (align: "top" | "middle" | "bottom") => void;
 }
 

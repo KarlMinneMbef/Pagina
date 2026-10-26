@@ -122,6 +122,8 @@ import {
   applyBorderPreset,
   getSelectionShape,
   setGridLineBorder,
+  readGridBorderState,
+  type GridLineInfo,
   applyColumnWidth,
   applyRowHeight,
   type GridLine,
@@ -251,6 +253,8 @@ export interface MarkdownEditorHandle {
    * lignes explicitement cliquées (ex. une seule ligne interne parmi
    * plusieurs), pas "tout l'intérieur" d'un coup. */
   setGridLineBorder: (lines: GridLine[], css: string | null) => void;
+  /** État réel des lignes de grille de la sélection (voir `readGridBorderState`). */
+  getGridBorderState: () => Map<string, GridLineInfo> | null;
   setCellVerticalAlign: (align: "top" | "middle" | "bottom") => void;
   insertHorizontalRule: () => void;
   insertPageBreak: () => void;
@@ -968,7 +972,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       setGridLineBorder: (lines, css) => {
         const ed = cmd();
         if (!ed) return;
-        setGridLineBorder(editor, lines, css);
+        setGridLineBorder(ed, lines, css);
+      },
+      getGridBorderState: () => {
+        const ed = cmd();
+        return ed ? readGridBorderState(ed) : null;
       },
       insertHorizontalRule: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).setHorizontalRule().run(),
       insertPageBreak: () => cmd()?.chain().focus(undefined, { scrollIntoView: false }).insertContent({ type: "pageBreak" }).run(),
@@ -2512,6 +2520,18 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // ancre (comme un glisser-sélection, sans glisser).
         if (e.shiftKey && e.detail === 1) {
           const { anchor } = editor.state.selection;
+          // Deux cellules différentes d'un même tableau : vraie CellSelection (comme le glisser) — un
+          // simple setTextSelection est normalisé par ProseMirror et ne sélectionne qu'une cellule.
+          const anchorCell = findCellPos(editor.state.doc, anchor);
+          const headCell = findCellPos(editor.state.doc, pos);
+          if (anchorCell !== null && headCell !== null && anchorCell !== headCell) {
+            try {
+              editor.view.dispatch(editor.state.tr.setSelection(CellSelection.create(editor.state.doc, anchorCell, headCell)));
+              return;
+            } catch {
+              /* cellules de tableaux différents : repli texte ci-dessous */
+            }
+          }
           editor.commands.setTextSelection({ from: anchor, to: pos });
           return;
         }
