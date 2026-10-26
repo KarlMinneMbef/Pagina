@@ -86,6 +86,7 @@ import {
   ROW_RESIZE_HANDLE_CLASS,
   ROW_RESIZE_TABLE_POS_ATTR,
   ROW_RESIZE_ROW_INDEX_ATTR,
+  SRC_POS_ATTR,
 } from "./pagination/paintPages";
 import { HorizontalRuler, VerticalRuler, PAGE_GAP_PX } from "./pagination/Ruler";
 import type { MathfieldElement } from "mathlive";
@@ -2186,10 +2187,51 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         dragAutoScrollRaf = requestAnimationFrame(dragAutoScrollTick);
       };
 
+      /** Case à cocher d'une liste de tâches sur la page PEINTE (copie du document) : son
+       *  état ne vit que dans le document ProseMirror — le basculer dans la copie ne
+       *  changerait que l'image, perdue au prochain redessin et jamais enregistrée
+       *  (bug du 2026-10-26). On retrouve l'item du document et on change son attribut. */
+      const taskCheckboxOf = (target: EventTarget | null): HTMLElement | null =>
+        (target as HTMLElement | null)?.closest?.<HTMLElement>('li[data-checked] > label input[type="checkbox"]') ?? null;
+
+      const toggleTaskItemFor = (li: HTMLElement) => {
+        const doc = editor.state.doc;
+        let itemPos: number | null = null;
+        // Items des listes à plat : le <li> peint porte la position de son item.
+        const attr = li.getAttribute(SRC_POS_ATTR);
+        if (attr !== null && doc.nodeAt(Number(attr))?.type.name === "taskItem") itemPos = Number(attr);
+        if (itemPos === null) {
+          // Liste dans une cellule de tableau : pas de position propre — on résout un point
+          // juste à droite de la case (sur le texte de l'item, même vide) puis on remonte à l'item.
+          const r = (li.querySelector("label") ?? li).getBoundingClientRect();
+          const pos = posFromCoords(r.right + 10, r.top + r.height / 2);
+          if (pos !== null) {
+            const $p = doc.resolve(Math.min(pos, doc.content.size));
+            for (let d = $p.depth; d > 0; d--) {
+              if ($p.node(d).type.name === "taskItem") {
+                itemPos = $p.before(d);
+                break;
+              }
+            }
+          }
+        }
+        if (itemPos === null) return;
+        const node = doc.nodeAt(itemPos);
+        if (!node) return;
+        editor.view.dispatch(editor.state.tr.setNodeMarkup(itemPos, undefined, { ...node.attrs, checked: !node.attrs.checked }));
+      };
+
       const onMouseDown = (e: MouseEvent) => {
         // Clic droit : ne touche ni la sélection ni le glisser — le menu
         // contextuel (`onContextMenu`) décide lui-même quoi sélectionner.
         if (e.button !== 0) return;
+        const taskBox = taskCheckboxOf(e.target);
+        if (taskBox) {
+          e.preventDefault();
+          const li = taskBox.closest<HTMLElement>("li[data-checked]");
+          if (li && editor.isEditable) toggleTaskItemFor(li);
+          return;
+        }
         // Poignée de redimensionnement de colonne (voir paintPages.ts) —
         // vérifiée en tout premier : une poignée peut visuellement se
         // trouver à l'intérieur d'un tableau d'en-tête/pied de page, donc
@@ -2532,6 +2574,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         if ((e.target as HTMLElement)?.closest("a")) {
           e.preventDefault();
         }
+        // Le basculement natif de la case de la copie peinte est annulé : l'état vient du document.
+        if (taskCheckboxOf(e.target)) e.preventDefault();
       };
 
       // Menu contextuel clic-droit (voir `tableContextMenu`/`TableContextMenu`

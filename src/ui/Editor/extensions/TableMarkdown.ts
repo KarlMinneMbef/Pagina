@@ -57,6 +57,19 @@ function childNodes(node: any): any[] {
   return nodes;
 }
 
+/** Une cellule GFM ne peut contenir QUE du texte en ligne : exactement un paragraphe, sans
+ *  retour à la ligne forcé. Tout autre contenu (case à cocher, liste, titre, bloc de code,
+ *  citation, plusieurs paragraphes) serait écrit en texte seul — donc perdu, dont l'état
+ *  coché d'une case sans texte (bug du 2026-10-26) : il impose le repli HTML. */
+function isSimpleCell(cell: any): boolean {
+  if (cell.childCount !== 1 || cell.firstChild.type.name !== "paragraph") return false;
+  let hardBreak = false;
+  cell.firstChild.forEach((inline: any) => {
+    if (inline.type.name === "hardBreak") hardBreak = true;
+  });
+  return !hardBreak;
+}
+
 function isMarkdownSerializable(node: any): boolean {
   const rows = childNodes(node);
   const firstRow = rows[0];
@@ -67,7 +80,7 @@ function isMarkdownSerializable(node: any): boolean {
   }
   if (
     childNodes(firstRow).some(
-      (cell) => cell.type.name !== "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || cell.childCount > 1,
+      (cell) => cell.type.name !== "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || !isSimpleCell(cell),
     )
   ) {
     return false;
@@ -75,7 +88,7 @@ function isMarkdownSerializable(node: any): boolean {
   if (
     bodyRows.some((row) =>
       childNodes(row).some(
-        (cell) => cell.type.name === "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || cell.childCount > 1,
+        (cell) => cell.type.name === "tableHeader" || hasSpan(cell) || hasAdvancedStyle(cell) || !isSimpleCell(cell),
       ),
     )
   ) {
