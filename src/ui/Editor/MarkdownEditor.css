@@ -1253,3 +1253,12 @@ math-virtual-keyboard {
   font-style: italic;
   color: #75766f;
 }
+
+/* --- Images (format .xmd) : jamais plus grandes que la zone de texte (largeur ET hauteur d'une page) ---------------------- */
+.xmd-prosemirror img {
+  max-width: 100%;
+  max-height: calc(var(--xmd-page-height, 297mm) - var(--xmd-margin-top, 25mm) - var(--xmd-margin-bottom, 25mm));
+  height: auto;
+  object-fit: contain;
+  vertical-align: bottom;
+}

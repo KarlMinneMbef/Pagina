@@ -5,7 +5,7 @@
 import type { Extensions } from "@tiptap/core";
 import { common, createLowlight } from "lowlight";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import { ImageAsset } from "./extensions/ImageAsset";
 import { TableMarkdown as Table } from "./extensions/TableMarkdown";
 import { TableRowStyled as TableRow } from "./extensions/TableRowStyle";
 import { TableCellStyled as TableCell, TableHeaderStyled as TableHeader } from "./extensions/TableCellStyle";
@@ -57,7 +57,7 @@ export function buildEditorExtensions({ onSpellChanged }: { onSpellChanged: () =
     }),
     CodeBlockLowlight.configure({ lowlight }),
     ParagraphMarkdown,
-    Image,
+    ImageAsset,
     Table.configure({ resizable: true }),
     TableRow,
     TableHeader,

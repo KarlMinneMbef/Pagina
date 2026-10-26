@@ -18,6 +18,7 @@ import { resolveClickPosition, findClonedBlock } from "../pagination/resolveClic
 import { findCellPos, applyColumnWidth, applyRowHeight } from "../editorTableOps";
 import { openDocFieldEditor } from "../docFieldEdit";
 import type { EditorRefs } from "./editorRefs";
+import { imageFilesFromTransfer, insertImageFiles, imagePosOfClone } from "../imageInsert";
 
 /** État du menu contextuel (clic droit) : position écran, dans un tableau ou non, mot mal orthographié sous le clic. */
 export interface TableContextMenuState {
@@ -34,7 +35,7 @@ export function useCanvasMouse({ editor, readOnly, setTableContextMenu, refs }: 
   setTableContextMenu: Dispatch<SetStateAction<TableContextMenuState | null>>;
   refs: EditorRefs;
 }) {
-  const { canvasRef, zoomRef, layoutRef, onLayoutChangeRef, startHeaderFooterEditRef, startMathEditRef, cloneIndexRef } = refs;
+  const { canvasRef, zoomRef, layoutRef, onLayoutChangeRef, startHeaderFooterEditRef, startMathEditRef, cloneIndexRef, addImageRef } = refs;
 
   // Clics sur la couche peinte : traduits en position réelle dans
   // l'éditeur invisible (voir resolveClickPosition.ts), qui reprend le
@@ -259,6 +260,17 @@ export function useCanvasMouse({ editor, readOnly, setTableContextMenu, refs }: 
       // Clic droit : ne touche ni la sélection ni le glisser — le menu
       // contextuel (`onContextMenu`) décide lui-même quoi sélectionner.
       if (e.button !== 0) return;
+      // Clic sur une IMAGE peinte : l'image est sélectionnée (comme un objet) — Suppr la retire, le panneau Image s'ouvre.
+      const imgEl = (e.target as HTMLElement | null)?.closest?.("img");
+      if (imgEl && editor.isEditable) {
+        const imgPos = imagePosOfClone(editor.state.doc, imgEl as HTMLImageElement);
+        if (imgPos !== null) {
+          e.preventDefault();
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          editor.commands.setNodeSelection(imgPos);
+          return;
+        }
+      }
       const taskBox = taskCheckboxOf(e.target);
       if (taskBox) {
         e.preventDefault();
@@ -677,12 +689,26 @@ export function useCanvasMouse({ editor, readOnly, setTableContextMenu, refs }: 
       }
     };
 
+    // Images glissées depuis l'Explorateur Windows : insérées à la sélection courante (l'éditeur invisible ne reçoit aucun dépôt).
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files");
+    const onDragOver = (e: DragEvent) => {
+      if (!readOnly && hasFiles(e)) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      if (readOnly || !hasFiles(e)) return;
+      e.preventDefault();
+      void imageFilesFromTransfer(e.dataTransfer).then((files) => insertImageFiles(editor.view, files, addImageRef.current));
+    };
+    canvas.addEventListener("dragover", onDragOver);
+    canvas.addEventListener("drop", onDrop);
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("click", onClick);
     canvas.addEventListener("contextmenu", onContextMenu);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     return () => {
+      canvas.removeEventListener("dragover", onDragOver);
+      canvas.removeEventListener("drop", onDrop);
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("click", onClick);
       canvas.removeEventListener("contextmenu", onContextMenu);

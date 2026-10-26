@@ -788,3 +788,14 @@ export function IconKeyboard({ size, className }: IconProps) {
     </Svg24>
   );
 }
+
+/** Icône « Image » (cadre, soleil, montagne). */
+export function IconImage({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <rect x="3.5" y="5" width="17" height="14" rx="1.5" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="M4 17l5-4.5 3.5 3 3-2.5 5 4" />
+    </Svg24>
+  );
+}

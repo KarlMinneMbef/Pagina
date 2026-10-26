@@ -253,6 +253,8 @@ export interface MarkdownEditorHandle {
   /** Pose un signet (ancre invisible `<a id="…">`) à la position du
    * curseur — cible des renvois. Voir `Bookmark.ts`. */
   insertBookmark: () => void;
+  /** Insère des images choisies dans une boîte de fichier (voir `imageInsert.ts`). */
+  insertImage: () => void;
   /** Insère un renvoi vers un signet : lien Markdown `[texte](#id)`. */
   insertCrossReference: () => void;
 }

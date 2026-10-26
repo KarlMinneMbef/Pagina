@@ -70,6 +70,7 @@ import {
   IconPaste,
   IconTaskList,
   IconTocMarker,
+  IconImage,
 } from "./icons";
 import "./Toolbar.css";
 import { keepEditorFocus } from "../focusGuard";
@@ -250,6 +251,8 @@ export interface ToolbarActions {
   insertEmoji: (emoji: string) => void;
   // --- Liens (Signet / Renvoi) ---
   insertBookmark: () => void;
+  /** Insère une ou plusieurs images choisies sur le disque (le document passe au format .xmd si besoin). */
+  insertImage: () => void;
   insertCrossReference: () => void;
   // --- Code en ligne (groupe Police) ---
   toggleCode: () => void;
@@ -906,6 +909,16 @@ export function Toolbar({
             {/* Les variables ({{page}}, {{date}}...) vivent désormais dans le
              * panneau latéral « Variables » qui s'ouvre avec le champ
              * d'édition (voir HeaderFooterPanel dans App.tsx). */}
+          </RibbonGroup>
+
+          <RibbonGroup label="Illustrations" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled}
+              onClick={() => actions?.insertImage()}
+              title="Insérer une image (png, jpg, gif, webp, svg) — les images sont embarquées dans le fichier .xmd"
+              icon={<IconImage size={28} />}
+              label="Image"
+            />
           </RibbonGroup>
 
           <RibbonGroup label="Sommaire" buttonsClassName="tb-group-buttons tb-group-buttons-flex">

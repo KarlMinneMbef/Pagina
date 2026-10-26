@@ -31,6 +31,9 @@ import { useEffect, forwardRef, useRef, useMemo, useState, type CSSProperties } 
 import { migrateCoverMarkdown } from "./extensions/CoverZone";
 
 import { buildEditorExtensions } from "./editorExtensions";
+import { syncAssetUrls } from "./assetUrls";
+import { imageFilesFromTransfer, insertImageFiles, isPureImagePaste, type AddImage } from "./imageInsert";
+import type { XmdAsset } from "../../core/xmd/container";
 import type { EditorRefs } from "./hooks/editorRefs";
 import { useCanvasRepaint } from "./hooks/useCanvasRepaint";
 import { useHeaderFooterEdit } from "./hooks/useHeaderFooterEdit";
@@ -64,6 +67,10 @@ import type { MarkdownEditorHandle, EditorStats } from "./editorTypes";
 
 interface MarkdownEditorProps {
   initialContent: string;
+  /** Images du document (par lien relatif) : leurs adresses d'affichage sont préparées AVANT la création de l'éditeur. */
+  assets?: Record<string, XmdAsset>;
+  /** Range une image dans le document et renvoie son lien relatif (voir imageInsert.ts). */
+  onAddImage?: AddImage;
   onChange: (markdown: string) => void;
   /** Appelé UNE fois à la création de l'éditeur avec le Markdown tel que l'éditeur le sérialise (normalisé) : la
    * référence de l'indicateur « modifié » — sans ça, un fichier que l'éditeur écrit autrement qu'il ne l'a lu
@@ -94,7 +101,7 @@ interface MarkdownEditorProps {
 /** Éditeur complet : ProseMirror INVISIBLE + couche peinte paginée (voir
  *  pagination/README.md) — le composant central de Pagina. */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ initialContent, onChange, onBaseline, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
+  ({ initialContent, onChange, onBaseline, assets, onAddImage, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
     // Contenu initial MIGRÉ (CoverZone.ts) : un document écrit avec
     // l'ancien bloc atomique `coverPage` s'ouvre directement en zone
     // transparente + contenu normal. Idempotent sur les documents
@@ -103,6 +110,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // ci-dessous rappellerait `setContent` avec le contenu BRUT et
     // détruirait la migration.
     const initialContentMigrated = useMemo(() => migrateCoverMarkdown(initialContent), [initialContent]);
+    // Adresses d'affichage des images : prêtes AVANT la création de l'éditeur (le rendu des images les consulte). Idempotent.
+    useMemo(() => syncAssetUrls(assets), [assets]);
     const loadedContentRef = useRef(initialContentMigrated);
     // Menu contextuel clic-droit sur une cellule de tableau (voir
     // `onContextMenu` plus bas) — seule pièce d'UI de ce composant gérée en
@@ -131,6 +140,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     onStatsRef.current = onStats;
     const onBaselineRef = useRef(onBaseline);
     onBaselineRef.current = onBaseline;
+    const addImageRef = useRef(onAddImage);
+    addImageRef.current = onAddImage;
     const zoomRef = useRef(zoom);
     zoomRef.current = zoom;
     const layoutRef = useRef(layout);
@@ -240,7 +251,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Regroupement des refs pour les hooks extraits (voir hooks/editorRefs.ts).
     const refs: EditorRefs = {
       wrapRef, canvasRef, caretRef, selectionLayerRef, liveHostRef, pageCountRef, currentPageRef, zoomRef, layoutRef,
-      documentTitleRef, onStatsRef, onLayoutChangeRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef,
+      documentTitleRef, onStatsRef, onLayoutChangeRef, addImageRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef,
       scrollSelectionIntoViewRef, startHeaderFooterEditRef, insertHeaderFooterVariableRef, startMathEditRef,
       headerMiniEditorRef, headerFooterCommitRef, headerFooterModeRef, mathEditRef, pendingMathLatexRef, cloneIndexRef,
       loadedContentRef,
@@ -326,6 +337,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // (`caretPosition.ts`/`selectionHighlight.ts`), jamais par le
         // scroll natif de l'éditeur invisible.
         handleScrollToSelection: () => true,
+        // Capture d'écran collée (image SEULE dans le presse-papiers) : rangée dans le document comme une image insérée.
+        // Un collage mixte (page web, Word : HTML + image) reste un collage de texte.
+        handlePaste: (view, event) => {
+          if (!isPureImagePaste(event.clipboardData)) return false;
+          event.preventDefault();
+          void imageFilesFromTransfer(event.clipboardData).then((files) => insertImageFiles(view, files, addImageRef.current));
+          return true;
+        },
         handleKeyDown: (_view, event) => {
           if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
             event.preventDefault();

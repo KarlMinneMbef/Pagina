@@ -46,7 +46,13 @@ export function askForm(options: Omit<PromptRequest, "resolve">): Promise<Record
   return new Promise((resolve) => usePromptStore.getState().open({ ...options, resolve }));
 }
 
-/** Ouvre un dialogue à UN champ ; `null` si l'utilisateur annule, sinon le texte saisi (éventuellement vide). */
+/** Demande une confirmation (message + « OK » / « Annuler », sans champ) : `true` si confirmée. */
+export async function askConfirm(options: { title: string; message: string; okLabel?: string }): Promise<boolean> {
+  const values = await askForm({ title: options.title, message: options.message, okLabel: options.okLabel ?? "OK", fields: [] });
+  return values !== null;
+}
+
+/** Ouvre un dialogue à UN champ ;`null` si l'utilisateur annule, sinon le texte saisi (éventuellement vide). */
 export async function askText(options: {
   title: string;
   label: string;

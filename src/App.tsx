@@ -36,6 +36,9 @@ import { SettingsDialog } from "./ui/Settings/SettingsDialog";
 import { DocumentCheckDialog } from "./ui/DocumentCheck/DocumentCheckDialog";
 import { PromptHost } from "./ui/dialogs/PromptHost";
 import { askNewFileName } from "./ui/dialogs/prompts";
+import { askConfirm } from "./ui/dialogs/promptStore";
+import type { AddImage } from "./ui/Editor/imageInsert";
+import { freeXmdPath, titleOf } from "./core/xmd/paths";
 import { UserDialog } from "./ui/User/UserDialog";
 import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
 import { resolvePageSizeMm } from "./core/pageLayout";
@@ -403,6 +406,34 @@ function App() {
     }
   };
 
+  /** Range une image dans le document actif (collage, glisser-déposer, bouton Image). Un document `.md` passe d'abord au
+   * format `.xmd` — avec confirmation — puisque seul le conteneur embarque les images ; renvoie le lien relatif à écrire. */
+  const handleAddImage: AddImage = async (file) => {
+    const store = useTabsStore.getState();
+    let tab = store.tabs.find((t) => t.path === store.activePath);
+    if (!tab) return null;
+    try {
+      if (tab.format !== "xmd") {
+        const target = await freeXmdPath(tab.path);
+        const ok = await askConfirm({
+          title: "Images : format .xmd",
+          message:
+            `Pour contenir des images, le document passe au format .xmd (un fichier compressé qui regroupe le texte, les images, ` +
+            `les commentaires et l'historique). « ${titleOf(target)} » va être créé dans le même dossier ; votre fichier ${tab.title} n'est pas modifié.`,
+          okLabel: "Créer le .xmd",
+        });
+        if (!ok) return null;
+        await store.convertToXmd(tab.path, target);
+        tab = useTabsStore.getState().tabs.find((t) => t.path === target);
+        if (!tab) return null;
+      }
+      return await useTabsStore.getState().addAsset(tab.path, file.name, file.bytes, file.mime);
+    } catch (e) {
+      await messageDialog(`Impossible d'ajouter l'image : ${e}`, { title: "Pagina", kind: "error" });
+      return null;
+    }
+  };
+
   const handleSaveAs = async () => {
     if (!activeTab) return;
     const newPath = await pickSaveLocation(activeTab.title);
@@ -591,11 +622,13 @@ function App() {
                   style={{ display: viewMode === "pages" ? "contents" : "none" }}
                 >
                   <MarkdownEditor
-                    key={`${activeTab.path}#${activeTab.revision}`}
+                    key={`${activeTab.key ?? activeTab.path}#${activeTab.revision}`}
                     ref={editorRef}
                     initialContent={pendingContent[activeTab.path] ?? activeTab.content}
                     onChange={(md) => updateContent(activeTab.path, md)}
                     onBaseline={(md) => useTabsStore.getState().setBaseline(activeTab.path, md)}
+                    assets={activeTab.assets}
+                    onAddImage={handleAddImage}
                     onSaveRequest={handleSave}
                     onStats={setStats}
                     layout={activeTab.layout}

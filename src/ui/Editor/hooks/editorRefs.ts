@@ -9,6 +9,7 @@ import type { MathfieldElement } from "mathlive";
 import type { CloneIndex } from "../pagination/cloneIndex";
 import type { PageLayoutSettings } from "../../../core/pageLayout";
 import type { EditorStats } from "../editorTypes";
+import type { AddImage } from "../imageInsert";
 
 export interface EditorRefs {
   // Éléments DOM de la couche peinte
@@ -25,6 +26,8 @@ export interface EditorRefs {
   documentTitleRef: MutableRefObject<string>;
   onStatsRef: MutableRefObject<((stats: EditorStats) => void) | undefined>;
   onLayoutChangeRef: MutableRefObject<(layout: PageLayoutSettings) => void>;
+  /** Range une image dans le document et renvoie son lien relatif (fourni par l'application, voir imageInsert.ts). */
+  addImageRef: MutableRefObject<AddImage | undefined>;
   // Fonctions peuplées par les hooks (appelables depuis les callbacks Tiptap, créés une seule fois)
   repaintRef: MutableRefObject<() => void>;
   repaintCaretRef: MutableRefObject<() => void>;

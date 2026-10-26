@@ -28,6 +28,9 @@ export interface EditorTab {
   /** Vrai quand le fichier a disparu du disque (rafraîchissement de
    * l'arbre) : l'onglet reste ouvert, marqué « (introuvable) ». */
   missing?: boolean;
+  /** Identité STABLE de l'onglet (clé du composant éditeur) : ne change pas quand le fichier est renommé ou converti en `.xmd`,
+   * sinon l'éditeur serait recréé (curseur perdu) au milieu d'une insertion d'image. Absente = le chemin à l'ouverture. */
+  key?: string;
   /** `md` : fichier texte ; `xmd` : conteneur ZIP (document + images + commentaires + historique, voir core/xmd/container.ts). */
   format: DocumentFormat;
   /** Images du document par chemin relatif (`images/plan-3fa9c1d2.png`) : celles embarquées dans le `.xmd`, ou lues à côté d'un `.md`. */
@@ -90,6 +93,9 @@ interface TabsState {
   /** Ajoute une image au document (octets bruts) et renvoie son chemin RELATIF (`images/<nom>-<empreinte>.<ext>`). Un
    * contenu identique réutilise le même chemin. Le texte du document est modifié par l'appelant (nœud image). */
   addAsset: (path: string, fileName: string, bytes: Uint8Array, mime: string) => Promise<string>;
+  /** Convertit l'onglet en `.xmd` à l'emplacement `newPath` : écrit le conteneur (texte courant + images), puis l'onglet
+   * POINTE sur le nouveau fichier — même éditeur, même curseur. Le fichier d'origine n'est ni modifié ni supprimé. */
+  convertToXmd: (path: string, newPath: string) => Promise<void>;
   /** Renommage disque d'un fichier OU d'un dossier : met à jour le chemin de
    * tout onglet sous `from` (le fichier lui-même, ou les fichiers contenus
    * dans le dossier) vers `to`, en conservant contenu, dirty et mise en
@@ -329,6 +335,33 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       tabs: s.tabs.map((t) => (t.path === path && !t.assets[name] ? { ...t, assets: { ...t.assets, [name]: { bytes, mime } } } : t)),
     }));
     return name;
+  },
+
+  convertToXmd: async (path: string, newPath: string) => {
+    const { pendingContent, tabs } = get();
+    const content = pendingContent[path];
+    const tab = tabs.find((t) => t.path === path);
+    if (content === undefined || !tab) throw new Error("Document introuvable.");
+    await saveDocument(newPath, {
+      raw: withDocumentConfig(tab.layout, content),
+      assets: tab.assets,
+      comments: tab.comments,
+      history: tab.history,
+      extras: tab.extras,
+    });
+    set((s) => {
+      const { [path]: _moved, ...restPending } = s.pendingContent;
+      return {
+        tabs: s.tabs.map((t) =>
+          t.path === path
+            ? { ...t, key: t.key ?? t.path, path: newPath, title: titleFromPath(newPath), format: "xmd", content, dirty: false, issues: [] }
+            : t,
+        ),
+        pendingContent: { ...restPending, [newPath]: content },
+        activePath: s.activePath === path ? newPath : s.activePath,
+      };
+    });
+    persist(get());
   },
 
   renameTabPaths: (from: string, to: string) => {

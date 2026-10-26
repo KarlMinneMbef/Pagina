@@ -13,10 +13,16 @@ function PromptDialog({ request }: { request: PromptRequest }) {
   );
   const [error, setError] = useState<string | null>(null);
   const firstRef = useRef<HTMLInputElement | null>(null);
+  const okRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    firstRef.current?.focus();
-    firstRef.current?.select();
+    // Premier champ sélectionné ; sans champ (confirmation), le bouton principal prend le focus (Entrée valide).
+    if (firstRef.current) {
+      firstRef.current.focus();
+      firstRef.current.select();
+    } else {
+      okRef.current?.focus();
+    }
   }, []);
 
   const finish = (result: Record<string, string> | null) => {
@@ -93,7 +99,7 @@ function PromptDialog({ request }: { request: PromptRequest }) {
           <button type="button" className="pd-btn" onClick={() => finish(null)}>
             Annuler
           </button>
-          <button type="button" className="pd-btn pd-btn-primary" onClick={submit}>
+          <button ref={okRef} type="button" className="pd-btn pd-btn-primary" onClick={submit}>
             {request.okLabel}
           </button>
         </div>

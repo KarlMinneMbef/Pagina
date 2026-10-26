@@ -15,6 +15,7 @@ import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType,
 import { applyToSelectedCells, clearSelectedCellContents, applyBorderPreset, getSelectionShape, setGridLineBorder, readGridBorderState } from "../editorTableOps";
 import { FONT_SIZE_STEPS, currentFontSizePt, nextCase, copyEditorSelection, cutEditorSelection, pasteIntoEditor, slugifyBookmark, escapeHtmlText, headerFooterTargetNearViewport, revealInViewport } from "../editorUtils";
 import type { EditorRefs } from "./editorRefs";
+import { pickAndInsertImages } from "../imageInsert";
 
 export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwardedRef, refs }: {
   editor: Editor;
@@ -543,6 +544,9 @@ export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwa
       return matches.length;
     },
     // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
+    insertImage: () => {
+      void pickAndInsertImages(editor.view, refs.addImageRef.current);
+    },
     insertBookmark: async () => {
       if (!editor) return;
       const name = await askBookmarkName();
