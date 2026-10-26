@@ -72,7 +72,7 @@ const PRESETS: { key: "all" | "outside" | "inside" | "none"; label: string; titl
   { key: "all", label: "Tout", title: "Bordure sur les 4 côtés de chaque cellule sélectionnée" },
   { key: "outside", label: "Extérieur", title: "Bordure uniquement sur le pourtour de la sélection" },
   { key: "inside", label: "Intérieur", title: "Bordure uniquement entre les cellules sélectionnées" },
-  { key: "none", label: "Aucune", title: "Retire la bordure des 4 côtés de chaque cellule sélectionnée" },
+  { key: "none", label: "Aucune", title: "Supprime la bordure des 4 côtés de chaque cellule sélectionnée (cellules sans bordure)" },
 ];
 
 /** Panneau contextuel des tableaux : lignes, colonnes, cellules, alignement

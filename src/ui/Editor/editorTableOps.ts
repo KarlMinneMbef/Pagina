@@ -157,7 +157,10 @@ export function applyBorderPreset(editor: Editor, preset: "all" | "outside" | "i
     }
     if (!sides.length) continue;
     const patch: Record<string, unknown> = { ...node.attrs };
-    for (const side of sides) patch[side] = preset === "none" ? null : css;
+    // « Aucune » écrit explicitement `none` (et non `null`) : `null` RETIRE le réglage de la cellule et la
+    // bordure grise par défaut du tableau réapparaît — la bordure n'était alors jamais supprimée
+    // (ni à l'écran, ni à l'impression).
+    for (const side of sides) patch[side] = preset === "none" ? "none" : css;
     tr.setNodeMarkup(tableStart + offset, undefined, patch);
   }
   editor.view.dispatch(tr);

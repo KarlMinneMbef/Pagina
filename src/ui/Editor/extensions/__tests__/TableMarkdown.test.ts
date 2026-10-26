@@ -14,6 +14,7 @@ import { ParagraphMarkdown } from "../ParagraphMarkdown";
 import { TableMarkdown } from "../TableMarkdown";
 import { TableRowStyled } from "../TableRowStyle";
 import { TableCellStyled, TableHeaderStyled } from "../TableCellStyle";
+import { applyBorderPreset } from "../../editorTableOps";
 
 function makeEditor(content: string): Editor {
   return new Editor({
@@ -102,5 +103,26 @@ describe("TableMarkdown — contenu de cellule non textuel", () => {
     });
     expect(again.map((c) => c.borderTop)).toEqual(["none", "none", null]);
     expect(again.map((c) => c.colwidth)).toEqual([[440], [240], null]);
+  });
+
+  it('le préréglage de bordures « Aucune » écrit "none" (et non null : la bordure par défaut reviendrait)', () => {
+    const ed = makeEditor("<table><tbody><tr><td><p>a</p></td><td><p>b</p></td></tr></tbody></table>");
+    let firstCell = 0;
+    ed.state.doc.descendants((n, pos) => {
+      if (!firstCell && n.type.name === "tableCell") firstCell = pos;
+    });
+    ed.commands.setTextSelection(firstCell + 2);
+    applyBorderPreset(ed, "none", null);
+    const attrs: Record<string, unknown>[] = [];
+    ed.state.doc.descendants((n) => {
+      if (n.type.name === "tableCell") attrs.push(n.attrs);
+    });
+    expect(attrs[0]).toMatchObject({ borderTop: "none", borderRight: "none", borderBottom: "none", borderLeft: "none" });
+    // La cellule non sélectionnée n'est pas touchée.
+    expect(attrs[1].borderTop).toBeNull();
+    // Le fichier garde le « sans bordure » (HTML, pas de tableau GFM).
+    const md = getMarkdown(ed);
+    expect(md).toContain("<table");
+    expect(md).toMatch(/border[^;"]*none/);
   });
 });
