@@ -159,7 +159,7 @@ Substituées **au moment de la peinture** (et à l'impression) — jamais écrit
 | Bloc de code | ` ```langage … ``` ` | Oui |
 | Séparateur | `---` | Oui |
 | Tableaux GFM | `\| Col A \| Col B \|` | Oui |
-| Notes de bas de page | `[^1]` / `[^1]: …` | Oui |
+| Notes de fin de document | `[^1]` / `[^1]: …` | Oui |
 | Formules | `$formule$` / `$$formule$$` | Oui (convention Pandoc) |
 | Diagrammes | Bloc ` ```mermaid ` | Oui |
 

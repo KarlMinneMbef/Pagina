@@ -1,5 +1,5 @@
 /**
- * Notes de bas de page — en réalité des notes de FIN DE DOCUMENT (choix
+ * Notes de fin de document (appelées « notes de bas de page » dans Word) — des notes de FIN DE DOCUMENT (choix
  * assumé, voir CLAUDE.md) : une vraie note « en bas de CHAQUE page » serait
  * bien plus complexe avec notre système de pagination (il faudrait savoir
  * sur quelle page atterrit chaque référence, potentiellement différent à
@@ -37,7 +37,7 @@ declare module "@tiptap/core" {
   }
 }
 
-/** Référence de note de bas de page `[^n]` — lien vers la définition. */
+/** Référence de note de fin de document `[^n]` — lien vers la définition. */
 export const FootnoteReference = Node.create({
   name: "footnoteReference",
   group: "inline",
@@ -127,7 +127,7 @@ export const FootnoteReference = Node.create({
 
 const DEFINITION_RE = /^\[\^([^\]:\s]+)\]:\s?(.*)$/;
 
-/** Définition de note de bas de page (regroupées en fin de document),
+/** Définition de note de fin de document (regroupées en fin de document),
  *  contenu riche réel. */
 export const FootnoteDefinition = Node.create({
   name: "footnoteDefinition",

@@ -40,7 +40,7 @@ Autres briques de la couche peinte : curseur dessiné (`caretPosition.ts`), surb
 
 ### Sérialisation : Markdown + commentaires invisibles
 
-- Le corps du document est du **Markdown standard** (GFM : tableaux, notes de bas de page, listes de tâches).
+- Le corps du document est du **Markdown standard** (GFM : tableaux, notes de fin de document, listes de tâches).
 - Ce qui n'a pas d'équivalent Markdown est encodé en **commentaires HTML** reconnus par les moteurs Markdown et invisibles ailleurs : saut de page, marqueur/emplacement de sommaire, et l'en-tête de configuration `<!-- pagina:config {...} -->` (marges, format papier, styles de titres, en-tête/pied… — `src/core/pageLayout.ts`, `serializeDocumentConfig`/`extractDocumentConfig`).
 - Les mises en forme sans équivalent Markdown (couleur, police, alignement, bordures complexes) sont sérialisées en `<span style>` ou HTML de tableau — lisible partout, hors syntaxe Markdown pure.
 - `$formule$` / `$$formule$$` (convention Pandoc) pour les formules.

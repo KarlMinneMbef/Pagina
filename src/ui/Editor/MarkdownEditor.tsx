@@ -2396,7 +2396,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           targetEl?.scrollIntoView({ behavior: "smooth", block: "start" });
           return;
         }
-        // Référence de note de bas de page (voir Footnote.ts) : saute à sa
+        // Référence de note de fin de document (voir Footnote.ts) : saute à sa
         // définition (en fin de document) plutôt que de positionner le
         // curseur dedans — c'est un atome en lecture seule dans la couche
         // peinte, pas du texte à éditer directement.
@@ -2410,7 +2410,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         }
         // Formule mathématique (voir Math.ts) : clic → invite avec la
         // source LaTeX actuelle, plutôt que d'éditer le rendu KaTeX
-        // directement (un atome, comme les notes de bas de page). Réutilise
+        // directement (un atome, comme les notes de fin de document). Réutilise
         // `posFromEvent` (déjà fiable sur du contenu en ligne, voir
         // resolveClickPosition.ts) pour retrouver la position réelle du
         // clic, puis cherche l'atome pile à cette position (ou juste avant,

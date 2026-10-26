@@ -81,7 +81,7 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 
 ### Pages
 - **Saut de page** (Ctrl+Entrée) : force le début d'une nouvelle page.
-- **Note de bas de page** (groupe Éléments) : insère la référence `[^n]` et sa définition en fin de document.
+- **Note de fin de document** (groupe Éléments) : insère la référence `[^n]` et sa définition en fin de document.
 
 ### Tableau
 - **Tableau** : grille de sélection façon Word (survoler pour choisir lignes × colonnes). Voir [panneau Outils de tableau](#outils-de-tableau).

@@ -40,7 +40,7 @@ Développé en interne, on a choisi de le rendre public : si un autre bureau d'�
 ### Contenu riche, toujours du Markdown standard
 - **Tableaux** avec alignement de colonnes (gauche/centre/droite), fusion/scission de cellules et **bordures éditées directement sur un schéma** (cliquer un côté du schéma applique la bordure : style, épaisseur, couleur) dans le panneau « Outils de tableau » qui apparaît dès que le curseur est dans une cellule.
 - **Blocs de code avec coloration syntaxique** (une trentaine de langages).
-- **Notes de bas de page** (syntaxe `[^1]`/`[^1]: ...`, standard Pandoc/GFM).
+- **Notes de fin de document** (syntaxe `[^1]`/`[^1]: ...`, standard Pandoc/GFM).
 - **Diagrammes Mermaid** et **formules LaTeX** (KaTeX), avec édition de la source et aperçu rendu en direct.
 - **Liens, signets et renvois** (ancre `<a id>` invisible + lien Markdown `#ancre`), citations, listes (à puces, numérotées, à cocher), séparateurs, emoji.
 - **Saut de page manuel**, sommaire, styles de titre : tout encodé en commentaires HTML Markdown standards, invisibles ailleurs.

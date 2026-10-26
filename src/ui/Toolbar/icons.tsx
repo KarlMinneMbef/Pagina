@@ -348,7 +348,7 @@ export function IconCoverPage({ size, className }: IconProps) {
   );
 }
 
-/** Icône « Note de bas de page ». */
+/** Icône « Note de fin de document ». */
 export function IconFootnote({ size, className }: IconProps) {
   return (
     <Svg24 size={size} className={className}>

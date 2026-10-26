@@ -840,9 +840,9 @@ export function Toolbar({
               <StackButton
                 disabled={disabled}
                 onClick={() => actions?.insertFootnote()}
-                title="Insérer une note de bas de page (numérotée automatiquement, ajoutée en fin de document)"
+                title="Insérer une note de fin de document (numérotée automatiquement, regroupée en fin de document)"
                 icon={<IconFootnote size={15} />}
-                label="Note de bas de page"
+                label="Note de fin de document"
               />
             </div>
           </RibbonGroup>
