@@ -140,6 +140,20 @@
    * à la main (.xmd-fake-caret). */
   user-select: none;
   cursor: text;
+  /* MÊMES règles de coupure de ligne que l'éditeur invisible (feuille de base de ProseMirror : `.ProseMirror`).
+   * Sans elles, un texte presque pleine ligne se coupait ailleurs sur la page peinte que dans l'éditeur qui la
+   * mesure : `white-space: break-spaces` compte l'espace final dans la largeur (le dernier mot passait à la ligne
+   * dans l'éditeur mais pas sur la page), les ligatures désactivées changent les chasses. Le curseur dessiné (calculé
+   * sur l'éditeur invisible) tombait alors au mauvais endroit — impossible de cliquer avant/après certaines lettres
+   * d'un titre long (2026-10-26). */
+  white-space: break-spaces;
+  overflow-wrap: break-word;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0;
+}
+
+.xmd-page-content pre {
+  white-space: pre-wrap;
 }
 
 /* En-tête / pied de page (voir pageLayout.ts) : texte statique, identique
