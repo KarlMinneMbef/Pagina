@@ -13,6 +13,7 @@
 import { Fragment, useState } from "react";
 import type { HeadingLevel, HeadingLevelStyle, NumberingScheme, PageLayoutSettings } from "../../core/pageLayout";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
+import { NumberField } from "../NumberField";
 import "./HeadingStyleDialog.css";
 
 const LEVELS: HeadingLevel[] = [1, 2, 3, 4, 5, 6];
@@ -167,20 +168,13 @@ export function HeadingStyleDialog({
                     <td>
                       {/* Espacement APRÈS les titres de ce niveau : vide =
                        * suivre l'espacement des paragraphes du document. */}
-                      <input
-                        type="text"
+                      <NumberField
                         className="hs-size-input"
-                        value={style.spacingAfterPt ?? ""}
+                        value={style.spacingAfterPt ?? null}
+                        allowEmpty
+                        max={600}
                         title="Espace après chaque titre de ce niveau, en points (vide = suivre le document)"
-                        onChange={(e) => {
-                          const raw = e.target.value.trim();
-                          if (raw === "") {
-                            setLevel(level, { spacingAfterPt: undefined });
-                            return;
-                          }
-                          const pt = Number(raw);
-                          if (Number.isFinite(pt) && pt >= 0) setLevel(level, { spacingAfterPt: pt });
-                        }}
+                        onCommit={(v) => setLevel(level, { spacingAfterPt: v ?? undefined })}
                       />
                     </td>
                   </tr>
@@ -200,38 +194,15 @@ export function HeadingStyleDialog({
                       </label>
                       <label className="hs-extra">
                         Retrait (mm)
-                        <input
-                          type="number"
-                          min={0}
-                          max={60}
-                          className="hs-size-input"
-                          value={style.indentMm ?? 0}
-                          onChange={(e) => setLevel(level, { indentMm: Math.max(0, Number(e.target.value) || 0) })}
-                        />
+                        <NumberField className="hs-size-input" value={style.indentMm ?? 0} max={60} onCommit={(v) => setLevel(level, { indentMm: v ?? 0 })} />
                       </label>
                       <label className="hs-extra">
                         Espacement lettres (pt)
-                        <input
-                          type="number"
-                          min={0}
-                          max={20}
-                          step={0.5}
-                          className="hs-size-input"
-                          value={style.letterSpacingPt ?? 0}
-                          onChange={(e) => setLevel(level, { letterSpacingPt: Math.max(0, Number(e.target.value) || 0) })}
-                        />
+                        <NumberField className="hs-size-input" value={style.letterSpacingPt ?? 0} max={20} onCommit={(v) => setLevel(level, { letterSpacingPt: v ?? 0 })} />
                       </label>
                       <label className="hs-extra">
                         Espace avant (pt)
-                        <input
-                          type="number"
-                          min={0}
-                          max={600}
-                          className="hs-size-input"
-                          value={style.spacingBeforePt ?? ""}
-                          placeholder="doc."
-                          onChange={(e) => setLevel(level, { spacingBeforePt: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value) || 0) })}
-                        />
+                        <NumberField className="hs-size-input" value={style.spacingBeforePt ?? null} allowEmpty max={600} placeholder="doc." onCommit={(v) => setLevel(level, { spacingBeforePt: v ?? undefined })} />
                       </label>
                       <label className="hs-extra" title="Le bandeau de couleur déborde des marges, d'un bord à l'autre de la page">
                         <input type="checkbox" checked={!!style.fullWidth} onChange={(e) => setLevel(level, { fullWidth: e.target.checked })} /> Bandeau pleine largeur

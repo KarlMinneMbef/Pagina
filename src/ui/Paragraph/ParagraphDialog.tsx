@@ -18,6 +18,7 @@
  *   page — l'alignement/retrait sont ceux du paragraphe, pas sauvegardés).
  */
 import { useState } from "react";
+import { NumberField } from "../NumberField";
 import type { PageLayoutSettings } from "../../core/pageLayout";
 import { saveDefaultPageLayout } from "../../core/pageLayout";
 import "./ParagraphDialog.css";
@@ -62,11 +63,6 @@ export function ParagraphDialog({
   const [spaceAfter, setSpaceAfter] = useState(layout.paragraphSpacingPt);
   const [lineSpacing, setLineSpacing] = useState(layout.lineHeight);
   const [defaultSaved, setDefaultSaved] = useState(false);
-
-  const num = (v: string, fallback: number) => {
-    const n = parseFloat(v.replace(",", "."));
-    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : fallback;
-  };
 
   const draftLayout: PageLayoutSettings = {
     ...layout,
@@ -123,22 +119,12 @@ export function ParagraphDialog({
             <div className="pg-row">
               <label className="pg-field">
                 <span>Gauche :</span>
-                <input
-                  type="text"
-                  value={String(indentLeft).replace(".", ",")}
-                  onChange={(e) => setIndentLeft(num(e.target.value, indentLeft))}
-                  title="Retrait à gauche du paragraphe, en cm"
-                />
+                <NumberField value={indentLeft} onCommit={(v) => setIndentLeft(v ?? 0)} max={50} title="Retrait à gauche du paragraphe, en cm" />
                 <span className="pg-unit">cm</span>
               </label>
               <label className="pg-field">
                 <span>Droite :</span>
-                <input
-                  type="text"
-                  value={String(indentRight).replace(".", ",")}
-                  onChange={(e) => setIndentRight(num(e.target.value, indentRight))}
-                  title="Retrait à droite du paragraphe, en cm"
-                />
+                <NumberField value={indentRight} onCommit={(v) => setIndentRight(v ?? 0)} max={50} title="Retrait à droite du paragraphe, en cm" />
                 <span className="pg-unit">cm</span>
               </label>
             </div>
@@ -149,22 +135,12 @@ export function ParagraphDialog({
             <div className="pg-row">
               <label className="pg-field">
                 <span>Avant :</span>
-                <input
-                  type="text"
-                  value={String(spaceBefore).replace(".", ",")}
-                  onChange={(e) => setSpaceBefore(num(e.target.value, spaceBefore))}
-                  title="Espace avant chaque paragraphe, en points"
-                />
+                <NumberField value={spaceBefore} onCommit={(v) => setSpaceBefore(v ?? 0)} max={600} title="Espace avant chaque paragraphe, en points" />
                 <span className="pg-unit">pt</span>
               </label>
               <label className="pg-field">
                 <span>Après :</span>
-                <input
-                  type="text"
-                  value={String(spaceAfter).replace(".", ",")}
-                  onChange={(e) => setSpaceAfter(num(e.target.value, spaceAfter))}
-                  title="Espace après chaque paragraphe, en points"
-                />
+                <NumberField value={spaceAfter} onCommit={(v) => setSpaceAfter(v ?? 0)} max={600} title="Espace après chaque paragraphe, en points" />
                 <span className="pg-unit">pt</span>
               </label>
               <label className="pg-field">
@@ -175,16 +151,7 @@ export function ParagraphDialog({
               </label>
               <label className="pg-field">
                 <span>de :</span>
-                <input
-                  type="text"
-                  className="pg-input-narrow"
-                  value={String(lineSpacing).replace(".", ",")}
-                  onChange={(e) => {
-                    const n = parseFloat(e.target.value.replace(",", "."));
-                    if (Number.isFinite(n) && n >= 0.5 && n <= 5) setLineSpacing(Math.round(n * 100) / 100);
-                  }}
-                  title="Interligne (0,5 à 5)"
-                />
+                <NumberField className="pg-input-narrow" value={lineSpacing} onCommit={(v) => setLineSpacing(v ?? 1.15)} min={0.5} max={5} title="Interligne (0,5 à 5)" />
               </label>
             </div>
           </section>

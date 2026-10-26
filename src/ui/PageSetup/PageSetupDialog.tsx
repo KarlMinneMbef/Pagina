@@ -26,6 +26,7 @@ import type { PageLayoutSettings } from "../../core/pageLayout";
 import { PAPER_SIZE_LABELS, PAPER_SIZES_MM, resolvePageSizeMm, saveDefaultPageLayout } from "../../core/pageLayout";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
 import { DocumentStylesTab } from "./DocumentStylesTab";
+import { NumberField } from "../NumberField";
 import "./PageSetupDialog.css";
 
 type PsTab = "marges" | "papier" | "miseEnPage" | "styles";
@@ -55,17 +56,12 @@ function CmField({
     <label className={`ps-num${disabled ? " ps-disabled-field" : ""}`}>
       <span>{label}</span>
       <span className="ps-num-box">
-        <input
-          type="number"
+        <NumberField
           disabled={disabled}
-          min={min}
-          max={max}
-          step={0.1}
+          min={mmToCm(min)}
+          max={mmToCm(max)}
           value={mmToCm(valueMm)}
-          onChange={(e) => {
-            const cm = Number(e.target.value);
-            if (!Number.isNaN(cm)) onChange(Math.min(Math.max(cmToMm(cm), min), max));
-          }}
+          onCommit={(cm) => onChange(Math.min(Math.max(cmToMm(cm ?? 0), min), max))}
         />
         <span className="ps-num-unit">cm</span>
       </span>
@@ -438,28 +434,23 @@ export function PageSetupDialog({
                       <label className="ps-num">
                         <span>Épaisseur (pt) :</span>
                         <span className="ps-num-box">
-                          <input
-                            type="number"
+                          <NumberField
                             min={0.25}
                             max={12}
-                            step={0.25}
                             disabled={!draft.pageBorder.enabled}
                             value={draft.pageBorder.widthPt}
-                            onChange={(e) => setBorder({ widthPt: Math.max(0.25, Math.min(12, parseFloat(e.target.value) || 1)) })}
+                            onCommit={(v) => setBorder({ widthPt: v ?? 1 })}
                           />
                         </span>
                       </label>
                       <label className="ps-num">
                         <span>Distance du bord (mm) :</span>
                         <span className="ps-num-box">
-                          <input
-                            type="number"
-                            min={0}
+                          <NumberField
                             max={50}
-                            step={1}
                             disabled={!draft.pageBorder.enabled}
                             value={draft.pageBorder.offsetMm}
-                            onChange={(e) => setBorder({ offsetMm: Math.max(0, Math.min(50, parseFloat(e.target.value) || 0)) })}
+                            onCommit={(v) => setBorder({ offsetMm: v ?? 0 })}
                           />
                         </span>
                       </label>

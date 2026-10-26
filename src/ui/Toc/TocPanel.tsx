@@ -18,6 +18,7 @@
  */
 import type { TocStyleSettings } from "../../core/pageLayout";
 import { ColorPicker } from "../ColorPicker/ColorPicker";
+import { NumberField } from "../NumberField";
 import { IconTocRefresh, IconTrash } from "../Toolbar/icons";
 import "./TocPanel.css";
 import { PanelHeader } from "../ContextualPanels/PanelHeader";
@@ -93,14 +94,7 @@ export function TocPanel({
         </label>
         <label className="toc-field">
           <span>Retrait par niveau (mm)</span>
-          <input
-            type="number"
-            min={0}
-            max={30}
-            step={1}
-            value={toc.indentMm}
-            onChange={(e) => onChangeToc({ indentMm: Math.max(0, Math.min(30, parseFloat(e.target.value) || 0)) })}
-          />
+          <NumberField value={toc.indentMm} max={30} onCommit={(v) => onChangeToc({ indentMm: v ?? 0 })} />
         </label>
         <label className="toc-field">
           <span>Couleur des entrées</span>
