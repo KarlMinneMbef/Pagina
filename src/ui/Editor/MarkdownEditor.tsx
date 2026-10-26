@@ -2187,6 +2187,43 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         dragAutoScrollRaf = requestAnimationFrame(dragAutoScrollTick);
       };
 
+      /** Clic dans une zone VIDE d'une page peinte (aucun bloc sous la souris) : position du
+       *  document la plus proche, ou "append" quand le clic tombe SOUS le dernier bloc du
+       *  document et que ce bloc n'accepte pas de curseur (tableau, saut de section/de page,
+       *  diagramme, formule en bloc…) — un paragraphe vide doit alors être ajouté. */
+      const resolveBlankClick = (e: MouseEvent): number | "append" | null => {
+        const target = e.target as HTMLElement | null;
+        const page = target?.closest<HTMLElement>(".xmd-page");
+        const content = page?.querySelector<HTMLElement>(".xmd-page-content");
+        if (!page || !content) return null;
+        const blocks = Array.from(content.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.hasAttribute(SRC_POS_ATTR));
+        if (blocks.length === 0) return null;
+        // Bloc le plus proche verticalement (les clics dans les marges gauche/droite en font partie).
+        let best = blocks[0];
+        let bestDist = Infinity;
+        for (const b of blocks) {
+          const r = b.getBoundingClientRect();
+          const d = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0;
+          if (d < bestDist) {
+            best = b;
+            bestDist = d;
+          }
+        }
+        const rect = best.getBoundingClientRect();
+        const isLastPage = Array.from(canvas.querySelectorAll(".xmd-page")).pop() === page;
+        const below = e.clientY > rect.bottom;
+        if (isLastPage && below && best === blocks[blocks.length - 1]) {
+          const last = editor.state.doc.lastChild;
+          if (last && !last.isTextblock && last.type.name !== "bulletList" && last.type.name !== "orderedList" && last.type.name !== "taskList") {
+            return "append";
+          }
+        }
+        // Ailleurs : on résout dans le bloc le plus proche, point ramené à l'intérieur du bloc.
+        const x = Math.min(Math.max(e.clientX, rect.left + 2), rect.right - 2);
+        const y = Math.min(Math.max(e.clientY, rect.top + 2), rect.bottom - 2);
+        return resolveClickPosition(editor.view, x, y, best, zoomRef.current, cloneIndexRef.current ?? undefined, best);
+      };
+
       /** Case à cocher d'une liste de tâches sur la page PEINTE (copie du document) : son
        *  état ne vit que dans le document ProseMirror — le basculer dans la copie ne
        *  changerait que l'image, perdue au prochain redessin et jamais enregistrée
@@ -2433,8 +2470,27 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           // que la palette.
           startMathEditRef.current(mathPos, mathTarget);
           return;
-        }        const pos = posFromEvent(e);
-        if (pos === null) return;
+        }
+        let pos = posFromEvent(e);
+        if (pos === null) {
+          // Clic dans une zone VIDE de la page (sous le dernier bloc, dans les marges, entre deux
+          // blocs) : aucun bloc sous la souris. Avant (2026-10-26) rien ne se passait — impossible de
+          // placer le curseur après un tableau ou un saut de section en fin de document.
+          const blank = resolveBlankClick(e);
+          if (blank === null) return;
+          e.preventDefault();
+          editor.commands.focus(undefined, { scrollIntoView: false });
+          if (blank === "append") {
+            // Le document se termine par un bloc dans lequel on ne tape pas (tableau, saut de
+            // section, saut de page…) : comme Word, on ouvre un paragraphe vide après lui.
+            const { state } = editor;
+            const end = state.doc.content.size;
+            const tr = state.tr.insert(end, state.schema.nodes.paragraph.create());
+            editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, end + 1)));
+            return;
+          }
+          pos = blank;
+        }
         e.preventDefault();
         editor.commands.focus(undefined, { scrollIntoView: false });
 
