@@ -44,8 +44,8 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 ## Ruban Accueil
 
 ### Presse-papiers
-- **Coller** : colle le contenu du presse-papiers ; le Markdown collé est automatiquement converti en mise en forme.
-- **Couper / Copier** : la sélection est copiée en **Markdown** (pas en HTML) — collable dans n'importe quel éditeur de texte.
+- **Coller** : colle le contenu du presse-papiers **avec sa mise en forme** (Word, page web, autre document Pagina : couleurs, tailles, surlignage, listes, tableaux) ; à défaut de mise en forme, le Markdown collé est converti. **Coller en texte brut** (menu clic droit) ne garde que le texte.
+- **Couper / Copier** : la sélection est copiée en **HTML mis en forme ET en Markdown** — Word la reçoit avec sa mise en forme, un éditeur de texte reçoit du Markdown.
 
 ### Police
 - Menus **Police** et **Taille** ; **G** gras, **I** italique, **S** souligné, ~~S~~ barré.

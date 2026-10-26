@@ -4,6 +4,7 @@
  * Extraits de MarkdownEditor.tsx.
  */
 import type { Editor } from "@tiptap/react";
+import { DOMSerializer } from "@tiptap/pm/model";
 
 /** Échelle de tailles de police (en pt) — partagée entre le menu "Taille"
  * du ruban et les boutons Agrandir/Réduire (un pas = la valeur suivante de
@@ -37,30 +38,47 @@ export function nextCase(text: string): string {
   return upper; // contient au moins une minuscule → MAJUSCULES
 }
 
-/** Presse-papiers INTERNE : dernier texte copié/coupé DANS l'application. * Repli de `pasteClipboard` quand la lecture du presse-papiers système est
- * refusée — WebView2 peut afficher une demande de permission native pour
- * clipboard-read (ou la voir bloquée par la configuration) : Coller reste
- * ainsi fonctionnel pour tout ce qui a été copié/coupé via les boutons du
- * ruban, sans dépendre de cette permission. */
-let internalClipboard: string | null = null;
+/** Presse-papiers INTERNE : dernier contenu copié/coupé DANS l'application (Markdown ET HTML).
+ * Repli de `pasteIntoEditor` quand la lecture du presse-papiers système est refusée — WebView2
+ * peut afficher une demande de permission native pour clipboard-read (ou la voir bloquée par la
+ * configuration) : Coller reste ainsi fonctionnel pour tout ce qui a été copié/coupé via les
+ * boutons du ruban, sans dépendre de cette permission. */
+let internalClipboard: { md: string; html: string } | null = null;
 
-/** Opérations presse-papiers partagées par le ruban (handle) ET le menu
- * contextuel clic-droit. Sérialisation Markdown de la sélection via
- * tiptap-markdown, puis API Clipboard (absente en contexte non sécurisé :
- * sans effet silencieux, le presse-papiers interne prend le relais). */
-function serializeSelection(editor: Editor): string | null {
+/** Sélection sérialisée en Markdown ET en HTML (mise en forme complète : couleurs, tailles,
+ * surlignage, alignements, tableaux…). Le HTML est ce que Word, les pages web et Pagina
+ * elle-même relisent ; le Markdown sert aux éditeurs de texte. */
+function serializeSelection(editor: Editor): { md: string; html: string } | null {
   const { from, to, empty } = editor.state.selection;
   if (empty) return null;
+  const slice = editor.state.doc.slice(from, to);
   // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
-  const md: string = editor.storage.markdown.serializer.serialize(editor.state.doc.slice(from, to).content);
-  return md;
+  const md: string = editor.storage.markdown.serializer.serialize(slice.content);
+  const box = document.createElement("div");
+  box.appendChild(DOMSerializer.fromSchema(editor.schema).serializeFragment(slice.content));
+  return { md, html: box.innerHTML };
 }
 
+/** Copie : écrit text/html ET text/plain (Markdown) dans le presse-papiers système, sinon
+ * seulement le texte. Avant (2026-10-26) seul le Markdown partait : Word recevait des `**` et
+ * aucune mise en forme. */
 export function copyEditorSelection(editor: Editor): void {
-  const md = serializeSelection(editor);
-  if (md === null) return;
-  internalClipboard = md;
-  navigator.clipboard?.writeText(md).catch(() => {});
+  const data = serializeSelection(editor);
+  if (data === null) return;
+  internalClipboard = data;
+  const clipboard = navigator.clipboard;
+  if (clipboard?.write && typeof ClipboardItem !== "undefined") {
+    clipboard
+      .write([
+        new ClipboardItem({
+          "text/html": new Blob([data.html], { type: "text/html" }),
+          "text/plain": new Blob([data.md], { type: "text/plain" }),
+        }),
+      ])
+      .catch(() => clipboard.writeText?.(data.md).catch(() => {}));
+    return;
+  }
+  clipboard?.writeText?.(data.md).catch(() => {});
 }
 
 export function cutEditorSelection(editor: Editor): void {
@@ -69,10 +87,12 @@ export function cutEditorSelection(editor: Editor): void {
   editor.chain().focus(undefined, { scrollIntoView: false }).deleteSelection().run();
 }
 
-/** Colle le presse-papiers ; `plain` = texte brut (aucune mise en forme ni
- * syntaxe Markdown interprétée — chaque ligne devient un paragraphe). */
+/** Colle le presse-papiers ; `plain` = texte brut (aucune mise en forme ni syntaxe Markdown
+ * interprétée — chaque ligne devient un paragraphe). Sinon : le HTML du presse-papiers (Word,
+ * page web, autre document Pagina) est collé AVEC sa mise en forme, par le même chemin que
+ * Ctrl+V ; à défaut de HTML, le texte est lu comme du Markdown. */
 export function pasteIntoEditor(editor: Editor, plain: boolean): void {
-  const insert = (text: string | null) => {
+  const insertText = (text: string | null) => {
     if (!text) return;
     const chain = editor.chain().focus(undefined, { scrollIntoView: false });
     if (!plain) {
@@ -90,11 +110,42 @@ export function pasteIntoEditor(editor: Editor, plain: boolean): void {
         .run();
     }
   };
-  navigator.clipboard
+  const insertHtml = (html: string) => {
+    editor.chain().focus(undefined, { scrollIntoView: false }).run();
+    editor.view.pasteHTML(html);
+  };
+  const fromInternal = () => {
+    if (!internalClipboard) return;
+    if (!plain && internalClipboard.html) insertHtml(internalClipboard.html);
+    else insertText(internalClipboard.md);
+  };
+  const clipboard = navigator.clipboard;
+  if (!plain && clipboard?.read) {
+    clipboard
+      .read()
+      .then(async (items) => {
+        for (const item of items) {
+          if (item.types.includes("text/html")) {
+            const html = await (await item.getType("text/html")).text();
+            if (html.trim()) return insertHtml(html);
+          }
+        }
+        for (const item of items) {
+          if (item.types.includes("text/plain")) {
+            const text = await (await item.getType("text/plain")).text();
+            if (text) return insertText(text);
+          }
+        }
+        fromInternal();
+      })
+      // Permission refusée : repli sur le presse-papiers interne.
+      .catch(fromInternal);
+    return;
+  }
+  clipboard
     ?.readText()
-    .then((text) => insert(text || internalClipboard))
-    // Permission refusée : repli sur le presse-papiers interne.
-    .catch(() => insert(internalClipboard));
+    .then((text) => (text ? insertText(text) : fromInternal()))
+    .catch(fromInternal);
 }
 
 /** Normalise un nom de signet saisi en identifiant d'ancre sûr : minuscules,
