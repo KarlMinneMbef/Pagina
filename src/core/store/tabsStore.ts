@@ -51,6 +51,9 @@ interface TabsState {
   closeTab: (path: string) => void;
   setActive: (path: string) => void;
   updateContent: (path: string, content: string) => void;
+  /** Référence de l'indicateur « modifié » : le Markdown tel que l'éditeur le sérialise à l'ouverture. Sans effet sur
+   * un onglet déjà modifié (ses modifications en attente restent à enregistrer). */
+  setBaseline: (path: string, markdown: string) => void;
   patchLayout: (path: string, patch: Partial<PageLayoutSettings>) => void;
   updateLayout: (path: string, layout: PageLayoutSettings) => void;
   saveTab: (path: string) => Promise<void>;
@@ -154,6 +157,17 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   setActive: (path: string) => {
     set({ activePath: path });
     persist(get());
+  },
+
+  setBaseline: (path: string, markdown: string) => {
+    set((s) => {
+      const tab = s.tabs.find((t) => t.path === path);
+      if (!tab || tab.dirty || tab.content === markdown) return s;
+      return {
+        tabs: s.tabs.map((t) => (t.path === path ? { ...t, content: markdown } : t)),
+        pendingContent: { ...s.pendingContent, [path]: markdown },
+      };
+    });
   },
 
   updateContent: (path: string, content: string) => {

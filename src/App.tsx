@@ -595,6 +595,7 @@ function App() {
                     ref={editorRef}
                     initialContent={pendingContent[activeTab.path] ?? activeTab.content}
                     onChange={(md) => updateContent(activeTab.path, md)}
+                    onBaseline={(md) => useTabsStore.getState().setBaseline(activeTab.path, md)}
                     onSaveRequest={handleSave}
                     onStats={setStats}
                     layout={activeTab.layout}

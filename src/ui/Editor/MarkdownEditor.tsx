@@ -475,6 +475,10 @@ export interface EditorStats {
 interface MarkdownEditorProps {
   initialContent: string;
   onChange: (markdown: string) => void;
+  /** Appelé UNE fois à la création de l'éditeur avec le Markdown tel que l'éditeur le sérialise (normalisé) : la
+   * référence de l'indicateur « modifié » — sans ça, un fichier que l'éditeur écrit autrement qu'il ne l'a lu
+   * (espaces, tableaux, commentaires) restait « modifié » même après annulation complète (0.8). */
+  onBaseline?: (markdown: string) => void;
   onSaveRequest: () => void;
   onStats?: (stats: EditorStats) => void;
   /** Format papier, marges, en-tête/pied de page — voir pageLayout.ts. */
@@ -500,7 +504,7 @@ interface MarkdownEditorProps {
 /** Éditeur complet : ProseMirror INVISIBLE + couche peinte paginée (voir
  *  pagination/README.md) — le composant central de Pagina. */
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
-  ({ initialContent, onChange, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
+  ({ initialContent, onChange, onBaseline, onSaveRequest, onStats, layout, documentTitle, onLayoutChange, zoom = 1, showRulers = true, onZoomChange, readOnly = false }, ref) => {
     // Contenu initial MIGRÉ (CoverZone.ts) : un document écrit avec
     // l'ancien bloc atomique `coverPage` s'ouvre directement en zone
     // transparente + contenu normal. Idempotent sur les documents
@@ -541,6 +545,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     const currentPageRef = useRef(1);
     const onStatsRef = useRef(onStats);
     onStatsRef.current = onStats;
+    const onBaselineRef = useRef(onBaseline);
+    onBaselineRef.current = onBaseline;
     const zoomRef = useRef(zoom);
     zoomRef.current = zoom;
     const layoutRef = useRef(layout);
@@ -747,6 +753,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         }),
       ],
       content: initialContent,
+      onCreate: ({ editor }) => {
+        // @ts-expect-error - storage.markdown ajouté par l'extension Markdown
+        const normalized = editor.storage.markdown.getMarkdown() as string;
+        // Le store répercute cette référence en prop `initialContent` : la poser aussi dans `loadedContentRef`, sinon l'effet de
+        // synchronisation rappellerait `setContent()` (et remettrait le curseur en fin de document).
+        loadedContentRef.current = normalized;
+        onBaselineRef.current?.(normalized);
+      },
       editorProps: {
         attributes: {
           class: "xmd-prosemirror",
