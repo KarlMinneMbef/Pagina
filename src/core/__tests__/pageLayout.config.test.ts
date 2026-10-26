@@ -48,3 +48,16 @@ describe("commentaire pagina:config", () => {
     expect(content).toBe("# Titre");
   });
 });
+
+describe("date de création des propriétés", () => {
+  it("posée au premier enregistrement d'un fichier sans config, jamais recalculée ensuite", () => {
+    const { layout } = extractDocumentConfig("# Titre\n");
+    expect(layout.documentProperties.createdDate).toBe("");
+    const written = withDocumentConfig(layout, "# Titre\n");
+    const created = extractDocumentConfig(written).layout.documentProperties.createdDate;
+    expect(created).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // Une date déjà présente n'est pas touchée.
+    const old = { ...layout, documentProperties: { ...layout.documentProperties, createdDate: "2020-01-02" } };
+    expect(extractDocumentConfig(withDocumentConfig(old, "x")).layout.documentProperties.createdDate).toBe("2020-01-02");
+  });
+});

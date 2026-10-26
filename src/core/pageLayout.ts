@@ -711,7 +711,13 @@ export function withDocumentConfig(layout: PageLayoutSettings, content: string):
   // Word — posée sur la copie écrite, l'état mémoire n'est pas altéré.
   const layoutEcrit = {
     ...layout,
-    documentProperties: { ...layout.documentProperties, modifiedDate: dateDuJourISO() },
+    // « Date de création » : posée au PREMIER enregistrement d'un fichier qui n'en avait pas (un .md écrit ailleurs n'a pas
+    // de commentaire de config, donc pas de date) — jamais recalculée ensuite.
+    documentProperties: {
+      ...layout.documentProperties,
+      createdDate: layout.documentProperties.createdDate || dateDuJourISO(),
+      modifiedDate: dateDuJourISO(),
+    },
   };
   return `${serializeGeneratorComment()}\n${serializeDocumentConfig(layoutEcrit)}\n${content}`;
 }

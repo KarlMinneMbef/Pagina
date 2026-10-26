@@ -210,6 +210,34 @@ export function DiagramPanel({
   onClose: () => void;
 }) {
   const [value, setValue] = useState(source);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Pile d'annulation LOCALE du textarea : sa valeur est pilotée par React et les modèles la remplacent par programme,
+  // la pile native du navigateur n'est donc pas fiable. Ctrl+Z / Ctrl+Y dans le textarea la parcourent (et réécrivent la
+  // source du document) ; depuis l'éditeur, Ctrl+Z annule le document et le textarea le suit (effet ci-dessous).
+  const history = useRef<{ stack: string[]; index: number; lastPushAt: number }>({ stack: [source], index: 0, lastPushAt: 0 });
+  const pushHistory = (v: string, coalesce: boolean) => {
+    const h = history.current;
+    if (h.stack[h.index] === v) return;
+    const now = Date.now();
+    h.stack = h.stack.slice(0, h.index + 1);
+    // Des frappes rapprochées ne forment qu'une étape d'annulation.
+    if (coalesce && h.index > 0 && now - h.lastPushAt < 600) h.stack[h.index] = v;
+    else {
+      h.stack.push(v);
+      h.index = h.stack.length - 1;
+    }
+    h.lastPushAt = now;
+  };
+  const stepHistory = (delta: -1 | 1) => {
+    const h = history.current;
+    const next = h.index + delta;
+    if (next < 0 || next >= h.stack.length) return;
+    h.index = next;
+    const v = h.stack[next];
+    setValue(v);
+    onSourceChange(v);
+    void renderPreview(v);
+  };
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [previewError, setPreviewError] = useState<string | null>(null);
   // Thème de couleurs (thème + surcharges) — réglage GLOBAL (tous les
@@ -255,8 +283,20 @@ export function DiagramPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // La source du document change HORS du textarea (Ctrl+Z / Ctrl+Y, modèle annulé) : le textarea suit. Jamais pendant
+  // la frappe (le curseur sauterait) — il a alors le focus et sa valeur fait foi.
+  useEffect(() => {
+    if (source !== value && document.activeElement !== textareaRef.current) {
+      pushHistory(source, false);
+      setValue(source);
+      void renderPreview(source);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source]);
+
   const onInput = (v: string) => {
     setValue(v);
+    pushHistory(v, true);
     onSourceChange(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => void renderPreview(v), 250);
@@ -265,6 +305,7 @@ export function DiagramPanel({
   /** Un modèle REMPLACE la source (undoable : une étape d'annulation
    * par remplacement, l'ancienne source reste récupérable par Ctrl+Z). */
   const applyTemplate = (tpl: DiagramTemplate) => {
+    pushHistory(tpl.source, false);
     setValue(tpl.source);
     onSourceChange(tpl.source);
     void renderPreview(tpl.source);
@@ -369,8 +410,21 @@ export function DiagramPanel({
         <textarea
           className="dm-source"
           spellCheck={false}
+          ref={textareaRef}
           value={value}
           onChange={(e) => onInput(e.target.value)}
+          onKeyDown={(e) => {
+            const mod = e.ctrlKey || e.metaKey;
+            if (!mod) return;
+            const key = e.key.toLowerCase();
+            if (key === "z" && !e.shiftKey) {
+              e.preventDefault();
+              stepHistory(-1);
+            } else if (key === "y" || (key === "z" && e.shiftKey)) {
+              e.preventDefault();
+              stepHistory(1);
+            }
+          }}
           placeholder="Source Mermaid du diagramme…"
         />
         {previewError ? (

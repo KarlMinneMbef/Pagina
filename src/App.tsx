@@ -160,6 +160,14 @@ function App() {
   }, [stats.coverZone]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Ctrl+S partout (le raccourci de l'éditeur ne marche que s'il a le focus : après une fenêtre de dialogue, un
+      // champ de panneau ou la vue Code, Ctrl+S ne faisait rien). Déjà traité par l'éditeur = defaultPrevented.
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "s" && !e.defaultPrevented) {
+        e.preventDefault();
+        const { activePath, saveTab: save } = useTabsStore.getState();
+        if (activePath) void save(activePath);
+        return;
+      }
       if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "f") {
         // Ne pas voler le Ctrl+F de l'EXPLORATEUR (son propre champ de
         // recherche) ni hors document ouvert.

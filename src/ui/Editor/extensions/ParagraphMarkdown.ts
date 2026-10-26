@@ -169,6 +169,19 @@ export const ParagraphMarkdown = ParagraphBase.extend({
   addKeyboardShortcuts() {
     // Raccourcis de Word : Ctrl+M augmente le retrait, Ctrl+Shift+M le
     // diminue (Cmd/Ctrl selon la plateforme via « Mod »).
+    /** Tab / Maj+Tab hors liste et tableau : retrait du paragraphe (la touche est toujours « consommée » : le
+     *  focus ne doit pas quitter l'éditeur). Dans une liste ou une cellule : false → touche des listes/tableaux. */
+    const tab = (direction: 1 | -1): boolean => {
+      const { $from } = this.editor.state.selection;
+      for (let d = $from.depth; d > 0; d--) {
+        const name = $from.node(d).type.name;
+        if (name === "listItem" || name === "taskItem" || name === "tableCell" || name === "tableHeader") return false;
+      }
+      if ($from.parent.type.name === "paragraph") {
+        return direction === 1 ? this.editor.commands.increaseParagraphIndent() : this.editor.commands.decreaseParagraphIndent();
+      }
+      return true;
+    };
     return {
       ...this.parent?.(),
       // Entrée en FIN d'un paragraphe porteur d'un style HTML brut (bandeau de
@@ -183,6 +196,12 @@ export const ParagraphMarkdown = ParagraphBase.extend({
       },
       "Mod-Shift-m": () => this.editor.commands.decreaseParagraphIndent(),
       "Mod-m": () => this.editor.commands.increaseParagraphIndent(),
+      // Touche Tabulation (comme les boutons « Tabulation ± » du ruban) : retrait du paragraphe de 1,25 cm.
+      // Sans ça, Tab faisait sortir le focus de l'éditeur (vers la barre d'état) sans rien changer. Dans une
+      // liste ou une cellule de tableau, la touche reste celle des listes (sous-niveau) et des tableaux
+      // (cellule suivante) : on ne la prend pas ici.
+      Tab: () => tab(1),
+      "Shift-Tab": () => tab(-1),
     };
   },
 
