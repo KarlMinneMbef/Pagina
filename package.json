@@ -38,6 +38,7 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
+    "fflate": "^0.8.3",
     "katex": "^0.18.7",
     "lowlight": "^3.3.0",
     "mathlive": "^0.111.1",
