@@ -218,7 +218,7 @@ export function builtinDocumentStyles(): DocumentStyle[] {
           fromEdgeMm: 8,
           showOnFirstPage: false,
           text:
-            '<table style="width:100%;border:none;border-collapse:collapse"><tr><td style="border:none;padding:0"><b style="font-size:18pt;color:#003f2b">{{Societe}}</b></td><td style="border:none;padding:0;width:62mm;font-size:8pt;color:#4f6228">Projet : {{Projet}}<br>Référence : <b>{{Reference}}</b></td></tr></table>',
+            '<table><colgroup><col style="width: 440px;"><col style="width: 240px;"></colgroup><tbody><tr><td colwidth="440" style="border-top:none;border-right:none;border-bottom:none;border-left:none"><p><span style="font-size:18pt;color:#003f2b"><strong>{{Societe}}</strong></span></p></td><td colwidth="240" style="border-top:none;border-right:none;border-bottom:none;border-left:none"><p><span style="font-size:8pt;color:#4f6228">Projet : {{Projet}}<br>Référence : <strong>{{Reference}}</strong></span></p></td></tr></tbody></table>',
         },
         footer: {
           ...b.footer,

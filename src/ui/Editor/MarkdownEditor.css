@@ -330,6 +330,35 @@ math-virtual-keyboard {
 .xmd-hf-prosemirror table,
 .xmd-header-footer-content table {
   border-collapse: collapse;
+  /* Pleine largeur de la zone, colonnes aux largeurs enregistrées (<col>), identiques en édition
+   * et sur la page : un tableau d'en-tête (logo à gauche, projet à droite) s'étale comme dans Word. */
+  width: 100%;
+  table-layout: fixed;
+}
+.xmd-hf-prosemirror .tableWrapper {
+  overflow: visible;
+}
+.xmd-hf-prosemirror td,
+.xmd-hf-prosemirror th {
+  position: relative;
+}
+/* Poignée de redimensionnement de colonne (plugin natif prosemirror-tables) */
+.xmd-hf-prosemirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #2f52a0;
+  z-index: 20;
+  pointer-events: none;
+}
+.xmd-hf-prosemirror.resize-cursor {
+  cursor: col-resize;
+}
+.xmd-hf-prosemirror p,
+.xmd-header-footer-content p {
+  margin: 0;
 }
 
 .xmd-hf-prosemirror td,

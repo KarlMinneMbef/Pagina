@@ -29,6 +29,21 @@ const CSS_BORDER_PROPERTY: Record<BorderSide, string> = {
   borderLeft: "border-left",
 };
 
+/** Bordure d'un côté, lue sur le style en ligne d'une cellule. On lit les propriétés DÉTAILLÉES
+ *  (style, épaisseur, couleur) : le raccourci `style.borderTop` est VIDE dans Chrome pour
+ *  `border-top: none` et pour `border: none` (bordure en raccourci d'un modèle ou écrite à la
+ *  main) — la bordure était alors perdue et l'éditeur affichait des bordures par défaut là où la
+ *  page n'en avait aucune. */
+export function parseSideBorder(element: HTMLElement, side: BorderSide): string | null {
+  const st = element.style as unknown as Record<string, string>;
+  const short = st[side];
+  if (short && !/^medium\b/.test(short)) return short;
+  const style = st[`${side}Style`];
+  if (!style) return null;
+  if (style === "none" || style === "hidden") return "none";
+  return [st[`${side}Width`], style, st[`${side}Color`]].filter(Boolean).join(" ");
+}
+
 function cellStyleAttributes() {
   const attrs: Record<string, any> = {
     backgroundColor: {
@@ -54,7 +69,7 @@ function cellStyleAttributes() {
   for (const side of BORDER_SIDES) {
     attrs[side] = {
       default: null,
-      parseHTML: (element: HTMLElement) => (element.style as any)[side] || null,
+      parseHTML: (element: HTMLElement) => parseSideBorder(element, side),
       renderHTML: (attributes: any) => {
         const value = attributes[side];
         if (!value) return {};

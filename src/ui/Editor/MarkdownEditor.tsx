@@ -1749,7 +1749,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             // sur la page de garde ; même bug pour l'en-tête/pied, corrigé
             // au passage).
             ParagraphMarkdown,
-            Table,
+            // Mêmes tableaux que le corps (bordures par côté, fond, largeurs) ET colonnes
+            // redimensionnables à la souris : le champ d'édition est visible, le plugin natif
+            // de poignées de colonnes y fonctionne (voir les règles `.xmd-hf-prosemirror` du CSS).
+            Table.configure({ resizable: true }),
             TableRow,
             TableCell,
             TableHeader,

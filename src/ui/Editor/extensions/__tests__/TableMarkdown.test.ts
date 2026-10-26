@@ -80,4 +80,27 @@ describe("TableMarkdown — contenu de cellule non textuel", () => {
     expect(md).toMatch(/^\| a \| b \|/m);
     expect(md).not.toContain("<table");
   });
+
+  it("relit les bordures en raccourci (border: none) et les largeurs de colonne d'un tableau d'en-tête", () => {
+    const html =
+      '<table><tbody><tr><td colwidth="440" style="border-top:none;border-right:none;border-bottom:none;border-left:none"><p>a</p></td>' +
+      '<td colwidth="240" style="border:none"><p>b</p></td><td style="border-bottom: 2px solid #ff0000"><p>c</p></td></tr></tbody></table>';
+    const ed = makeEditor(html);
+    const cells: Record<string, unknown>[] = [];
+    ed.state.doc.descendants((n) => {
+      if (n.type.name === "tableCell") cells.push(n.attrs);
+    });
+    expect(cells.map((c) => c.borderTop)).toEqual(["none", "none", null]);
+    expect(cells.map((c) => c.borderLeft)).toEqual(["none", "none", null]);
+    expect(String(cells[2].borderBottom)).toContain("solid");
+    expect(cells.map((c) => c.colwidth)).toEqual([[440], [240], null]);
+    // Aller-retour : bordures et largeurs survivent à l'écriture puis à la relecture.
+    const relu = makeEditor(getMarkdown(ed));
+    const again: Record<string, unknown>[] = [];
+    relu.state.doc.descendants((n) => {
+      if (n.type.name === "tableCell") again.push(n.attrs);
+    });
+    expect(again.map((c) => c.borderTop)).toEqual(["none", "none", null]);
+    expect(again.map((c) => c.colwidth)).toEqual([[440], [240], null]);
+  });
 });
