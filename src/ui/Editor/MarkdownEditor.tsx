@@ -2235,11 +2235,16 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           }
         }
         const rect = best.getBoundingClientRect();
-        if (e.clientY > rect.bottom) {
+        // Bloc VISIBLE situé au-dessus du clic (les repères de hauteur nulle — saut de page, fin de zone de
+        // garde — sont ignorés : ils collent au bas du tableau et passeraient sinon pour le bloc le plus proche).
+        const visibles = blocks.filter((b) => b.getBoundingClientRect().height >= 1);
+        let anchor: HTMLElement | null = null;
+        for (const b of visibles) if (b.getBoundingClientRect().top <= e.clientY) anchor = b;
+        if (anchor && e.clientY > anchor.getBoundingClientRect().bottom) {
           const doc = editor.state.doc;
           const accepteTexte = (n: ProseMirrorNode | null | undefined) =>
             !!n && (n.isTextblock || n.type.name === "bulletList" || n.type.name === "orderedList" || n.type.name === "taskList");
-          const srcAttr = best.getAttribute(SRC_POS_ATTR);
+          const srcAttr = anchor.getAttribute(SRC_POS_ATTR);
           const node = srcAttr !== null ? doc.nodeAt(Number(srcAttr)) : null;
           if (srcAttr !== null && node && !accepteTexte(node)) {
             const end = Number(srcAttr) + node.nodeSize;
@@ -2247,7 +2252,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
             const pages = Array.from(canvas.querySelectorAll<HTMLElement>(".xmd-page"));
             const nextFirst = pages[pages.indexOf(page) + 1]?.querySelector<HTMLElement>(".xmd-page-content")?.children[0];
             const continuesOnNextPage =
-              best === blocks[blocks.length - 1] && nextFirst?.getAttribute(SRC_POS_ATTR) === srcAttr;
+              anchor === visibles[visibles.length - 1] && nextFirst?.getAttribute(SRC_POS_ATTR) === srcAttr;
             if (!continuesOnNextPage && !accepteTexte(doc.nodeAt(end))) return { insertAt: end };
           }
         }
