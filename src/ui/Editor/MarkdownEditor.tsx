@@ -1410,6 +1410,15 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         const selectionLayer = selectionLayerRef.current;
         if (!canvas || !caret) return;
 
+        // Un champ d'en-tête/pied de page est en cours d'édition : c'est LUI qui porte le curseur. Celui
+        // du corps (copie peinte de l'ancienne sélection) est masqué — sinon deux curseurs s'affichent
+        // en même temps (bug du 2026-10-26).
+        if (headerMiniEditorRef.current) {
+          caret.style.display = "none";
+          selectionLayer?.replaceChildren();
+          return;
+        }
+
         const { from, to } = editor.state.selection;
         const isCollapsed = from === to;
 
@@ -1766,6 +1775,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         return;
       }
       headerMiniEditorRef.current = mini;
+      repaintCaretRef.current(); // masque tout de suite le curseur du corps
       emitMode(isHeader ? "header" : "footer");
       mini.commands.focus("end");
 
@@ -1835,6 +1845,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         window.removeEventListener("resize", reposition);
         headerFooterCommitRef.current = null;
         headerMiniEditorRef.current = null;
+        repaintCaretRef.current(); // le curseur du corps réapparaît
         emitMode(null);
         mini.destroy();
         host.remove();
