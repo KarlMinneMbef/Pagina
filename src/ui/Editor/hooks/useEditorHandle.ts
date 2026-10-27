@@ -595,6 +595,49 @@ export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwa
       // Le bouton du panneau a pris le focus : on le rend à l'éditeur (Ctrl+Z doit pouvoir annuler la suppression).
       editor.commands.focus(undefined, { scrollIntoView: false });
     },
+    // --- Commentaires de relecture (marque `comment`, voir CommentMark.ts) ---
+    addCommentMark: (id) => {
+      if (!editor || !editor.isEditable) return false;
+      const { from, to, empty } = editor.state.selection;
+      if (empty) return false;
+      const type = editor.state.schema.marks.comment;
+      if (!type) return false;
+      editor.view.dispatch(editor.state.tr.addMark(from, to, type.create({ id })));
+      return true;
+    },
+    getSelectionText: () => {
+      if (!editor) return "";
+      const { from, to } = editor.state.selection;
+      return editor.state.doc.textBetween(from, to, " ");
+    },
+    jumpToComment: (id) => {
+      if (!editor) return false;
+      let range: { from: number; to: number } | null = null;
+      editor.state.doc.descendants((node, pos) => {
+        if (range || !node.isText) return !range;
+        const mark = node.marks.find((m) => m.type.name === "comment" && m.attrs.id === id);
+        if (mark) range = { from: pos, to: pos + node.nodeSize };
+        return !range;
+      });
+      if (!range) return false;
+      editor.commands.focus(undefined, { scrollIntoView: false });
+      editor.commands.setTextSelection(range);
+      scrollSelectionIntoViewRef.current();
+      return true;
+    },
+    removeCommentMark: (id) => {
+      if (!editor) return;
+      const type = editor.state.schema.marks.comment;
+      if (!type) return;
+      const tr = editor.state.tr;
+      editor.state.doc.descendants((node, pos) => {
+        if (!node.isText) return true;
+        const mark = node.marks.find((m) => m.type === type && m.attrs.id === id);
+        if (mark) tr.removeMark(pos, pos + node.nodeSize, mark);
+        return true;
+      });
+      if (tr.steps.length > 0) editor.view.dispatch(tr);
+    },
     insertImage: () => {
       void pickAndInsertImages(editor.view, refs.addImageRef.current);
     },

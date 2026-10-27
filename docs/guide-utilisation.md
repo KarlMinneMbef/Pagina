@@ -127,6 +127,16 @@ Un fichier **`.xmd`** est un fichier compressé (un ZIP) qui regroupe le texte d
 - Enregistrer sous un `.md` depuis un `.xmd` extrait les images dans un dossier `images/` à côté du fichier.
 - Lu dans un autre lecteur Markdown (après décompression du `.xmd`), le `document.md` n'affiche que le contenu : aucun commentaire ni historique n'y figure.
 
+## Commentaires et historique (.xmd uniquement)
+
+Les boutons **Commenter** et **Historique** (coin droit du ruban, à côté de l'Explorateur) sont grisés sur un document `.md` — seuls les fichiers `.xmd` portent ces données.
+
+- **Commenter** : sélectionnez un passage de texte, puis « ＋ Commenter la sélection » dans le panneau. Le passage est **surligné en jaune** (jamais imprimé ni exporté en PDF) et la carte du commentaire s'affiche : **répondre**, **résoudre/rouvrir**, **supprimer** (retire aussi le surlignage), et cliquer la citation pour **revenir au passage**.
+- Les commentaires vivent dans le fichier `.xmd` (pas dans le texte) : le `document.md` reste du Markdown pur, avec une simple balise invisible autour du passage commenté.
+- **Historique** : chaque **enregistrement** du fichier ajoute une version automatique (sans doublon si le contenu n'a pas changé) ; « ＋ Enregistrer une version nommée… » étiquette une version précise (« Soumission client »…).
+- **Restaurer** une version remplace le contenu de l'onglet (après confirmation) ; l'onglet passe « modifié » — enregistrez pour l'appliquer au fichier. La version en cours reste dans l'historique : rien n'est perdu.
+- La liste est plafonnée (25 versions) : les plus anciennes versions **automatiques** sautent d'abord, les versions **nommées** sont conservées en priorité.
+
 ## Panneaux contextuels
 
 Une colonne à droite de l'éditeur regroupe les panneaux selon le contexte (onglets quand plusieurs sont actifs). Ils apparaissent seuls, ne recouvrent jamais la page, et se ferment en quittant le contexte ou par ✕.

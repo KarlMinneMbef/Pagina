@@ -5,7 +5,7 @@
  * titres, Propriétés du document, Paragraphe), panneaux latéraux et câblage
  * des actions du ruban vers l'éditeur via MarkdownEditorHandle.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { confirm as confirmDialog, message as messageDialog } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
@@ -28,6 +28,10 @@ import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialo
 import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { ImagePanel } from "./ui/Image/ImagePanel";
+import { CommentsPanel } from "./ui/Comments/CommentsPanel";
+import { HistoryPanel } from "./ui/History/HistoryPanel";
+import { parseComments, serializeComments, newCommentId, type CommentsFile } from "./core/xmd/comments";
+import { parseHistory, serializeHistory, type Revision } from "./core/xmd/history";
 import { SectionBreakDialog } from "./ui/Section/SectionBreakDialog";
 import { CoverGalleryDialog } from "./ui/Cover/CoverGalleryDialog";
 import { addUserCoverTemplate } from "./core/coverTemplates";
@@ -37,7 +41,7 @@ import { SettingsDialog } from "./ui/Settings/SettingsDialog";
 import { DocumentCheckDialog } from "./ui/DocumentCheck/DocumentCheckDialog";
 import { PromptHost } from "./ui/dialogs/PromptHost";
 import { askNewFileName } from "./ui/dialogs/prompts";
-import { askConfirm } from "./ui/dialogs/promptStore";
+import { askConfirm, askText } from "./ui/dialogs/promptStore";
 import type { AddImage } from "./ui/Editor/imageInsert";
 import { freeXmdPath, titleOf } from "./core/xmd/paths";
 import { UserDialog } from "./ui/User/UserDialog";
@@ -90,6 +94,10 @@ function App() {
     saveTab,
     saveTabAs,
     restoreSession,
+    updateComments,
+    updateHistory,
+    saveNamedRevision,
+    restoreRevision,
   } = useTabsStore();
 
   const editorRef = useRef<MarkdownEditorHandle>(null);
@@ -148,6 +156,12 @@ function App() {
   // Panneau « Image » : ouvert quand une image est sélectionnée, refermé quand la sélection la quitte (même cycle que Diagramme).
   const [imagePanelOpen, setImagePanelOpen] = useState(false);
   const wasImageSelRef = useRef(false);
+  // Panneaux « Commentaires » et « Historique » (format .xmd uniquement,
+  // roadmap 5.2/5.3) : ouverts MANUELLEMENT depuis les boutons du coin du
+  // ruban — pas de front montant, ils restent ouverts tant que l'onglet
+  // .xmd est actif.
+  const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   useEffect(() => {
     const was = wasImageSelRef.current;
     wasImageSelRef.current = !!stats.image;
@@ -209,7 +223,7 @@ function App() {
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image" | "commentaires" | "historique">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -349,6 +363,25 @@ function App() {
 
   const activeTab = tabs.find((t) => t.path === activePath) ?? null;
 
+  // Commentaires/historique de l'onglet actif, REPARSÉS quand le JSON
+  // change (action du panneau ou changement d'onglet).
+  const activeComments: CommentsFile = useMemo(
+    () => parseComments(activeTab?.comments ?? ""),
+    [activeTab?.comments, activeTab?.path],
+  );
+  const activeRevisions: Revision[] = useMemo(
+    () => parseHistory(activeTab?.history ?? "").revisions.slice().reverse(),
+    [activeTab?.history, activeTab?.path],
+  );
+  // Un document `.md` n'a ni commentaires ni historique : les panneaux
+  // ouverts se referment d'eux-mêmes au changement d'onglet.
+  useEffect(() => {
+    if (activeTab?.format !== "xmd") {
+      setCommentsPanelOpen(false);
+      setHistoryPanelOpen(false);
+    }
+  }, [activeTab?.format, activeTab?.path]);
+
   // Changer d'onglet revient toujours à la vue Pages avec des statistiques
   // fraîches — sinon on garderait la vue "code" ou les stats du fichier
   // précédent affichées sur le nouveau.
@@ -447,6 +480,133 @@ function App() {
       await messageDialog(`Impossible d'ajouter l'image : ${e}`, { title: "Pagina", kind: "error" });
       return null;
     }
+  };
+
+  // --- Commentaires de relecture (format .xmd, roadmap 5.2) ---
+  // Le texte du commentaire vit dans `comments.json` du conteneur, l'ancre
+  // est surlignée dans le document (marque `comment`, voir CommentMark.ts).
+  const commentAuthor = `${firstName} ${lastName}`.trim();
+
+  const handleAddComment = async () => {
+    if (!activeTab || activeTab.format !== "xmd" || !editorRef.current) return;
+    const quote = editorRef.current.getSelectionText();
+    if (!quote.trim()) {
+      await messageDialog("Sélectionnez d'abord le passage de texte à commenter.", { title: "Commentaires", kind: "warning" });
+      return;
+    }
+    const text = await askText({
+      title: "Nouveau commentaire",
+      label: "Votre commentaire :",
+      placeholder: "Écrivez votre remarque de relecture…",
+      okLabel: "Commenter",
+      validate: (v) => (v.trim() ? null : "Le commentaire ne peut pas être vide."),
+    });
+    if (text === null || !text.trim()) return;
+    const id = newCommentId();
+    if (!editorRef.current.addCommentMark(id)) return;
+    const file = parseComments(activeTab.comments);
+    file.comments.push({
+      id,
+      quote,
+      author: commentAuthor,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      resolved: false,
+      resolvedAt: null,
+      replies: [],
+    });
+    updateComments(activeTab.path, serializeComments(file));
+  };
+
+  const handleReplyComment = (id: string, text: string) => {
+    if (!activeTab) return;
+    const file = parseComments(activeTab.comments);
+    const comment = file.comments.find((c) => c.id === id);
+    if (!comment) return;
+    comment.replies.push({ id: newCommentId(), author: commentAuthor, text, createdAt: new Date().toISOString() });
+    updateComments(activeTab.path, serializeComments(file));
+  };
+
+  const handleToggleResolveComment = (id: string) => {
+    if (!activeTab) return;
+    const file = parseComments(activeTab.comments);
+    const comment = file.comments.find((c) => c.id === id);
+    if (!comment) return;
+    comment.resolved = !comment.resolved;
+    comment.resolvedAt = comment.resolved ? new Date().toISOString() : null;
+    updateComments(activeTab.path, serializeComments(file));
+  };
+
+  const handleDeleteComment = (id: string) => {
+    if (!activeTab) return;
+    const file = parseComments(activeTab.comments);
+    file.comments = file.comments.filter((c) => c.id !== id);
+    updateComments(activeTab.path, serializeComments(file));
+    // Le surlignage suit le commentaire : il disparaît aussi.
+    editorRef.current?.removeCommentMark(id);
+  };
+
+  const handleJumpToComment = (id: string) => {
+    void editorRef.current?.jumpToComment(id);
+  };
+
+  // --- Historique des révisions (format .xmd, roadmap 5.3) ---
+  const handleSaveNamedRevision = async () => {
+    if (!activeTab) return;
+    const label = await askText({
+      title: "Enregistrer une version nommée",
+      label: "Nom de la version :",
+      placeholder: "ex. Soumission client",
+      okLabel: "Enregistrer",
+      validate: (v) => (v.trim() ? null : "Le nom ne peut pas être vide."),
+    });
+    if (label === null || !label.trim()) return;
+    saveNamedRevision(activeTab.path, label.trim());
+    setHistoryPanelOpen(true);
+  };
+
+  const handleRestoreRevision = async (id: string) => {
+    if (!activeTab) return;
+    const revision = parseHistory(activeTab.history).revisions.find((r) => r.id === id);
+    if (!revision) return;
+    const ok = await askConfirm({
+      title: "Restaurer une version",
+      message:
+        `Le contenu de l'onglet va être remplacé par « ${revision.label ?? "Enregistrée automatiquement"} » ` +
+        `(enregistrée le ${new Date(revision.savedAt).toLocaleString("fr-FR")}). ` +
+        `L'onglet passera « modifié » : enregistrez-le pour l'appliquer au fichier — la version actuelle restera dans l'historique.`,
+      okLabel: "Restaurer",
+    });
+    if (ok) restoreRevision(activeTab.path, id);
+  };
+
+  const handleRenameRevision = async (id: string) => {
+    if (!activeTab) return;
+    const file = parseHistory(activeTab.history);
+    const revision = file.revisions.find((r) => r.id === id);
+    if (!revision) return;
+    const label = await askText({
+      title: "Renommer la version",
+      label: "Nouveau nom (vide = version automatique) :",
+      initial: revision.label ?? "",
+      okLabel: "Renommer",
+    });
+    if (label === null) return;
+    revision.label = label.trim() || null;
+    updateHistory(activeTab.path, serializeHistory(file));
+  };
+
+  const handleDeleteRevision = async (id: string) => {
+    if (!activeTab) return;
+    const ok = await askConfirm({
+      title: "Supprimer la version",
+      message: "Cette version sera définitivement retirée de l'historique du document. Continuer ?",
+      okLabel: "Supprimer",
+    });
+    if (!ok) return;
+    const file = parseHistory(activeTab.history);
+    file.revisions = file.revisions.filter((r) => r.id !== id);
+    updateHistory(activeTab.path, serializeHistory(file));
   };
 
   const handleSaveAs = async () => {
@@ -591,6 +751,26 @@ function App() {
         actions={actions}
         onToggleSidebar={() => setSidebarOpen((o) => !o)}
         sidebarOpen={sidebarOpen}
+        /* Commentaires + Historique : format .xmd uniquement (conteneur),
+         * sinon le bouton est visible mais inactif. L'ouverture sélectionne
+         * AUSSI l'onglet contextuel correspondant (sinon l'hôte rend la
+         * colonne sans contenu). */
+        onToggleComments={() => {
+          setCommentsPanelOpen((o) => {
+            if (!o) setCtxTab("commentaires");
+            return !o;
+          });
+        }}
+        commentsOpen={commentsPanelOpen}
+        canComments={activeTab?.format === "xmd"}
+        onToggleHistory={() => {
+          setHistoryPanelOpen((o) => {
+            if (!o) setCtxTab("historique");
+            return !o;
+          });
+        }}
+        historyOpen={historyPanelOpen}
+        canHistory={activeTab?.format === "xmd"}
         onOpenPageSetup={() => setPageSetupOpen(true)}
         onOpenHeadingStyles={() => setHeadingStylesOpen(true)}
         onOpenDocumentProperties={() => setDocumentPropertiesOpen(true)}
@@ -686,7 +866,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen || coverPanelOpen || imagePanelOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen || coverPanelOpen || imagePanelOpen || commentsPanelOpen || historyPanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -701,10 +881,12 @@ function App() {
                 ...(mermaidPanelOpen && stats.mermaid ? [{ id: "diagramme", label: "Diagramme" }] : []),
                 ...(coverPanelOpen && stats.coverZone ? [{ id: "page-de-garde", label: "Page de garde" }] : []),
                 ...(imagePanelOpen && stats.image ? [{ id: "image", label: "Image" }] : []),
+                ...(commentsPanelOpen && activeTab?.format === "xmd" ? [{ id: "commentaires", label: "Commentaires" }] : []),
+                ...(historyPanelOpen && activeTab?.format === "xmd" ? [{ id: "historique", label: "Historique" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image" | "commentaires" | "historique")}
             /* « Rechercher » plus large (volet façon Word, retour
              * utilisateur 2026-10-21) — appliqué au changement d'onglet
              * seulement, l'utilisateur garde la main sur la poignée. */
@@ -812,6 +994,31 @@ function App() {
                   onTransform={(action) => editorRef.current?.transformImage(action)}
                   onDelete={() => editorRef.current?.deleteImage()}
                   onClose={() => setImagePanelOpen(false)}
+                />
+              )}
+            {ctxTab === "commentaires" &&
+              commentsPanelOpen &&
+              activeTab?.format === "xmd" && (
+                <CommentsPanel
+                  comments={activeComments.comments}
+                  onAdd={() => void handleAddComment()}
+                  onReply={handleReplyComment}
+                  onToggleResolve={handleToggleResolveComment}
+                  onDelete={handleDeleteComment}
+                  onJump={handleJumpToComment}
+                  onClose={() => setCommentsPanelOpen(false)}
+                />
+              )}
+            {ctxTab === "historique" &&
+              historyPanelOpen &&
+              activeTab?.format === "xmd" && (
+                <HistoryPanel
+                  revisions={activeRevisions}
+                  onSaveNamed={() => void handleSaveNamedRevision()}
+                  onRestore={(id) => void handleRestoreRevision(id)}
+                  onRename={(id) => void handleRenameRevision(id)}
+                  onDelete={(id) => void handleDeleteRevision(id)}
+                  onClose={() => setHistoryPanelOpen(false)}
                 />
               )}
             {ctxTab === "diagramme" &&

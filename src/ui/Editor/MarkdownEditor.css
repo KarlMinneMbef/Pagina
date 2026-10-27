@@ -1319,3 +1319,19 @@ math-virtual-keyboard {
     display: none !important;
   }
 }
+
+/* Commentaire de relecture (2026-10-27, format .xmd — même langage que la
+ * CommentExtension de CasualOffice) : passage surligné en jaune pâle, trait
+ * jaune en dessous. Visible à l'écran dans l'éditeur ET ses clones peints
+ * (le style est porté par la classe) ; JAMAIS à l'impression. */
+.xmd-comment {
+  background-color: rgba(255, 212, 0, 0.25);
+  border-bottom: 2px solid rgba(255, 212, 0, 0.6);
+}
+
+@media print {
+  .xmd-comment {
+    background: none;
+    border-bottom: none;
+  }
+}

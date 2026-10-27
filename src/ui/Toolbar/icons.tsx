@@ -799,3 +799,14 @@ export function IconImage({ size, className }: IconProps) {
     </Svg24>
   );
 }
+
+/** Historique des versions (coin droit du ruban, format .xmd) — horloge à aiguille arrière. */
+export function IconHistory({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 3-6.46" />
+      <path d="M3 3v4.5h4.5" />
+      <path d="M12 7.5V12l3.5 2" />
+    </Svg24>
+  );
+}

@@ -67,6 +67,7 @@ import {
   IconCoverPage,
   IconPageSetup,
   IconComment,
+  IconHistory,
   IconPaste,
   IconTaskList,
   IconTocMarker,
@@ -323,6 +324,12 @@ export function Toolbar({
   actions,
   onToggleSidebar,
   sidebarOpen,
+  onToggleComments = () => {},
+  commentsOpen = false,
+  canComments = false,
+  onToggleHistory = () => {},
+  historyOpen = false,
+  canHistory = false,
   onOpenPageSetup,
   onOpenHeadingStyles,
   onOpenDocumentProperties,
@@ -345,6 +352,16 @@ export function Toolbar({
   actions: ToolbarActions | null;
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
+  /** Panneau « Commentaires » (format .xmd uniquement, roadmap 5.2). */
+  onToggleComments?: () => void;
+  commentsOpen?: boolean;
+  /** `false` = document `.md` : bouton visible mais inactif. */
+  canComments?: boolean;
+  /** Panneau « Historique » (format .xmd uniquement, roadmap 5.3). */
+  onToggleHistory?: () => void;
+  historyOpen?: boolean;
+  /** `false` = document `.md` : bouton visible mais inactif. */
+  canHistory?: boolean;
   onOpenPageSetup: () => void;
   onOpenHeadingStyles: () => void;
   /** Ouvre la fenêtre « Propriétés du document » (roadmap 1.3). */
@@ -433,8 +450,10 @@ export function Toolbar({
         </button>
 
         {/* Coin droit du ruban (demande 2026-10-17) : Explorateur au
-         * même emplacement que « Partager » dans Word, Commenter à
-         * côté — inactif tant que la fonctionnalité n'existe pas. */}
+         * même emplacement que « Partager » dans Word, Commenter puis
+         * Historique à côté (2026-10-27) — ces deux-là n'existent que
+         * dans le format .xmd (commentaires.json / history.json du
+         * conteneur) : grisés sur un document .md. */}
         <div className="tb-tabbar-right">
           <button
             type="button"
@@ -445,9 +464,25 @@ export function Toolbar({
             <IconExplorer size={16} />
             Explorateur
           </button>
-          <button type="button" className="tb-corner-btn" disabled title="Commenter (bientôt disponible)">
+          <button
+            type="button"
+            className={`tb-corner-btn${commentsOpen ? " tb-corner-btn-active" : ""}`}
+            onClick={canComments ? onToggleComments : undefined}
+            disabled={!canComments}
+            title={canComments ? "Commentaires de relecture (sélectionnez du texte, puis commentez)" : "Les commentaires existent uniquement dans les fichiers .xmd (avec images)"}
+          >
             <IconComment size={16} />
             Commenter
+          </button>
+          <button
+            type="button"
+            className={`tb-corner-btn${historyOpen ? " tb-corner-btn-active" : ""}`}
+            onClick={canHistory ? onToggleHistory : undefined}
+            disabled={!canHistory}
+            title={canHistory ? "Historique des versions du document" : "L'historique existe uniquement dans les fichiers .xmd (avec images)"}
+          >
+            <IconHistory size={16} />
+            Historique
           </button>
         </div>
       </div>}

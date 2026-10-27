@@ -1,0 +1,168 @@
+/* Panneau « Commentaires » (voir CommentsPanel.tsx) — même langage que les
+ * autres panneaux contextuels, charte MBEF. */
+.cm-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.cm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.cm-add {
+  border: 1px solid #003f2b;
+  border-radius: 6px;
+  background: #003f2b;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.cm-add:hover {
+  background: #00503a;
+}
+
+.cm-empty {
+  margin: 6px 0;
+  font-size: 11px;
+  color: #75766f;
+  line-height: 1.5;
+}
+
+.cm-card {
+  border: 1px solid #d0d3d4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cm-card-resolved {
+  background: #f6f6f5;
+}
+
+.cm-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cm-author {
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+}
+
+.cm-date {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #75766f;
+}
+
+.cm-text {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #343334;
+  white-space: pre-wrap;
+}
+
+.cm-quote {
+  border: none;
+  background: #fdf6d8;
+  border-radius: 4px;
+  padding: 4px 6px;
+  text-align: left;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-style: italic;
+  color: #6b6b69;
+  cursor: pointer;
+}
+
+.cm-quote:hover {
+  background: #fbeec3;
+}
+
+.cm-reply {
+  border-left: 2px solid #d0d3d4;
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cm-reply-form {
+  display: flex;
+  gap: 6px;
+}
+
+.cm-reply-input {
+  flex: 1;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.cm-reply-input:focus {
+  outline: 1px solid #24ac6e;
+}
+
+.cm-reply-ok {
+  border: 1px solid #003f2b;
+  border-radius: 4px;
+  background: #003f2b;
+  color: #ffffff;
+  font-size: 10px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.cm-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.cm-action {
+  border: 1px solid #d0d3d4;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #343334;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.cm-action:hover {
+  border-color: #24ac6e;
+  color: #00503a;
+}
+
+.cm-action.cm-danger:hover {
+  border-color: #b3261e;
+  color: #b3261e;
+}
+
+.cm-resolved-title {
+  margin: 4px 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #75766f;
+}

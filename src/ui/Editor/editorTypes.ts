@@ -264,6 +264,19 @@ export interface MarkdownEditorHandle {
   transformImage: (action: "rotateCW" | "rotateCCW" | "flipH" | "flipV") => void;
   /** Supprime l'image sélectionnée. */
   deleteImage: () => void;
+  /** --- Commentaires de relecture (format .xmd, roadmap 5.2) ---
+   *  Surligne la sélection avec la marque `comment` portant `id` (voir
+   *  CommentMark.ts) ; retourne `false` (et ne fait rien) si la sélection
+   *  est vide ou l'éditeur en lecture seule. */
+  addCommentMark: (id: string) => boolean;
+  /** Texte brut de la sélection courante (extrait cité par un commentaire). */
+  getSelectionText: () => string;
+  /** Place la sélection sur le passage surligné par le commentaire `id`
+   *  et l'amène à l'écran ; `false` si l'ancre n'existe plus. */
+  jumpToComment: (id: string) => boolean;
+  /** Retire la marque du commentaire `id` de tout le document (commentaire
+   *  supprimé) — sans effet si la marque a déjà disparu. */
+  removeCommentMark: (id: string) => void;
   /** Insère un renvoi vers un signet : lien Markdown `[texte](#id)`. */
   insertCrossReference: () => void;
 }

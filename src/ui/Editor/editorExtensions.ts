@@ -6,6 +6,7 @@ import type { Extensions } from "@tiptap/core";
 import { common, createLowlight } from "lowlight";
 import StarterKit from "@tiptap/starter-kit";
 import { ImageAsset } from "./extensions/ImageAsset";
+import { CommentMark } from "./extensions/CommentMark";
 import { TableMarkdown as Table } from "./extensions/TableMarkdown";
 import { TableRowStyled as TableRow } from "./extensions/TableRowStyle";
 import { TableCellStyled as TableCell, TableHeaderStyled as TableHeader } from "./extensions/TableCellStyle";
@@ -58,6 +59,9 @@ export function buildEditorExtensions({ onSpellChanged }: { onSpellChanged: () =
     CodeBlockLowlight.configure({ lowlight }),
     ParagraphMarkdown,
     ImageAsset,
+    // Commentaires de relecture (format .xmd, roadmap 5.2) : marque
+    // surlignée `<span data-comment="id">`, contenu dans comments.json.
+    CommentMark,
     Table.configure({ resizable: true }),
     TableRow,
     TableHeader,

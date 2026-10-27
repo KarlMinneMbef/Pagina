@@ -1,0 +1,126 @@
+/* Panneau « Historique » (voir HistoryPanel.tsx) — même langage que les
+ * autres panneaux contextuels, charte MBEF. */
+.hi-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.hi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.hi-named {
+  border: 1px solid #003f2b;
+  border-radius: 6px;
+  background: #003f2b;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.hi-named:hover {
+  background: #00503a;
+}
+
+.hi-empty {
+  margin: 6px 0;
+  font-size: 11px;
+  color: #75766f;
+  line-height: 1.5;
+}
+
+.hi-card {
+  border: 1px solid #d0d3d4;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hi-card-current {
+  border-color: #24ac6e;
+}
+
+.hi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hi-label {
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #003f2b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hi-size {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #75766f;
+  white-space: nowrap;
+}
+
+.hi-meta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #75766f;
+}
+
+.hi-author {
+  color: #343334;
+}
+
+.hi-current-tag {
+  color: #24ac6e;
+  font-weight: 600;
+}
+
+.hi-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.hi-action {
+  border: 1px solid #d0d3d4;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #343334;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.hi-action:hover {
+  border-color: #24ac6e;
+  color: #00503a;
+}
+
+.hi-action.hi-danger:hover {
+  border-color: #b3261e;
+  color: #b3261e;
+}
+
+.hi-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: #6b6b69;
+}

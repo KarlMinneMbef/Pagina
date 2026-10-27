@@ -9,6 +9,14 @@ import { loadDocument, saveDocument, type DocumentFormat } from "../../persisten
 import { assetPathFor, EMPTY_COMMENTS, EMPTY_HISTORY, type XmdAsset } from "../xmd/container";
 import { checkDocument, repairDocument, backupPathFor, type Problem } from "../documentCheck";
 import { extractDocumentConfig, withDocumentConfig, type PageLayoutSettings } from "../pageLayout";
+import { appendRevision, parseHistory, serializeHistory } from "../xmd/history";
+import { useUserStore } from "../store/settingsStore";
+
+/** Auteur courant (« Prénom Nom », vide si le profil n'est pas renseigné). */
+function currentAuthor(): string {
+  const { firstName, lastName } = useUserStore.getState();
+  return `${firstName} ${lastName}`.trim();
+}
 
 /** Un onglet document ouvert : chemin, contenu Markdown courant, mise en
  *  page, état modifié, restauration de session. */
@@ -77,6 +85,18 @@ interface TabsState {
   setBaseline: (path: string, markdown: string) => void;
   patchLayout: (path: string, patch: Partial<PageLayoutSettings>) => void;
   updateLayout: (path: string, layout: PageLayoutSettings) => void;
+  /** Remplace le JSON de `comments.json` de l'onglet (panneau Commentaires) — marque l'onglet modifié. */
+  updateComments: (path: string, commentsJson: string) => void;
+  /** Remplace le JSON de `history.json` de l'onglet (panneau Historique) — marque l'onglet modifié. */
+  updateHistory: (path: string, historyJson: string) => void;
+  /** « Enregistrer une version nommée » : ajoute un instantané du contenu
+   *  COURANT (config comprise) à `history.json` — l'onglet est marqué
+   *  modifié (l'instantané est écrit au prochain enregistrement). */
+  saveNamedRevision: (path: string, label: string) => void;
+  /** Restaure une révision : remplace le contenu et la mise en page de
+   *  l'onglet par l'instantané (onglet marqué modifié — rien n'est perdu
+   *  avant l'enregistrement). L'onglet reste ouvert, l'éditeur remonte. */
+  restoreRevision: (path: string, revisionId: string) => void;
   saveTab: (path: string) => Promise<void>;
   /** Relit le fichier sur le disque (contenu, mise en page, problèmes) et remonte l'éditeur.
    * Écrase l'état mémoire de l'onglet : à n'appeler que sur un onglet non modifié. */
@@ -231,6 +251,42 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     }));
   },
 
+  // --- Commentaires et historique (format .xmd, roadmap 5.2/5.3) ---
+  updateComments: (path, commentsJson) => {
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.path === path ? { ...t, comments: commentsJson, dirty: true } : t)),
+    }));
+  },
+  updateHistory: (path, historyJson) => {
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.path === path ? { ...t, history: historyJson, dirty: true } : t)),
+    }));
+  },
+  saveNamedRevision: (path, label) => {
+    const { pendingContent, tabs } = get();
+    const tab = tabs.find((t) => t.path === path);
+    if (!tab) return;
+    const content = pendingContent[path] ?? tab.content;
+    const raw = withDocumentConfig(tab.layout, content);
+    const file = appendRevision(parseHistory(tab.history), raw, currentAuthor(), label);
+    get().updateHistory(path, serializeHistory(file));
+  },
+  restoreRevision: (path, revisionId) => {
+    const { tabs } = get();
+    const tab = tabs.find((t) => t.path === path);
+    if (!tab) return;
+    const revision = parseHistory(tab.history).revisions.find((r) => r.id === revisionId);
+    if (!revision) return;
+    const { layout, content } = extractDocumentConfig(revision.markdown);
+    set((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.path === path ? { ...t, content, layout, dirty: true, revision: t.revision + 1 } : t
+      ),
+      // Le contenu restauré devient la référence en attente d'enregistrement.
+      pendingContent: { ...s.pendingContent, [path]: content },
+    }));
+  },
+
   saveTab: async (path: string) => {
     const { pendingContent, tabs } = get();
     const content = pendingContent[path];
@@ -239,10 +295,16 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     // Le commentaire de config est réinjecté ICI, juste avant l'écriture
     // disque — jamais porté par l'éditeur (voir pageLayout.ts).
     const raw = withDocumentConfig(tab.layout, content);
-    await saveDocument(path, { raw, assets: tab.assets, comments: tab.comments, history: tab.history, extras: tab.extras });
+    // Historique (format .xmd) : chaque enregistrement ajoute une révision
+    // AUTOMATIQUE si le contenu a changé (voir core/xmd/history.ts).
+    const history = tab.format === "xmd" ? serializeHistory(appendRevision(parseHistory(tab.history), raw, currentAuthor(), null)) : tab.history;
+    await saveDocument(path, { raw, assets: tab.assets, comments: tab.comments, history, extras: tab.extras });
     const issues = checkDocument(raw);
     set((s) => ({
-      tabs: s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: false, issues } : t)),
+      // `history` : la révision automatique créée par CET enregistrement
+      // devient la référence du store aussi (le panneau la montre tout de
+      // suite, sans attendre une réouverture).
+      tabs: s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: false, issues, history } : t)),
     }));
   },
 
