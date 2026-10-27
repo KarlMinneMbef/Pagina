@@ -134,7 +134,8 @@ Les boutons **Commenter** et **Historique** (coin droit du ruban, à côté de l
 - **Commenter** : sélectionnez un passage de texte, puis « ＋ Commenter la sélection » dans le panneau. Le passage est **surligné en jaune** (jamais imprimé ni exporté en PDF) et la carte du commentaire s'affiche : **répondre**, **résoudre/rouvrir**, **supprimer** (retire aussi le surlignage), et cliquer la citation pour **revenir au passage**.
 - Les commentaires vivent dans le fichier `.xmd` (pas dans le texte) : le `document.md` reste du Markdown pur, avec une simple balise invisible autour du passage commenté.
 - **Historique** : chaque **enregistrement** du fichier ajoute une version automatique (sans doublon si le contenu n'a pas changé) ; « ＋ Enregistrer une version nommée… » étiquette une version précise (« Soumission client »…).
-- **Restaurer** une version remplace le contenu de l'onglet (après confirmation) ; l'onglet passe « modifié » — enregistrez pour l'appliquer au fichier. La version en cours reste dans l'historique : rien n'est perdu.
+- **Comparer** une version ouvre la fenêtre « Comparaison de versions » : les différences avec le document actuel, **mot par mot** (suppressions barrées en rouge, ajouts en vert), avec un résumé chiffré.
+- **Restaurer** une version remplace le contenu de l'onglet ; la **confirmation chiffre la différence** (« 4 mots ajoutés, 3 supprimés » — ou « identique au document actuel »). L'onglet passe « modifié » : enregistrez pour l'appliquer au fichier — l'enregistrement écrit le contenu restauré et ajoute une nouvelle révision, donc la version remplacée reste dans l'historique : rien n'est perdu.
 - La liste est plafonnée (25 versions) : les plus anciennes versions **automatiques** sautent d'abord, les versions **nommées** sont conservées en priorité.
 
 ## Panneaux contextuels

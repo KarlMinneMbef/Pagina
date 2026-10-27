@@ -23,6 +23,7 @@ export function HistoryPanel({
   revisions,
   onSaveNamed,
   onRestore,
+  onCompare,
   onRename,
   onDelete,
   onClose,
@@ -33,6 +34,8 @@ export function HistoryPanel({
   onSaveNamed: () => void;
   /** Restaure une révision (demande confirmation dans l'appelant). */
   onRestore: (id: string) => void;
+  /** Ouvre la fenêtre « Comparaison de versions » (révision ↔ contenu actuel). */
+  onCompare: (id: string) => void;
   onRename: (id: string) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
@@ -68,6 +71,9 @@ export function HistoryPanel({
               {index === 0 && <span className="hi-current-tag">la plus récente</span>}
             </div>
             <div className="hi-actions">
+              <button type="button" className="hi-action" onClick={() => onCompare(r.id)} title="Ce qui a changé entre cette version et le document actuel">
+                Comparer
+              </button>
               <button type="button" className="hi-action hi-restore" onClick={() => onRestore(r.id)}>
                 Restaurer
               </button>
@@ -82,8 +88,10 @@ export function HistoryPanel({
         ))}
 
         <p className="hi-hint">
-          Restaurer remplace le contenu de l'onglet par l'instantané ; l'onglet passe « modifié » — enregistrez pour
-          l'appliquer au fichier (l'ancien contenu reste dans l'historique).
+          <strong>Comparer</strong> montre, mot par mot, ce qui sépare une version du document actuel.
+          <strong> Restaurer</strong> remplace le contenu de l'onglet par l'instantané (la confirmation chiffre la
+          différence) ; l'onglet passe « modifié » — enregistrez pour l'appliquer au fichier. La version remplacée
+          reste dans l'historique : rien n'est perdu.
         </p>
       </div>
     </div>

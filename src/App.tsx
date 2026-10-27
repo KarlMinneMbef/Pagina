@@ -30,6 +30,8 @@ import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
 import { ImagePanel } from "./ui/Image/ImagePanel";
 import { CommentsPanel } from "./ui/Comments/CommentsPanel";
 import { HistoryPanel } from "./ui/History/HistoryPanel";
+import { VersionDiffDialog } from "./ui/History/VersionDiffDialog";
+import { diffWords, diffStats, diffStatsLabel } from "./core/xmd/diff";
 import { parseComments, serializeComments, newCommentId, type CommentsFile } from "./core/xmd/comments";
 import { parseHistory, serializeHistory, type Revision } from "./core/xmd/history";
 import { SectionBreakDialog } from "./ui/Section/SectionBreakDialog";
@@ -46,7 +48,7 @@ import type { AddImage } from "./ui/Editor/imageInsert";
 import { freeXmdPath, titleOf } from "./core/xmd/paths";
 import { UserDialog } from "./ui/User/UserDialog";
 import { useSettingsStore, useUserStore, userInitials } from "./core/store/settingsStore";
-import { resolvePageSizeMm } from "./core/pageLayout";
+import { resolvePageSizeMm, extractDocumentConfig } from "./core/pageLayout";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
 import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
@@ -162,6 +164,8 @@ function App() {
   // .xmd est actif.
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  // Révision dont la fenêtre « Comparaison de versions » est ouverte.
+  const [diffRevisionId, setDiffRevisionId] = useState<string | null>(null);
   useEffect(() => {
     const was = wasImageSelRef.current;
     wasImageSelRef.current = !!stats.image;
@@ -565,19 +569,43 @@ function App() {
     setHistoryPanelOpen(true);
   };
 
+  /** Contenu ACTUEL de l'onglet (frappes non enregistrées comprises),
+   *  SANS le commentaire de config — comparable à une révision. */
+  const currentComparableContent = activeTab ? pendingContent[activeTab.path] ?? activeTab.content : "";
+
+  /** Diff mot par mot entre une révision et le contenu actuel. */
+  const diffOfRevision = (revision: Revision) => {
+    const { content } = extractDocumentConfig(revision.markdown);
+    return diffWords(content, currentComparableContent);
+  };
+
+  const handleCompareRevision = (id: string) => {
+    setDiffRevisionId(id);
+  };
+
   const handleRestoreRevision = async (id: string) => {
     if (!activeTab) return;
     const revision = parseHistory(activeTab.history).revisions.find((r) => r.id === id);
     if (!revision) return;
+    // RESTAURATION EXPLICITE (retour utilisateur 2026-10-27) : la
+    // confirmation chiffre ce qui va changer, mot par mot.
+    const stats = diffStats(diffOfRevision(revision).segments);
+    const identical = stats.added === 0 && stats.removed === 0;
     const ok = await askConfirm({
       title: "Restaurer une version",
-      message:
-        `Le contenu de l'onglet va être remplacé par « ${revision.label ?? "Enregistrée automatiquement"} » ` +
-        `(enregistrée le ${new Date(revision.savedAt).toLocaleString("fr-FR")}). ` +
-        `L'onglet passera « modifié » : enregistrez-le pour l'appliquer au fichier — la version actuelle restera dans l'historique.`,
+      message: identical
+        ? `« ${revision.label ?? "Enregistrée automatiquement"} » (enregistrée le ${new Date(revision.savedAt).toLocaleString("fr-FR")}) ` +
+          `est IDENTIQUE au document actuel : la restauration ne changera rien.`
+        : `Le contenu de l'onglet va être remplacé par « ${revision.label ?? "Enregistrée automatiquement"} » ` +
+          `(enregistrée le ${new Date(revision.savedAt).toLocaleString("fr-FR")}). ` +
+          `Différence avec le document actuel : ${diffStatsLabel(stats)}. ` +
+          `L'onglet passera « modifié » : enregistrez-le pour l'appliquer au fichier — la version actuelle restera dans l'historique.`,
       okLabel: "Restaurer",
     });
-    if (ok) restoreRevision(activeTab.path, id);
+    if (ok) {
+      restoreRevision(activeTab.path, id);
+      setDiffRevisionId(null);
+    }
   };
 
   const handleRenameRevision = async (id: string) => {
@@ -1016,6 +1044,7 @@ function App() {
                   revisions={activeRevisions}
                   onSaveNamed={() => void handleSaveNamedRevision()}
                   onRestore={(id) => void handleRestoreRevision(id)}
+                  onCompare={handleCompareRevision}
                   onRename={(id) => void handleRenameRevision(id)}
                   onDelete={(id) => void handleDeleteRevision(id)}
                   onClose={() => setHistoryPanelOpen(false)}
@@ -1110,6 +1139,22 @@ function App() {
       {documentCheckOpen && activeTab && (
         <DocumentCheckDialog path={activeTab.path} onClose={() => setDocumentCheckOpen(false)} />
       )}
+      {diffRevisionId && activeTab?.format === "xmd" && (() => {
+        const revision = activeRevisions.find((r) => r.id === diffRevisionId);
+        if (!revision) return null;
+        const { segments, mode } = diffOfRevision(revision);
+        return (
+          <VersionDiffDialog
+            versionLabel={revision.label ?? "Enregistrée automatiquement"}
+            versionDate={new Date(revision.savedAt).toLocaleString("fr-FR")}
+            currentLabel="Document actuel"
+            segments={segments}
+            mode={mode}
+            onRestore={() => void handleRestoreRevision(revision.id)}
+            onClose={() => setDiffRevisionId(null)}
+          />
+        );
+      })()}
       {sectionBreakDialogOpen && activeTab && (
         <SectionBreakDialog
           onApply={({ title, restart }) => editorRef.current?.insertSectionBreak(title, restart)}

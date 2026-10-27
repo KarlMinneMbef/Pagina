@@ -1,0 +1,182 @@
+/*
+ * Fenêtre « Comparaison de versions » — même châssis que les autres
+ * dialogues (voir DocumentCheckDialog.css), charte MBEF.
+ */
+.vdd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.vdd-dialog {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  width: 720px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  color: #343334;
+}
+
+.vdd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e4e5e2;
+  font-weight: 700;
+}
+
+.vdd-close {
+  border: none;
+  background: none;
+  font-size: 14px;
+  cursor: pointer;
+  color: #75766f;
+}
+
+.vdd-close:hover {
+  color: #343334;
+}
+
+.vdd-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vdd-versus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vdd-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vdd-side-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #003f2b;
+}
+
+.vdd-side-date {
+  font-size: 10px;
+  color: #75766f;
+}
+
+.vdd-vs {
+  font-size: 14px;
+  color: #24ac6e;
+  font-weight: 700;
+}
+
+.vdd-stats {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.vdd-added {
+  color: #1b7a3e;
+  font-weight: 700;
+}
+
+.vdd-removed {
+  color: #b3261e;
+  font-weight: 700;
+}
+
+.vdd-stats-words {
+  color: #75766f;
+  font-size: 10px;
+}
+
+.vdd-stats-ok {
+  color: #1b7a3e;
+}
+
+.vdd-mode {
+  display: block;
+  font-size: 10px;
+  color: #a06010;
+}
+
+.vdd-diff {
+  border: 1px solid #e4e5e2;
+  border-radius: 6px;
+  background: #fbfbfa;
+  padding: 10px 12px;
+  overflow-y: auto;
+  min-height: 120px;
+  max-height: calc(100vh - 320px);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.vdd-diff del {
+  background: #fbe7e5;
+  color: #b3261e;
+  text-decoration: line-through;
+}
+
+.vdd-diff ins {
+  background: #e3f4e8;
+  color: #1b7a3e;
+  text-decoration: none;
+}
+
+.vdd-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid #e4e5e2;
+}
+
+.vdd-restore {
+  border: 1px solid #003f2b;
+  border-radius: 6px;
+  background: #003f2b;
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.vdd-restore:hover {
+  background: #00503a;
+}
+
+.vdd-cancel {
+  border: 1px solid #d0d3d4;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #343334;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.vdd-cancel:hover {
+  border-color: #24ac6e;
+}
