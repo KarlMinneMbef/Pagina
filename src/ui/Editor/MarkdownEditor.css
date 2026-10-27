@@ -766,6 +766,26 @@ math-virtual-keyboard {
   margin: 12px 0;
 }
 
+/* Tableau à largeurs de colonnes FIXES (prosemirror-tables pose un `width`
+ * inline quand chaque colonne a une largeur, ex. conversion Word via Pandoc
+ * ou colonnes redimensionnées à la souris) : layout fixe pour que les
+ * proportions tiennent quelle que soit la taille du contenu — sinon le
+ * contenu étire les colonnes et le tableau sort de la zone de texte
+ * (constaté au premier import réel : grille de page de garde « hors
+ * champs »). Le sélecteur vise le style en POSITION 1 : sans largeur,
+ * prosemirror écrit `min-width:` — non couvert, layout auto conservé. */
+.xmd-prosemirror table[style^="width:"] {
+  table-layout: fixed;
+}
+
+/* Image DANS un tableau : jamais plus large que sa cellule (Word cadre
+ * ainsi les images importées trop grandes ; sans ce plafond, une image
+ * pousse sa colonne et agrandit tout le tableau). */
+.xmd-prosemirror table img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* `.tableWrapper` (ajouté par Tiptap avec `resizable: true`) doit être
  * positionné pour que les poignées de redimensionnement de colonne
  * (position:absolute, voir paintPages.ts/MarkdownEditor.tsx) s'alignent

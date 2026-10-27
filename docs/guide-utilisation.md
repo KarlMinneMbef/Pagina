@@ -217,7 +217,7 @@ Cliquez sur la zone en haut (ou en bas) de n'importe quelle page : un champ rich
 
 Onglet **Convertir** du ruban. La conversion passe par **Pandoc** (gratuit, open source, à installer une fois depuis https://pandoc.org) ; sans lui, un message vous le dit et rien d'autre ne se passe.
 
-- **Importer** (bouton « Importer un document… », ou clic droit > « Convertir en Pagina… » sur un `.docx`/`.odt` de l'explorateur, ou double-clic dessus) : un `.xmd` est créé **à côté** de l'original — jamais d'écrasement, l'original n'est pas touché. Texte, mise en forme, listes, tableaux et images sont repris ; les images sont rangées dans le conteneur (`images/`).
+- **Importer** (bouton « Importer un document… », ou clic droit > « Convertir en Pagina… » sur un `.docx`/`.odt` de l'explorateur, ou double-clic dessus) : un `.xmd` est créé **à côté** de l'original — jamais d'écrasement, l'original n'est pas touché. Texte, mise en forme, listes, tableaux et images sont repris ; les images sont rangées dans le conteneur (`images/`) et les proportions des colonnes des tableaux sont conservées (un tableau Word plus large que la page est réduit proportionnellement).
 - **Exporter** (boutons « Word (.docx) » / « LibreOffice (.odt) ») : enregistre le document actif — dernières frappes comprises — au format choisi. Les images du conteneur partent avec. La mise en page Pagina proprement dite (marges, bandeaux, sommaire) n'est pas reprise telle quelle : c'est le contenu qui est converti.
 - Les `.docx`, `.odt` et `.pdf` apparaissent dans l'explorateur avec leur icône ; le menu « Convertir » d'un PDF est désactivé (l'import PDF n'est pas prévu).
 

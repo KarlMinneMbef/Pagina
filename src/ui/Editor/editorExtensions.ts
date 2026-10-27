@@ -62,7 +62,11 @@ export function buildEditorExtensions({ onSpellChanged }: { onSpellChanged: () =
     // Commentaires de relecture (format .xmd, roadmap 5.2) : marque
     // surlignée `<span data-comment="id">`, contenu dans comments.json.
     CommentMark,
-    Table.configure({ resizable: true }),
+    // `cellMinWidth: 1` (défaut Tiptap : 25 px) : les conversions Word via
+    // Pandoc produisent des grilles fines (colonnes-hélices de 1-13 px sur
+    // les pages de garde) — un plancher de 25 px doublait ces colonnes et
+    // faisait sortir le tableau de la zone de texte.
+    Table.configure({ resizable: true, cellMinWidth: 1 }),
     TableRow,
     TableHeader,
     TableCell,
