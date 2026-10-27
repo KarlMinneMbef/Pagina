@@ -7,15 +7,16 @@ Guide fonctionnel complet : chaque commande de l'application, commentée. La [r�
 1. [Prise en main](#prise-en-main)
 2. [Ruban Accueil](#ruban-accueil)
 3. [Ruban Insertion](#ruban-insertion)
-4. [Panneaux contextuels](#panneaux-contextuels)
-5. [Explorateur de fichiers](#explorateur-de-fichiers)
-6. [Mise en page du document](#mise-en-page-du-document)
-7. [En-têtes et pieds de page](#en-têtes-et-pieds-de-page)
-8. [Impression et export PDF](#impression-et-export-pdf)
-9. [Rechercher et remplacer](#rechercher-et-remplacer)
-10. [Propriétés du document](#propriétés-du-document)
-11. [Paramétrage et utilisateur](#paramétrage-et-utilisateur)
-12. [Raccourcis clavier](#raccourcis-clavier)
+4. [Convertir Word et LibreOffice](#convertir-word-et-libreoffice)
+5. [Panneaux contextuels](#panneaux-contextuels)
+6. [Explorateur de fichiers](#explorateur-de-fichiers)
+7. [Mise en page du document](#mise-en-page-du-document)
+8. [En-têtes et pieds de page](#en-têtes-et-pieds-de-page)
+9. [Impression et export PDF](#impression-et-export-pdf)
+10. [Rechercher et remplacer](#rechercher-et-remplacer)
+11. [Propriétés du document](#propriétés-du-document)
+12. [Paramétrage et utilisateur](#paramétrage-et-utilisateur)
+13. [Raccourcis clavier](#raccourcis-clavier)
 
 ---
 
@@ -209,6 +210,16 @@ Cliquez sur la zone en haut (ou en bas) de n'importe quelle page : un champ rich
 - Tout le ruban s'y applique (police, taille, couleur, alignement, gras, tableaux…).
 - Le panneau latéral insère les **variables** en un clic.
 - Échap, ✕ ou un clic dans le document referme le champ ; tout est déjà appliqué.
+
+---
+
+## Convertir Word et LibreOffice
+
+Onglet **Convertir** du ruban. La conversion passe par **Pandoc** (gratuit, open source, à installer une fois depuis https://pandoc.org) ; sans lui, un message vous le dit et rien d'autre ne se passe.
+
+- **Importer** (bouton « Importer un document… », ou clic droit > « Convertir en Pagina… » sur un `.docx`/`.odt` de l'explorateur, ou double-clic dessus) : un `.xmd` est créé **à côté** de l'original — jamais d'écrasement, l'original n'est pas touché. Texte, mise en forme, listes, tableaux et images sont repris ; les images sont rangées dans le conteneur (`images/`).
+- **Exporter** (boutons « Word (.docx) » / « LibreOffice (.odt) ») : enregistre le document actif — dernières frappes comprises — au format choisi. Les images du conteneur partent avec. La mise en page Pagina proprement dite (marges, bandeaux, sommaire) n'est pas reprise telle quelle : c'est le contenu qui est converti.
+- Les `.docx`, `.odt` et `.pdf` apparaissent dans l'explorateur avec leur icône ; le menu « Convertir » d'un PDF est désactivé (l'import PDF n'est pas prévu).
 
 ---
 

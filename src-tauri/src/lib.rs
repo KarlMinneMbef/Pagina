@@ -1,3 +1,4 @@
+mod convert_commands;
 mod fs_commands;
 mod print_commands;
 mod spell_commands;
@@ -26,6 +27,10 @@ pub fn run() {
         .manage(watcher::WatcherState::default())
         .manage(spell_commands::SpellState::default())
         .invoke_handler(tauri::generate_handler![
+            convert_commands::pandoc_path,
+            convert_commands::convert_import,
+            convert_commands::convert_export,
+            convert_commands::cleanup_temp_dir,
             fs_commands::read_workspace_tree,
             fs_commands::read_text_file,
             fs_commands::write_text_file,

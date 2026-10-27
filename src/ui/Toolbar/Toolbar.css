@@ -777,3 +777,14 @@
   margin: 0 3px;
   background: rgba(255, 255, 255, 0.28);
 }
+
+/* Onglet « Convertir » : note d'aide (Pandoc absent / PDF hors périmètre). */
+.tb-convert-note {
+  margin: 0;
+  max-width: 190px;
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #75766f;
+  align-self: center;
+}

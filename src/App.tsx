@@ -51,7 +51,18 @@ import { useSettingsStore, useUserStore, userInitials } from "./core/store/setti
 import { resolvePageSizeMm, extractDocumentConfig } from "./core/pageLayout";
 import { ContextualPanelHost, type ContextualTab } from "./ui/ContextualPanels/ContextualPanelHost";
 import { clampZoom } from "./ui/Editor/pagination/zoom";
-import { printWindow, exportPdf, pickPdfSaveLocation, pickFiles, pickSaveLocation, getStartupFiles } from "./persistence/fileService";
+import {
+  printWindow,
+  exportPdf,
+  pickPdfSaveLocation,
+  pickFiles,
+  pickSaveLocation,
+  pickConvertibleFile,
+  pickConvertSaveLocation,
+  getStartupFiles,
+} from "./persistence/fileService";
+import { importDocument, exportDocument, isImportableDocument, pandocAvailable } from "./core/convert/convert";
+import { isEditableDocument } from "./core/types";
 import { useWorkspaceStore } from "./core/store/workspaceStore";
 import { useTabsStore } from "./core/store/tabsStore";
 import "./App.css";
@@ -115,6 +126,12 @@ function App() {
   const [documentPropertiesOpen, setDocumentPropertiesOpen] = useState(false);
   // Fenêtre « Paragraphe — Retrait et espacement » (comme Word).
   const [paragraphDialogOpen, setParagraphDialogOpen] = useState(false);
+  // Pandoc installé ? (onglet Convertir — vérifié au montage, l'installation
+  // ne se détecte qu'au redémarrage de l'app.)
+  const [pandocReady, setPandocReady] = useState(true);
+  useEffect(() => {
+    void pandocAvailable().then(setPandocReady);
+  }, []);
   // Fenêtre « Paramétrage » (préférences globales, roadmap 1.4) —
   // indépendante des documents, peut s'ouvrir sans onglet actif.
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -455,6 +472,83 @@ function App() {
     const paths = await pickFiles();
     for (const p of paths) {
       await openFile(p);
+    }
+  };
+
+  // --- Convertir (Word/LibreOffice via Pandoc, onglet + explorateur) ---
+  /** Ouvre OU convertit selon le type : .md/.xmd → onglet ; .docx/.odt →
+   *  conversion demandée (confirmée) ; .pdf → message (hors périmètre). */
+  const openOrConvert = async (path: string) => {
+    if (isEditableDocument(path)) {
+      await openFile(path);
+      return;
+    }
+    if (isImportableDocument(path)) {
+      await handleConvertFile(path);
+      return;
+    }
+    if (path.toLowerCase().endsWith(".pdf")) {
+      await messageDialog("L'import PDF n'est pas prévu dans cette version de Pagina.", { title: "PDF", kind: "info" });
+      return;
+    }
+    await messageDialog("Ce type de fichier ne s'ouvre pas dans Pagina.", { title: "Pagina", kind: "info" });
+  };
+
+  /** Convertit un .docx/.odt en .xmd À CÔTÉ de l'original (jamais
+   *  d'écrasement, l'original n'est pas touché) puis l'ouvre dans un onglet. */
+  const handleConvertFile = async (path: string) => {
+    if (!pandocReady) {
+      await messageDialog("Pandoc n'est pas installé (ou introuvable). Installez-le depuis https://pandoc.org, puis rouvrez Pagina.", {
+        title: "Convertir",
+        kind: "warning",
+      });
+      return;
+    }
+    const ok = await askConfirm({
+      title: "Convertir en Pagina",
+      message:
+        `« ${path.split(/[\/]/).pop() ?? path} » va être converti : un fichier .xmd (avec les images du document) sera créé ` +
+        `dans le même dossier et ouvert. Votre fichier d'origine n'est ni modifié ni supprimé.`,
+      okLabel: "Convertir",
+    });
+    if (!ok) return;
+    try {
+      const created = await importDocument(path);
+      await openFile(created);
+    } catch (e) {
+      await messageDialog(`La conversion a échoué : ${e}`, { title: "Convertir", kind: "error" });
+    }
+  };
+
+  /** Onglet Convertir > « Word / LibreOffice… » : boîte de fichier puis conversion. */
+  const handleConvertImport = async () => {
+    const path = await pickConvertibleFile();
+    if (path) await handleConvertFile(path);
+  };
+
+  /** Onglet Convertir > export : document actif (frappes non enregistrées
+   *  comprises, commentaire de config Pagina EXCLU) vers .docx/.odt. */
+  const handleConvertExport = async (format: "docx" | "odt") => {
+    if (!activeTab) return;
+    if (!pandocReady) {
+      await messageDialog("Pandoc n'est pas installé (ou introuvable). Installez-le depuis https://pandoc.org, puis rouvrez Pagina.", {
+        title: "Convertir",
+        kind: "warning",
+      });
+      return;
+    }
+    const defaultName = activeTab.title.replace(/\.(md|xmd)$/i, "");
+    const outputPath = await pickConvertSaveLocation(`${defaultName}.${format}`, format);
+    if (!outputPath) return;
+    try {
+      // Le Markdown exporté est le CONTENU, sans le commentaire de config
+      // Pagina (il ne regarde que Pagina) ; les images du conteneur partent
+      // avec (Pandoc les embarque dans le document produit).
+      const content = pendingContent[activeTab.path] ?? activeTab.content;
+      await exportDocument(content, activeTab.assets, outputPath);
+      await messageDialog(`Document exporté : ${outputPath}`, { title: "Convertir", kind: "info" });
+    } catch (e) {
+      await messageDialog(`L'export a échoué : ${e}`, { title: "Convertir", kind: "error" });
     }
   };
 
@@ -805,6 +899,10 @@ function App() {
         /* Sections + pages de garde (2026-10-22) : onglet Insertion. */
         onInsertSectionBreak={() => setSectionBreakDialogOpen(true)}
         onOpenCoverGallery={() => setCoverGalleryOpen(true)}
+        /* Convertir (2026-10-27) : import/export Word/LibreOffice via Pandoc. */
+        onConvertImport={() => void handleConvertImport()}
+        onConvertExport={(format) => void handleConvertExport(format)}
+        pandocReady={pandocReady}
         onOpenParagraphDialog={() => setParagraphDialogOpen(true)}
         onToggleHeadingPanel={() => {
           setHeadingPanelOpen((o) => !o);
@@ -824,7 +922,7 @@ function App() {
       <div className="app-body">
         {sidebarOpen && (
           <aside className="app-sidebar">
-            <FileExplorer onOpenFile={openFile} onClose={() => setSidebarOpen(false)} activePath={activePath} />
+            <FileExplorer onOpenFile={(path) => void openOrConvert(path)} onConvertFile={(path) => void handleConvertFile(path)} onClose={() => setSidebarOpen(false)} activePath={activePath} />
           </aside>
         )}
         <div className="app-main-column">

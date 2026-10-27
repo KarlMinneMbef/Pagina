@@ -321,3 +321,10 @@
   filter: brightness(1.05);
   background: #eb5b1f;
 }
+
+/* Entrée de menu inactive (« Convertir (PDF : à venir) »). */
+.fx-menu-item:disabled {
+  color: #a8a9a6;
+  cursor: default;
+  background: transparent;
+}

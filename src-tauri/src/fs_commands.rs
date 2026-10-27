@@ -10,7 +10,10 @@ pub struct FileNode {
     pub children: Option<Vec<FileNode>>,
 }
 
-const ALLOWED_EXTENSIONS: [&str; 2] = ["md", "xmd"];
+// Documents éditables + formats convertibles visibles dans l'explorateur (clic droit
+// « Convertir » pour .docx/.odt ; .pdf/.odp affichés, conversion PDF hors
+// périmètre — décision utilisateur 2026-10-27).
+const ALLOWED_EXTENSIONS: [&str; 5] = ["md", "xmd", "docx", "odt", "pdf"];
 
 fn should_include_dir_entry(path: &Path, is_dir: bool) -> bool {
     if is_dir {

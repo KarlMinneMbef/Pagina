@@ -5,6 +5,8 @@ export interface TreeMenuAction {
   id: string;
   label: string;
   onAction: () => void;
+  /** `true` = entrée affichée mais inactive (ex. « Convertir (PDF : à venir) »). */
+  disabled?: boolean;
 }
 
 /**
@@ -89,7 +91,9 @@ export function TreeMenu({
           ref={(el) => {
             itemRefs.current[i] = el;
           }}
+          disabled={a.disabled === true}
           onClick={() => {
+            if (a.disabled === true) return;
             onClose();
             a.onAction();
           }}

@@ -241,3 +241,67 @@ export async function pickXmdSaveLocation(defaultName: string): Promise<string |
     title: "Enregistrer au format .xmd",
   });
 }
+
+// ============================================================
+// Conversion Word / LibreOffice via Pandoc (voir src-tauri/src/convert_commands.rs)
+// ============================================================
+
+/** Chemin de l'exécutable Pandoc, `null` s'il n'est pas installé. */
+export async function pandocPath(): Promise<string | null> {
+  return invoke<string | null>("pandoc_path");
+}
+
+/** Résultat d'un import Pandoc : Markdown GFM + médias dans un dossier temporaire. */
+export interface ConvertImportResult {
+  markdown: string;
+  /** Dossier temporaire (à nettoyer via `cleanupTempDir`). */
+  tempDir: string;
+  /** Médias extraits, chemins relatifs au dossier temporaire (`media/image1.png`). */
+  media: string[];
+}
+
+/** Convertit un `.docx`/`.odt` en Markdown (le fichier d'origine n'est pas touché). */
+export async function convertImport(inputPath: string): Promise<ConvertImportResult> {
+  return invoke<ConvertImportResult>("convert_import", { inputPath });
+}
+
+/** Une image à embarquer dans l'export (chemin relatif du conteneur + octets). */
+export interface ConvertExportMedia {
+  name: string;
+  bytes: Uint8Array;
+}
+
+/** Convertit du Markdown (+ images) en `.docx`/`.odt` — tout le temporaire vit côté Rust. */
+export async function convertExport(markdown: string, media: ConvertExportMedia[], outputPath: string): Promise<void> {
+  // Les octets voyagent dans les arguments JSON : propreté d'API contre
+  // légère surcharge — les exports sont des actions manuelles rares.
+  await invoke("convert_export", {
+    request: { markdown, media: media.map((m) => ({ name: m.name, bytes: Array.from(m.bytes) })), outputPath },
+  });
+}
+
+/** Supprime le dossier temporaire d'un import (refuse tout autre dossier). */
+export async function cleanupTempDir(path: string): Promise<void> {
+  await invoke("cleanup_temp_dir", { path });
+}
+
+/** Sélecteur natif « Ouvrir » pour un fichier à CONVERTIR (Word/LibreOffice, onglet Convertir). */
+export async function pickConvertibleFile(): Promise<string | null> {
+  const CONVERT_FILTERS = [
+    { name: "Documents Word et LibreOffice", extensions: ["docx", "odt"] },
+    { name: "Document Word", extensions: ["docx"] },
+    { name: "Document LibreOffice", extensions: ["odt"] },
+  ];
+  const selected = await open({ directory: false, multiple: false, filters: CONVERT_FILTERS, title: "Importer dans Pagina" });
+  return typeof selected === "string" ? selected : null;
+}
+
+/** Sélecteur natif « Enregistrer » pour un export Word/LibreOffice. */
+export async function pickConvertSaveLocation(defaultName: string, format: "docx" | "odt"): Promise<string | null> {
+  const label = format === "docx" ? "Document Word" : "Document LibreOffice";
+  return save({
+    defaultPath: defaultName,
+    filters: [{ name: label, extensions: [format] }],
+    title: `Exporter en ${format === "docx" ? "Word" : "LibreOffice"}`,
+  });
+}

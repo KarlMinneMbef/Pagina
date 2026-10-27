@@ -810,3 +810,25 @@ export function IconHistory({ size, className }: IconProps) {
     </Svg24>
   );
 }
+
+/** Document Word (.docx) — onglet Convertir. */
+export function IconWordDoc({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 15.5h4" />
+    </Svg24>
+  );
+}
+
+/** Document LibreOffice (.odt) — onglet Convertir. */
+export function IconLibreDoc({ size, className }: IconProps) {
+  return (
+    <Svg24 size={size} className={className}>
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9.5 16v-4h1.5a1.5 1.5 0 0 1 0 3h-1.5" />
+    </Svg24>
+  );
+}

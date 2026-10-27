@@ -11,7 +11,12 @@ import "./FileExplorer.css";
 
 function FileIcon({ isDir, name, expanded }: { isDir: boolean; name: string; expanded?: boolean }) {
   if (isDir) return <span className="fx-icon">{expanded ? "📂" : "📁"}</span>;
-  if (name.toLowerCase().endsWith(".xmd")) return <span className="fx-icon">🧩</span>;
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".xmd")) return <span className="fx-icon">🧩</span>;
+  // Convertibles (Word/LibreOffice — clic droit « Convertir ») et PDF :
+  // visibles dans l'arbre, style distinct, jamais ouverts directement.
+  if (lower.endsWith(".docx") || lower.endsWith(".odt")) return <span className="fx-icon">📝</span>;
+  if (lower.endsWith(".pdf")) return <span className="fx-icon">📕</span>;
   return <span className="fx-icon">📄</span>;
 }
 
@@ -154,10 +159,15 @@ function relativePath(root: string, path: string): string {
  *  contextuel, boîtes intégrées, ergonomie clavier. */
 export function FileExplorer({
   onOpenFile,
+  onConvertFile = () => {},
   onClose,
   activePath,
 }: {
   onOpenFile: (path: string) => void;
+  /** Convertit un .docx/.odt en .xmd à côté (clic droit « Convertir en Pagina » —
+   *  Pandoc, voir core/convert/convert.ts). Optionnel : sans lui, le .docx/.odt
+   *  reste visible sans action de conversion. */
+  onConvertFile?: (path: string) => void;
   onClose?: () => void;
   /** Chemin de l'onglet actif — pour la mise en évidence de la ligne
    * correspondante dans l'arborescence (barre d'accent + fond clair). */
@@ -238,8 +248,28 @@ export function FileExplorer({
         del,
       ];
     }
+    // Word/LibreOffice : conversion en .xmd à côté (Pandoc) ; PDF : visible
+    // mais conversion hors périmètre de cette version (décision 2026-10-27).
+    const lower = node.name.toLowerCase();
+    if (lower.endsWith(".docx") || lower.endsWith(".odt")) {
+      const convert = {
+        id: "convert",
+        label: "Convertir en Pagina…",
+        onAction: () => onConvertFile(node.path),
+      };
+      return [convert, rename, duplicate, del];
+    }
+    if (lower.endsWith(".pdf")) {
+      const pdf = {
+        id: "convertPdf",
+        label: "Convertir (PDF : à venir)",
+        onAction: () => undefined,
+        disabled: true,
+      };
+      return [pdf, rename, duplicate, del];
+    }
     return [rename, duplicate, del];
-  }, [menu, duplicateEntry]);
+  }, [menu, duplicateEntry, onConvertFile]);
 
   const dialogTitles: Record<"newFile" | "newFolder" | "rename", { title: string; submitLabel: string }> = {
     newFile: { title: "Nouveau fichier", submitLabel: "Créer" },

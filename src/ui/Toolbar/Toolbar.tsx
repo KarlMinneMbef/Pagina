@@ -68,6 +68,8 @@ import {
   IconPageSetup,
   IconComment,
   IconHistory,
+  IconWordDoc,
+  IconLibreDoc,
   IconPaste,
   IconTaskList,
   IconTocMarker,
@@ -305,7 +307,7 @@ const LINE_SPACINGS = [1, 1.15, 1.5, 2, 2.5, 3];
 const fmtLineSpacing = (v: number) =>
   v % 1 === 0 ? `${v.toFixed(1).replace(".", ",")}` : String(v).replace(".", ",");
 
-type RibbonTab = "accueil" | "insertion";
+type RibbonTab = "accueil" | "insertion" | "convertir";
 
 const EMPTY_ACTIVE_MARKS = {
   bold: false,
@@ -335,6 +337,9 @@ export function Toolbar({
   onOpenDocumentProperties,
   onInsertSectionBreak,
   onOpenCoverGallery,
+  onConvertImport = () => {},
+  onConvertExport = () => {},
+  pandocReady = true,
   onOpenParagraphDialog,
   onToggleHeadingPanel,
   headingPanelOpen = false,
@@ -371,6 +376,12 @@ export function Toolbar({
   onInsertSectionBreak: () => void;
   /** Ouvre la galerie de pages de garde (modèles + variables). */
   onOpenCoverGallery: () => void;
+  /** Onglet « Convertir » : importe un .docx/.odt (boîte de fichier). */
+  onConvertImport?: () => void;
+  /** Onglet « Convertir » : exporte le document actif en .docx/.odt. */
+  onConvertExport?: (format: "docx" | "odt") => void;
+  /** `false` = Pandoc introuvable : les boutons de conversion l'expliquent. */
+  pandocReady?: boolean;
   /** Ouvre la fenêtre « Paragraphe — Retrait et espacement » (comme le
    * lanceur du groupe Paragraphe de Word + « Options d'interligne… »). */
   onOpenParagraphDialog: () => void;
@@ -447,6 +458,17 @@ export function Toolbar({
           onClick={() => setTab("insertion")}
         >
           Insertion
+        </button>
+
+        {/* Convertir (2026-10-27, décision utilisateur) : import/export Word et
+         * LibreOffice via Pandoc — moteur local léger. */}
+        <button
+          className={`tb-tab${tab === "convertir" ? " tb-tab-active" : ""}`}
+          onClick={() => setTab("convertir")}
+          disabled={leger}
+          title="Importer et exporter Word (.docx) et LibreOffice (.odt)"
+        >
+          Convertir
         </button>
 
         {/* Coin droit du ruban (demande 2026-10-17) : Explorateur au
@@ -991,6 +1013,49 @@ export function Toolbar({
               />
             </div>
           </RibbonGroup>
+        </div>
+      )}
+
+      {/* Convertir : import/export Word et LibreOffice via Pandoc (2026-10-27).
+       * `disabled` = aucun document actif ; `!pandocReady` = Pandoc absent :
+       * boutons inactifs, le bandeau l'explique (installation : pandoc.org). */}
+      {!leger && tab === "convertir" && (
+        <div className="tb-ribbon">
+          <RibbonGroup label="Importer dans Pagina" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={!pandocReady}
+              onClick={onConvertImport}
+              title="Choisir un fichier Word (.docx) ou LibreOffice (.odt) : un .xmd est créé à côté, l'original n'est pas touché"
+              icon={<IconWordDoc size={28} />}
+              label="Word / LibreOffice…"
+            />
+            <p className="tb-convert-note">
+              Import PDF : non prévu dans cette version (décision 2026-10-27 — usage trop personnel pour un projet open source).
+            </p>
+          </RibbonGroup>
+
+          <RibbonGroup label="Exporter le document" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
+            <BigButton
+              disabled={disabled || !pandocReady}
+              onClick={() => onConvertExport("docx")}
+              title="Enregistrer le document actif au format Word (.docx)"
+              icon={<IconWordDoc size={28} />}
+              label="Word (.docx)"
+            />
+            <BigButton
+              disabled={disabled || !pandocReady}
+              onClick={() => onConvertExport("odt")}
+              title="Enregistrer le document actif au format LibreOffice (.odt)"
+              icon={<IconLibreDoc size={28} />}
+              label="LibreOffice (.odt)"
+            />
+          </RibbonGroup>
+
+          {!pandocReady && (
+            <p className="tb-convert-note">
+              Pandoc n'est pas installé (ou introuvable) : installez-le depuis https://pandoc.org, puis rouvrez Pagina.
+            </p>
+          )}
         </div>
       )}
 
