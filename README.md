@@ -61,9 +61,9 @@ Tout ce qui n'a pas d'équivalent Markdown standard est encodé en commentaires 
 
 ## Installation (Windows)
 
-Les installeurs prêts à l'emploi se trouvent dans [`releases/`](releases/) :
-- [`Pagina_0.4.10_x64-setup.exe`](releases/Pagina_0.4.10_x64-setup.exe) — installation manuelle simple.
-- [`Pagina_0.4.10_x64_en-US.msi`](releases/Pagina_0.4.10_x64_en-US.msi) — pour un déploiement centralisé (GPO/Intune).
+Les installeurs prêts à l'emploi sont publiés dans la section **Releases** de ce dépôt GitHub (à droite de la page d'accueil, puis choisir la version) :
+- `Pagina_x64-setup.exe` — installation manuelle simple.
+- `Pagina_x64_en-US.msi` — pour un déploiement centralisé (GPO/Intune).
 
 Aucun certificat de signature de code n'est configuré : Windows SmartScreen affichera un avertissement « éditeur non reconnu » au premier lancement — cliquer sur « Informations complémentaires → Exécuter quand même ».
 
