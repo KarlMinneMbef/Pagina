@@ -114,12 +114,21 @@ export function getMermaidAtSelection(editor: Editor): EditorStats["mermaid"] {
   return null;
 }
 
-/** Image sélectionnée (NodeSelection) — pilote le panneau latéral « Image ». */
+/** Image sélectionnée (NodeSelection) — pilote le panneau latéral « Image »
+ *  et les poignées de redimensionnement (useImageResize). */
 export function getImageAtSelection(editor: Editor): EditorStats["image"] {
   const sel = editor.state.selection;
-  const node = (sel as unknown as { node?: { type: { name: string }; attrs: { src?: string | null; alt?: string | null; width?: string | null } } }).node;
+  const node = (sel as unknown as { node?: { type: { name: string }; attrs: { src?: string | null; alt?: string | null; width?: string | null; transform?: string | null; borderWidth?: number | null; borderColor?: string | null } } }).node;
   if (node && node.type.name === "image") {
-    return { pos: sel.from, src: String(node.attrs.src ?? ""), alt: String(node.attrs.alt ?? ""), width: node.attrs.width ?? null };
+    return {
+      pos: sel.from,
+      src: String(node.attrs.src ?? ""),
+      alt: String(node.attrs.alt ?? ""),
+      width: node.attrs.width ?? null,
+      transform: node.attrs.transform ?? null,
+      borderWidth: node.attrs.borderWidth ?? null,
+      borderColor: node.attrs.borderColor ?? null,
+    };
   }
   return null;
 }

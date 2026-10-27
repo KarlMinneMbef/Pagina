@@ -28,7 +28,7 @@ export function useCanvasRepaint({ editor, geometry, layout, zoom, cmd, refs }: 
   cmd: () => Editor;
   refs: EditorRefs;
 }) {
-  const { canvasRef, caretRef, selectionLayerRef, liveHostRef, pageCountRef, currentPageRef, zoomRef, layoutRef, documentTitleRef, onStatsRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef, headerMiniEditorRef, headerFooterModeRef, cloneIndexRef } = refs;
+  const { canvasRef, caretRef, selectionLayerRef, liveHostRef, pageCountRef, currentPageRef, zoomRef, layoutRef, documentTitleRef, onStatsRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef, imgResizeSyncRef, headerMiniEditorRef, headerFooterModeRef, cloneIndexRef } = refs;
 
   // repaint() reconstruit entièrement la couche peinte (répartition en
   // pages + clones, voir paintPages.ts) et replace le curseur dessiné à la
@@ -42,6 +42,7 @@ export function useCanvasRepaint({ editor, geometry, layout, zoom, cmd, refs }: 
       // curseur (visible ou non selon qu'on est dans un bloc de code,
       // recollée au bon clone) — avant les early-returns ci-dessous.
       codeLangSyncRef.current();
+      imgResizeSyncRef.current();
       selBarSyncRef.current();
       const canvas = canvasRef.current;
       const caret = caretRef.current;
@@ -257,6 +258,7 @@ export function useCanvasRepaint({ editor, geometry, layout, zoom, cmd, refs }: 
       // Les clones viennent d'être recréés : recolle la pastille de
       // langage sur le bloc peint correspondant.
       codeLangSyncRef.current();
+      imgResizeSyncRef.current();
       selBarSyncRef.current();
       const words: number = editor.storage.characterCount.words();
       const characters: number = editor.storage.characterCount.characters();

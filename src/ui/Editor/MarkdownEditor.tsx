@@ -60,6 +60,7 @@ import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType,
 import { getSelectionShape } from "./editorTableOps";
 import { currentFontSizePt, mmToPx } from "./editorUtils";
 import { useCodeLangChip } from "./hooks/useCodeLangChip";
+import { useImageResize } from "./hooks/useImageResize";
 import { useSelectionBarSync } from "./hooks/useSelectionBarSync";
 
 export type { FindReplaceOptions, FindMatchResult, MarkdownEditorHandle, EditorStats } from "./editorTypes";
@@ -173,6 +174,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // quand la sélection est dans un bloc de code ; resynchronisée à
     // chaque repaint/curseur/scroll/resize via `codeLangSyncRef`.
     const codeLangSyncRef = useRef<() => void>(() => {});
+    // Poignées de redimensionnement d'une image sélectionnée (2026-10-26) :
+    // calque posé sur l'image PEINTE, resynchronisé au même rythme que la
+    // pastille de langage (voir useImageResize).
+    const imgResizeSyncRef = useRef<() => void>(() => {});
     // Éditeur ciblé par les commandes du RUBAN : tant qu'un champ
     // d'en-tête/pied de page est ouvert, c'est LUI (l'en-tête/le pied est
     // du contenu Markdown ordinaire, simplement dupliqué sur chaque page —
@@ -251,7 +256,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     // Regroupement des refs pour les hooks extraits (voir hooks/editorRefs.ts).
     const refs: EditorRefs = {
       wrapRef, canvasRef, caretRef, selectionLayerRef, liveHostRef, pageCountRef, currentPageRef, zoomRef, layoutRef,
-      documentTitleRef, onStatsRef, onLayoutChangeRef, addImageRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef,
+      documentTitleRef, onStatsRef, onLayoutChangeRef, addImageRef, repaintRef, repaintCaretRef, selBarSyncRef, codeLangSyncRef, imgResizeSyncRef,
       scrollSelectionIntoViewRef, startHeaderFooterEditRef, insertHeaderFooterVariableRef, startMathEditRef,
       headerMiniEditorRef, headerFooterCommitRef, headerFooterModeRef, mathEditRef, pendingMathLatexRef, cloneIndexRef,
       loadedContentRef,
@@ -424,6 +429,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     useCanvasRepaint({ editor, geometry, layout, zoom, cmd, refs });
 
     useCodeLangChip(editor, readOnly, canvasRef, codeLangSyncRef);
+
+    useImageResize(editor, readOnly, canvasRef, imgResizeSyncRef, layoutRef, zoomRef);
 
     useSelectionBarSync(editor, readOnly, canvasRef, zoomRef, headerMiniEditorRef, selBarSyncRef, setSelBar);
 

@@ -255,8 +255,13 @@ export interface MarkdownEditorHandle {
   insertBookmark: () => void;
   /** Insère des images choisies dans une boîte de fichier (voir `imageInsert.ts`). */
   insertImage: () => void;
-  /** Modifie l'image sélectionnée (largeur, texte alternatif). */
-  updateImage: (patch: { alt?: string; width?: string | null }) => void;
+  /** Modifie l'image sélectionnée (largeur, texte alternatif, transformation,
+   *  bordure) — chaque champ à `null` le retire. */
+  updateImage: (patch: { alt?: string; width?: string | null; transform?: string | null; borderWidth?: number | null; borderColor?: string | null }) => void;
+  /** Pivote (±90°, à chaque appel) ou retourne (miroir) l'image sélectionnée
+   *  — même modèle que CasualOffice : la transformation est une chaîne CSS
+   *  (`rotate(90deg) scaleX(-1)`) stockée dans l'attribut `transform`. */
+  transformImage: (action: "rotateCW" | "rotateCCW" | "flipH" | "flipV") => void;
   /** Supprime l'image sélectionnée. */
   deleteImage: () => void;
   /** Insère un renvoi vers un signet : lien Markdown `[texte](#id)`. */
@@ -323,7 +328,7 @@ export interface EditorStats {
    * diagramme, jamais à la frappe). */
   mermaid: { pos: number; source: string } | null;
   /** Image sélectionnée (NodeSelection, posée au clic sur l'image peinte ou à l'insertion) — pilote le panneau « Image ». */
-  image: { pos: number; src: string; alt: string; width: string | null } | null;
+  image: { pos: number; src: string; alt: string; width: string | null; transform: string | null; borderWidth: number | null; borderColor: string | null } | null;
   /** Zone page de garde contenant le curseur (marqueurs transparents,
    *  contenu NORMAL — voir CoverZone.ts) — pilote le panneau latéral
    *  « Page de garde » ; `start` sert de clé de remontage du panneau. */

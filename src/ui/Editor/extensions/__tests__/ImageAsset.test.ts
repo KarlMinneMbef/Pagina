@@ -73,3 +73,86 @@ describe("ImageAsset", () => {
     expect(resolveAssetUrl("images/b.png")).toBe("images/b.png");
   });
 });
+
+/**
+ * Réglages d'image (2026-10-26, mêmes commandes que CasualOffice) : largeur %, transformation (rotation/miroir) et
+ * bordure — tout doit faire l'aller-retour Markdown sans rien perdre.
+ */
+import { ParagraphMarkdown } from "../ParagraphMarkdown";
+
+function makeEditor2(markdown: string): Editor {
+  return new Editor({
+    extensions: [
+      StarterKit.configure({ paragraph: false }),
+      ParagraphMarkdown,
+      ImageAsset,
+      Markdown.configure({ html: true }),
+    ],
+    content: markdown,
+  });
+}
+
+function imageNode(ed: Editor): { pos: number; attrs: Record<string, unknown> } | null {
+  const found: { pos: number; attrs: Record<string, unknown> }[] = [];
+  ed.state.doc.descendants((n, pos) => {
+    if (n.type.name === "image" && found.length === 0) found.push({ pos, attrs: n.attrs as Record<string, unknown> });
+    return true;
+  });
+  return found[0] ?? null;
+}
+
+describe("ImageAsset — largeur, transformation, bordure", () => {
+  it("largeur % → attribut width, relu tel quel", () => {
+    const ed = makeEditor2('<img src="images/plan.png" alt="" width="50%">');
+    expect(imageNode(ed)?.attrs.width).toBe("50%");
+    const out = md(ed);
+    expect(out).toContain('width="50%"');
+    expect(out).not.toContain("style=");
+    expect(imageNode(makeEditor2(out))?.attrs.width).toBe("50%");
+  });
+
+  it("transformation (rotate/flip) → style CSS, relu", () => {
+    const ed = makeEditor2('<img src="images/plan.png" alt="" style="transform: rotate(90deg) scaleX(-1);">');
+    expect(imageNode(ed)?.attrs.transform).toBe("rotate(90deg) scaleX(-1)");
+    const out = md(ed);
+    expect(out).toContain("transform: rotate(90deg) scaleX(-1)");
+    expect(imageNode(makeEditor2(out))?.attrs.transform).toBe("rotate(90deg) scaleX(-1)");
+  });
+
+  it("bordure (épaisseur + couleur, rgb() normalisé en hex) → style CSS, relu", () => {
+    const ed = makeEditor2('<img src="images/plan.png" alt="" style="border: 2px solid rgb(0, 63, 43);">');
+    const node = imageNode(ed);
+    expect(node?.attrs.borderWidth).toBe(2);
+    expect(node?.attrs.borderColor).toBe("#003f2b");
+    const out = md(ed);
+    expect(out).toContain("border: 2px solid #003f2b");
+    expect(imageNode(makeEditor2(out))?.attrs.borderColor).toBe("#003f2b");
+  });
+
+  it("tout ensemble + largeur % : round-trip complet et stable", () => {
+    const ed = makeEditor2('<img src="images/plan.png" alt="Plan 3" width="75%" style="transform: rotate(180deg); border: 1px solid #24ac6e;">');
+    const out = md(ed);
+    expect(out).toContain('width="75%"');
+    expect(out).toContain('alt="Plan 3"');
+    expect(out).toContain("transform: rotate(180deg)");
+    expect(out).toContain("border: 1px solid #24ac6e");
+    const again = makeEditor2(out);
+    const node = imageNode(again);
+    expect(node?.attrs.width).toBe("75%");
+    expect(node?.attrs.alt).toBe("Plan 3");
+    expect(node?.attrs.transform).toBe("rotate(180deg)");
+    expect(node?.attrs.borderWidth).toBe(1);
+    expect(node?.attrs.borderColor).toBe("#24ac6e");
+    // Et le Markdown ressort IDENTIQUE (stable à la 2e sauvegarde).
+    expect(md(again)).toBe(out);
+  });
+
+  it("le rendu DOM pose le lien d'origine + le style complet", () => {
+    const ed = makeEditor2('<img src="images/plan.png" alt="" width="50%" style="transform: rotate(90deg);">');
+    const node = imageNode(ed)!;
+    const dom = ed.view.nodeDOM(node.pos) as HTMLElement;
+    expect(dom.getAttribute("data-asset-src")).toBe("images/plan.png");
+    expect(dom.style.transform).toContain("rotate(90deg)");
+    expect(dom.style.width).toBe("50%");
+  });
+});

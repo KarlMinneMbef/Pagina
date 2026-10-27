@@ -33,6 +33,8 @@ export interface EditorRefs {
   repaintCaretRef: MutableRefObject<() => void>;
   selBarSyncRef: MutableRefObject<() => void>;
   codeLangSyncRef: MutableRefObject<() => void>;
+  /** Poignées de redimensionnement d'image — recalées à chaque repaint/curseur, comme la pastille de langage. */
+  imgResizeSyncRef: MutableRefObject<() => void>;
   scrollSelectionIntoViewRef: MutableRefObject<() => void>;
   startHeaderFooterEditRef: MutableRefObject<(target: HTMLElement) => void>;
   insertHeaderFooterVariableRef: MutableRefObject<(token: string) => void>;

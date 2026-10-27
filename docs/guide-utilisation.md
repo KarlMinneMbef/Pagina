@@ -121,7 +121,7 @@ Un fichier **`.xmd`** est un fichier compressé (un ZIP) qui regroupe le texte d
 
 - **Insérer une image** : Insertion > **Image**, ou **collez une capture d'écran** (Ctrl+V), ou **glissez un fichier image** sur la page. Formats : png, jpg, gif, webp, svg, bmp, avif.
 - Dans un document **`.md`**, la première image propose de créer un `.xmd` à côté (« rapport.md » → « rapport.xmd ») : votre fichier `.md` n'est ni modifié ni supprimé.
-- **Sélectionner une image** (clic) ouvre le panneau **Image** : largeur (Auto, 25, 50, 75, 100 % de la zone de texte, ou un pourcentage libre), **texte alternatif**, suppression. **Suppr** retire l'image sélectionnée, **Ctrl+Z** la remet.
+- **Sélectionner une image** (clic) ouvre le panneau **Image** et pose des **poignées d'angle** sur la page : tirez une poignée pour l'agrandir ou la réduire (proportions conservées, un seul Ctrl+Z annule le geste). Le panneau règle la **largeur** (Auto, 25, 50, 75, 100 % de la zone de texte, ou un pourcentage libre), la **transformation** (pivoter à gauche/droite par pas de 90°, miroir horizontal/vertical), la **bordure** (aucune/fine/moyenne/épaisse + couleur), le **texte alternatif**, et la suppression. **Suppr** retire l'image sélectionnée, **Ctrl+Z** la remet.
 - Une image dans une ligne de texte reste **dans la ligne** ; pour la centrer, centrez le paragraphe qui la contient. Une image n'est jamais plus grande que la zone de texte.
 - Les images sont **imprimées et exportées en PDF** comme le reste de la page.
 - Enregistrer sous un `.md` depuis un `.xmd` extrait les images dans un dossier `images/` à côté du fichier.

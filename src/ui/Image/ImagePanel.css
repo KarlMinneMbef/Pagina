@@ -106,3 +106,55 @@
   line-height: 1.45;
   color: #6b6b69;
 }
+
+/* --- Transformer (pivoter / miroir, mêmes commandes que CasualOffice) --- */
+.im-transform {
+  display: flex;
+  gap: 6px;
+}
+
+.im-transform-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: 1px solid #d0d3d4;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #343334;
+  cursor: pointer;
+}
+
+.im-transform-btn:hover {
+  background: #f0f6f3;
+  border-color: #24ac6e;
+}
+
+.im-hint-small {
+  margin: 4px 0 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: #6b6b69;
+}
+
+.im-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #2479a5;
+  cursor: pointer;
+  font-size: 10px;
+  text-decoration: underline;
+}
+
+/* --- Bordure --- */
+.im-color {
+  width: 34px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: pointer;
+}

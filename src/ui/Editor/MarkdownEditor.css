@@ -1262,3 +1262,60 @@ math-virtual-keyboard {
   object-fit: contain;
   vertical-align: bottom;
 }
+
+/* Poignées de redimensionnement d'une image sélectionnée (2026-10-26, même
+ * langage que CasualOffice : cadre bleu + 4 poignées d'angle) : calque posé
+ * dans .xmd-canvas-frame (les coordonnées sont relatives au cadre, comme les
+ * rectangles de sélection — voir selectionHighlight.ts). Le corps du calque
+ * ne capte PAS la souris : cliquer l'image la (re)sélectionne comme avant ;
+ * seules les poignées sont actives. */
+.xmd-img-resize {
+  position: absolute;
+  pointer-events: none;
+  z-index: 22;
+}
+
+.xmd-img-resize-border {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #2479a5;
+  box-sizing: border-box;
+}
+
+.xmd-img-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #2479a5;
+  border: 1px solid #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  pointer-events: auto;
+  cursor: nw-resize;
+}
+
+.xmd-img-resize-nw { left: -5px; top: -5px; }
+.xmd-img-resize-ne { right: -5px; top: -5px; cursor: ne-resize; }
+.xmd-img-resize-sw { left: -5px; bottom: -5px; cursor: sw-resize; }
+.xmd-img-resize-se { right: -5px; bottom: -5px; cursor: se-resize; }
+
+.xmd-img-resize-tip {
+  position: absolute;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 23;
+}
+
+@media print {
+  .xmd-img-resize {
+    display: none !important;
+  }
+}

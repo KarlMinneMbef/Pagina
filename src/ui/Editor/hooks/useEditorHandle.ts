@@ -551,7 +551,41 @@ export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwa
       const tr = editor.state.tr;
       if (patch.alt !== undefined) tr.setNodeAttribute(img.pos, "alt", patch.alt);
       if (patch.width !== undefined) tr.setNodeAttribute(img.pos, "width", patch.width);
+      if (patch.transform !== undefined) tr.setNodeAttribute(img.pos, "transform", patch.transform);
+      if (patch.borderWidth !== undefined) tr.setNodeAttribute(img.pos, "borderWidth", patch.borderWidth);
+      if (patch.borderColor !== undefined) tr.setNodeAttribute(img.pos, "borderColor", patch.borderColor);
       editor.view.dispatch(tr);
+    },
+    // Rotation/miroir de l'image sélectionnée — même logique que le
+    // handleImageTransform de CasualOffice : la chaîne CSS courante est
+    // relue (rotate/scaleX/scaleY), modifiée puis reconstruite.
+    transformImage: (action) => {
+      const img = getImageAtSelection(editor);
+      if (!img) return;
+      const current = img.transform ?? "";
+      const rotateMatch = current.match(/rotate\((-?\d+(?:\.\d+)?)deg\)/);
+      let rotation = rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+      let hasFlipH = /scaleX\(-1\)/.test(current);
+      let hasFlipV = /scaleY\(-1\)/.test(current);
+      switch (action) {
+        case "rotateCW":
+          rotation = (rotation + 90) % 360;
+          break;
+        case "rotateCCW":
+          rotation = (rotation - 90 + 360) % 360;
+          break;
+        case "flipH":
+          hasFlipH = !hasFlipH;
+          break;
+        case "flipV":
+          hasFlipV = !hasFlipV;
+          break;
+      }
+      const parts: string[] = [];
+      if (rotation !== 0) parts.push(`rotate(${rotation}deg)`);
+      if (hasFlipH) parts.push("scaleX(-1)");
+      if (hasFlipV) parts.push("scaleY(-1)");
+      editor.view.dispatch(editor.state.tr.setNodeAttribute(img.pos, "transform", parts.length ? parts.join(" ") : null));
     },
     deleteImage: () => {
       const img = getImageAtSelection(editor);

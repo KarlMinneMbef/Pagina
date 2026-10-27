@@ -805,7 +805,11 @@ function App() {
                   src={stats.image.src}
                   alt={stats.image.alt}
                   width={stats.image.width}
+                  transform={stats.image.transform}
+                  borderWidth={stats.image.borderWidth}
+                  borderColor={stats.image.borderColor}
                   onChange={(patch) => editorRef.current?.updateImage(patch)}
+                  onTransform={(action) => editorRef.current?.transformImage(action)}
                   onDelete={() => editorRef.current?.deleteImage()}
                   onClose={() => setImagePanelOpen(false)}
                 />
