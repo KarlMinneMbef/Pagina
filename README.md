@@ -101,8 +101,6 @@ En développement actif. Version courante : **0.4.11**.
 - **Export HTML autonome** — un fichier autonome, mise en page incluse, pour publication web ou partage sans lecteur PDF.
 - **Thème sombre**, **langue** de l'interface.
 - **Tableaux imbriqués** (dans les cellules, pour les pages de garde complexes).
-- **Module d'édition assistée par IA** : sélection d'un passage, correction/reformulation proposée par un modèle, validation façon « suivi des modifications » Word.
-- **Connexion au serveur MBEF (Ingenerix)** pour l'archivage et l'indexation RAG.
 - **Autres pistes à évaluer** : multi-fenêtres natives, signature de l'installeur Windows.
 
 ## Licence
