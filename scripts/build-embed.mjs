@@ -20,7 +20,7 @@ const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf-8"));
 const executer = (commande) => execSync(commande, { stdio: "inherit", cwd: racine });
 
 // Dépendances de Pagina inutiles à la version légère (Tauri, état de l'app, diagrammes, formules).
-const EXCLUES = new Set(["@tauri-apps/api", "@tauri-apps/plugin-dialog", "@tauri-apps/plugin-opener", "zustand", "mermaid", "katex", "react", "react-dom"]);
+const EXCLUES = new Set(["@tauri-apps/api", "@tauri-apps/plugin-dialog", "@tauri-apps/plugin-opener", "mermaid", "katex", "react", "react-dom"]);
 const dependances = Object.fromEntries(Object.entries(pkg.dependencies).filter(([nom]) => !EXCLUES.has(nom)));
 
 executer("npx vite build --config vite.lib.config.ts");

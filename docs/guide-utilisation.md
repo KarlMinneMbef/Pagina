@@ -115,6 +115,18 @@ Sélectionnez du texte : une **mini-barre flottante** apparaît au-dessus de la 
 
 ---
 
+## Images et fichiers .xmd
+
+Un fichier **`.xmd`** est un fichier compressé (un ZIP) qui regroupe le texte du document (en Markdown standard), ses **images**, ses commentaires et son historique. Dans l'explorateur il porte une icône verte.
+
+- **Insérer une image** : Insertion > **Image**, ou **collez une capture d'écran** (Ctrl+V), ou **glissez un fichier image** sur la page. Formats : png, jpg, gif, webp, svg, bmp, avif.
+- Dans un document **`.md`**, la première image propose de créer un `.xmd` à côté (« rapport.md » → « rapport.xmd ») : votre fichier `.md` n'est ni modifié ni supprimé.
+- **Sélectionner une image** (clic) ouvre le panneau **Image** : largeur (Auto, 25, 50, 75, 100 % de la zone de texte, ou un pourcentage libre), **texte alternatif**, suppression. **Suppr** retire l'image sélectionnée, **Ctrl+Z** la remet.
+- Une image dans une ligne de texte reste **dans la ligne** ; pour la centrer, centrez le paragraphe qui la contient. Une image n'est jamais plus grande que la zone de texte.
+- Les images sont **imprimées et exportées en PDF** comme le reste de la page.
+- Enregistrer sous un `.md` depuis un `.xmd` extrait les images dans un dossier `images/` à côté du fichier.
+- Lu dans un autre lecteur Markdown (après décompression du `.xmd`), le `document.md` n'affiche que le contenu : aucun commentaire ni historique n'y figure.
+
 ## Panneaux contextuels
 
 Une colonne à droite de l'éditeur regroupe les panneaux selon le contexte (onglets quand plusieurs sont actifs). Ils apparaissent seuls, ne recouvrent jamais la page, et se ferment en quittant le contexte ou par ✕.

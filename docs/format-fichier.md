@@ -258,17 +258,51 @@ Rédigé par : {{author}}
 
 ---
 
-## 9. VERS LE FORMAT `.xmd` — questions ouvertes
+## 9. LE FORMAT `.xmd` (conteneur) — implémenté le 2026-10-26
 
-> **À définir ensemble avant de coder.** Ajoutez vos préférences en commentaire de cette section.
+> Décisions prises avec l'utilisateur : un **ZIP renommé `.xmd`** qui contient le document Markdown, ses images, un JSON de
+> commentaires et un JSON d'historique. Le Markdown à l'intérieur reste **standard** : lu dans un autre lecteur Markdown, rien
+> d'autre que le contenu ne doit être visible.
 
-| Question | Option A | Option B | Statut |
-|---|---|---|---|
-| Conteneur ? | **ZIP** renommé `.xmd` (fichier `.md` + dossier `images/` + `settings.json`) | **Extension + dossier compagnon** (fichier `.xmd` = `.md` avec extension différente, images dans un dossier du même nom) | À trancher |
-| Détection ? | Bascule automatique `.md` → `.xmd` à l'ajout d'une image (avec toast) | Choix explicite de l'utilisateur à la création | À trancher |
-| Images ? | Dossier `images/` à l'intérieur du conteneur (chemin relatif dans le `.md`) | Dossier compagnon (chemin relatif à côté du fichier) | Dépend du choix conteneur |
-| Ouverture ? | `.xmd` ouvrable comme un `.md` (repli : le ZIP contient le `.md` lisible en décompressant) | `.xmd` nécessite Pagina (sinon message explicite) | À trancher |
-| Compatibilité ? | Toujours sauvegarder une copie `.md` à côté (option « double écriture ») | Uniquement le conteneur `.xmd` | À trancher |
+### 9.1 Contenu du ZIP
+
+| Entrée | Rôle |
+|---|---|
+| `manifest.json` | Identité du format : `{"format":"pagina-xmd","formatVersion":1,"main":"document.md","generator":{"app","version"},"modified":"<ISO>"}` |
+| `document.md` | **Le document** : exactement le texte qu'écrit Pagina pour un `.md` (commentaires `pagina:config` / `pagina:generator` en tête, §2). Les images y sont des liens **relatifs** : `![texte](images/plan-3fa9c1d2.png)` |
+| `images/*` | Les images référencées par le document (png, jpg, gif, webp, svg, bmp, avif), stockées **sans recompression** |
+| `comments.json` | Commentaires de relecture : `{"version":1,"comments":[]}` — **jamais dans le Markdown** (réservé, voir feuille de route 5.2) |
+| `history.json` | Historique des révisions : `{"version":1,"revisions":[]}` — jamais dans le Markdown (feuille de route 5.3) |
+
+- Extrait du ZIP (n'importe quel outil de décompression), `document.md` + le dossier `images/` s'affichent correctement dans tout
+  lecteur Markdown : seuls des liens relatifs vers les images, aucun commentaire visible (test `xmdPortable.test.ts`).
+- **Images** : nom `<nom-simplifié>-<empreinte SHA-256 sur 8 caractères>.<ext>` — le même contenu donne le même chemin (pas de
+  doublon). Une image qui n'est plus référencée par le texte n'est **pas réécrite** au prochain enregistrement.
+- **Largeur d'image** : sans largeur, l'image est du Markdown standard `![texte](chemin)` ; avec une largeur (en % de la zone de
+  texte), du HTML `<img src alt width="50%">`, que tout lecteur Markdown affiche.
+- **Écriture atomique** : le ZIP est écrit dans un fichier temporaire puis renommé — un enregistrement interrompu ne détruit jamais
+  l'ancien fichier.
+
+### 9.2 Tolérance (lecture)
+
+| Cas | Comportement |
+|---|---|
+| Fichier `.xmd` qui n'est **pas un ZIP** (un `.md` renommé) | Lu comme du Markdown ; converti en conteneur à la prochaine sauvegarde |
+| `manifest.json` absent ou illisible | Fichier principal = `document.md`, à défaut le premier `.md` de la racine |
+| Fichier **inconnu** dans le ZIP (version future) | Conservé tel quel et réécrit à l'identique — rien n'est perdu |
+| Aucun document Markdown dans le ZIP, ZIP corrompu, entrée démesurée | Message d'erreur lisible, rien n'est ouvert |
+| Nom d'entrée dangereux (`../`, chemin absolu) | Ignoré (zip-slip) |
+
+### 9.3 Cycle de vie des images dans l'application
+
+1. **Insérer** : bouton **Image** (Insertion > Illustrations), **coller une capture d'écran**, ou **glisser un fichier image** sur la page.
+2. Dans un **`.md`**, la première image propose de **créer un `.xmd`** à côté du fichier (`rapport.md` → `rapport.xmd`, jamais d'écrasement :
+   `rapport (2).xmd`…). Le fichier `.md` d'origine n'est ni modifié ni supprimé ; l'onglet pointe ensuite sur le `.xmd` (même éditeur,
+   même curseur).
+3. **Ouvrir un `.md` qui a des images relatives** (`images/x.png` à côté du fichier) : elles sont lues et affichées ; elles ne sont pas réécrites.
+4. **Enregistrer sous un `.md`** depuis un `.xmd` : les images sont extraites dans `images/` à côté du nouveau fichier.
+5. **Enregistrer sous un `.xmd`** depuis un `.md` : les images lues à côté du fichier sont embarquées.
+6. Une image **sélectionnée** (clic) ouvre le panneau **Image** : largeur (Auto / 25 / 50 / 75 / 100 % / personnalisée), texte alternatif, suppression.
 
 <!-- ================================================================ -->
 <!-- VOS COMMENTAIRES SUR LE .XMD ==================================== -->

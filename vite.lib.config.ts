@@ -26,6 +26,8 @@ export default defineConfig({
     alias: [
       { find: /^.*\/extensions\/MermaidDiagram$/, replacement: chemin("./src/embed/stubs/MermaidDiagram.ts") },
       { find: /^.*\/extensions\/Math$/, replacement: chemin("./src/embed/stubs/Math.ts") },
+      { find: /^.*\/persistence\/fileService$/, replacement: chemin("./src/embed/stubs/fileService.ts") },
+      { find: /^.*\/persistence\/spellService$/, replacement: chemin("./src/embed/stubs/spellService.ts") },
       { find: /^katex\/dist\/katex\.min\.css$/, replacement: chemin("./src/embed/stubs/vide.css") },
     ],
   },
