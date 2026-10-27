@@ -71,13 +71,18 @@ export function useImageResize(
     let target: { pos: number; img: HTMLImageElement; rect: DOMRect } | null = null;
 
     /** Retrouve l'image PEINTE correspondant à l'image sélectionnée :
-     *  bloc clone `[data-src-pos]` + RANG de l'image dans le bloc (même
+     *  clone `[data-src-pos]` + RANG de l'image dans l'unité clonée (même
      *  logique inverse que `imagePosOfClone` dans imageInsert.ts). */
     const findPaintedImage = (): { pos: number; img: HTMLImageElement } | null => {
       const sel = editor.state.selection as unknown as { node?: { type: { name: string } } };
       if (!sel.node || sel.node.type.name !== "image") return null;
       const pos = editor.state.selection.from;
       const $from = editor.state.selection.$from;
+      // Unités clonées candidates : le BLOC (paragraphe), et — pour une
+      // image dans un TABLEAU — la LIGNE : les paragraphes de cellules ne
+      // portent pas data-src-pos, ce sont les <tr> peints qui l'ont
+      // (paintPages, buildTableFragment). Sans la ligne, aucune poignée
+      // n'apparaissait sur les images de tableau (retour 2026-10-27).
       let blockPos = -1;
       for (let d = $from.depth; d >= 1; d--) {
         if ($from.node(d).isBlock) {
@@ -85,24 +90,37 @@ export function useImageResize(
           break;
         }
       }
-      if (blockPos < 0) return null;
-      let index = 0;
-      editor.state.doc.nodesBetween(blockPos + 1, pos, (n) => {
-        if (n.type.name === "image") index++;
-        return true;
-      });
-      // Le bloc peut être cloné sur plusieurs pages (liste coupée) : prend
-      // le clone dont l'image est visible à l'écran, sinon le premier.
-      const clones = Array.from(canvas.querySelectorAll<HTMLElement>(`[data-src-pos="${blockPos}"]`));
-      let img: HTMLImageElement | null = null;
-      for (const clone of clones) {
-        const imgs = Array.from(clone.querySelectorAll<HTMLImageElement>("img:not(.ProseMirror-separator)"));
-        const candidate = imgs[index] ?? null;
-        if (candidate) {
-          const r = candidate.getBoundingClientRect();
-          if (img === null || (r.bottom > 120 && r.top < window.innerHeight - 16)) img = candidate;
+      let rowPos = -1;
+      for (let d = $from.depth; d >= 1; d--) {
+        if ($from.node(d).type.name === "tableRow") {
+          rowPos = $from.before(d);
+          break;
         }
       }
+      // RANG de l'image dans l'unité + clone peint (l'unité peut être clonée
+      // sur plusieurs pages — liste coupée, tableau à cheval) : prend le
+      // clone dont l'image est visible à l'écran, sinon le premier.
+      const imageInUnit = (unitPos: number): HTMLImageElement | null => {
+        let index = 0;
+        editor.state.doc.nodesBetween(unitPos + 1, pos, (n) => {
+          if (n.type.name === "image") index++;
+          return true;
+        });
+        const clones = Array.from(canvas.querySelectorAll<HTMLElement>(`[data-src-pos="${unitPos}"]`));
+        let img: HTMLImageElement | null = null;
+        for (const clone of clones) {
+          const imgs = Array.from(clone.querySelectorAll<HTMLImageElement>("img:not(.ProseMirror-separator)"));
+          const candidate = imgs[index] ?? null;
+          if (candidate) {
+            const r = candidate.getBoundingClientRect();
+            if (img === null || (r.bottom > 120 && r.top < window.innerHeight - 16)) img = candidate;
+          }
+        }
+        return img;
+      };
+      let img: HTMLImageElement | null = null;
+      if (blockPos >= 0) img = imageInUnit(blockPos);
+      if (!img && rowPos >= 0) img = imageInUnit(rowPos);
       return img ? { pos, img } : null;
     };
 
@@ -147,22 +165,28 @@ export function useImageResize(
       const anchorRight = target.rect.right;
       const startWidth = target.rect.width;
       const side = corner.includes("w") ? -1 : 1;
-      const contentW = contentWidthPx();
       const zoom = zoomRef.current;
+      // Conteneur RÉEL de l'image : hors tableau c'est la zone de texte
+      // (le % du modèle s'y rapporte), mais DANS un tableau le CSS
+      // applique `width: N%` à la CELLULE — le pourcentage doit donc être
+      // calculé sur la cellule, sinon le geste (242 px lâchés) retombe à
+      // une toute autre largeur une fois rendu (retour 2026-10-27).
+      const cell = target.img.closest("td,th");
+      const containerW = cell ? cell.getBoundingClientRect().width / zoom : contentWidthPx();
       let newWidth = startWidth;
 
       dragging = true;
       tooltip.style.display = "";
 
       const onMove = (ev: MouseEvent) => {
-        newWidth = Math.min(Math.max(startWidth + side * (ev.clientX - startX), MIN_SCREEN_PX), contentW * zoom);
+        newWidth = Math.min(Math.max(startWidth + side * (ev.clientX - startX), MIN_SCREEN_PX), containerW * zoom);
         const logicalW = newWidth / zoom;
         // Aperçu EN DIRECT sur l'image peinte (sans repaint complet) +
         // recadrage du calque (le bord opposé ne bouge pas).
         target!.img.style.width = `${logicalW}px`;
         overlay.style.width = `${newWidth}px`;
         if (corner.includes("w")) overlay.style.left = `${anchorRight - newWidth - frame.getBoundingClientRect().left}px`;
-        const pct = Math.min(100, Math.max(5, Math.round((logicalW / contentW) * 100)));
+        const pct = Math.min(100, Math.max(5, Math.round((logicalW / containerW) * 100)));
         const logicalH = target!.img.getBoundingClientRect().height / zoom;
         tooltip.textContent = `${Math.round(logicalW)} × ${Math.round(logicalH)} px — ${pct} %`;
         tooltip.style.left = `${overlay.offsetLeft + overlay.offsetWidth / 2}px`;
@@ -174,7 +198,7 @@ export function useImageResize(
         tooltip.style.display = "none";
         dragging = false;
         const logicalW = newWidth / zoomRef.current;
-        const pct = Math.min(100, Math.max(5, Math.round((logicalW / contentWidthPx()) * 100)));
+        const pct = Math.min(100, Math.max(5, Math.round((logicalW / containerW) * 100)));
         // UNE transaction pour tout le geste (un seul Ctrl+Z).
         const t = target;
         if (t) editor.view.dispatch(editor.state.tr.setNodeAttribute(t.pos, "width", `${pct}%`));
