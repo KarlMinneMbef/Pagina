@@ -104,7 +104,7 @@ Nuancier de référence (les couleurs sont écrites dans les feuilles CSS). Sapi
 ## Tests
 
 - **Unitaires** : `npm test` (Vitest, jsdom, alias `@`, setup `@testing-library/jest-dom/vitest` + `cleanup()` explicite). Les commandes Tauri sont mockées via `vi.mock("@tauri-apps/api/core")`, les stores testés directement.
-- **Fenêtre réelle** : lancement avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` (`run-tauri-dev.cmd`), pilotage Playwright `connectOverCDP('http://localhost:9222')`. Pièges : fenêtre réduite = viewport 146×20 (restaurer via `restore-window.ps`) ; HMR de `workspaceStore.ts` = singleton Zustand perdu (`page.reload()`) ; ne jamais sauvegarder les documents réels de l'utilisateur pendant un test.
+- **Fenêtre réelle** : lancement avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 npx tauri dev`, pilotage Playwright `connectOverCDP('http://localhost:9222')`. Pièges : fenêtre réduite = viewport 146×20 (restaurer avec `powershell -command "(New-Object -ComObject Shell.Application).MinimizeAll(); ..."` ou Win32 `ShowWindow`) ; HMR de `workspaceStore.ts` = singleton Zustand perdu (`page.reload()`) ; ne jamais sauvegarder les documents réels de l'utilisateur pendant un test.
 
 ## Version légère (intégrable)
 
@@ -114,7 +114,7 @@ Nuancier de référence (les couleurs sont écrites dans les feuilles CSS). Sapi
 
 ```
 npm run dev        # vite
-npx tauri dev      # application complète (ou run-tauri-dev.cmd avec CDP)
+npx tauri dev      # application complète (ajouter WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 pour le CDP)
 npm test           # tests unitaires
 npm run build      # build production
 ```
