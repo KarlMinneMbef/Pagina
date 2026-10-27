@@ -1,0 +1,108 @@
+/* Panneau « Image » — charte MBEF (sapin / prairie / charbon). */
+.im-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: #343334;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+}
+
+.im-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.im-preview {
+  background: repeating-conic-gradient(#f4f4f3 0% 25%, #ffffff 0% 50%) 0 0 / 14px 14px;
+  border: 1px solid #d9d9d7;
+  border-radius: 4px;
+  padding: 6px;
+  display: flex;
+  justify-content: center;
+}
+
+.im-preview img {
+  max-width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+}
+
+.im-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.im-label {
+  font-weight: 600;
+  color: #003f2b;
+}
+
+.im-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.im-preset {
+  border: 1px solid #d0d3d4;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #343334;
+}
+
+.im-preset:hover {
+  background: #f0f0ee;
+}
+
+.im-preset-on {
+  background: #003f2b;
+  border-color: #003f2b;
+  color: #ffffff;
+}
+
+.im-preset-on:hover {
+  background: #00503a;
+}
+
+.im-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b6b69;
+}
+
+.im-number {
+  width: 64px;
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.im-text {
+  border: 1px solid #d0d3d4;
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
+.im-text:focus,
+.im-number:focus {
+  outline: 1px solid #24ac6e;
+  border-color: #24ac6e;
+}
+
+.im-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6b6b69;
+}

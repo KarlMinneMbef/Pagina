@@ -27,6 +27,7 @@ import { FindReplacePanel } from "./ui/FindReplace/FindReplacePanel";
 import { DocumentPropertiesDialog } from "./ui/PageSetup/DocumentPropertiesDialog";
 import { ParagraphDialog } from "./ui/Paragraph/ParagraphDialog";
 import { DiagramPanel } from "./ui/Mermaid/DiagramPanel";
+import { ImagePanel } from "./ui/Image/ImagePanel";
 import { SectionBreakDialog } from "./ui/Section/SectionBreakDialog";
 import { CoverGalleryDialog } from "./ui/Cover/CoverGalleryDialog";
 import { addUserCoverTemplate } from "./core/coverTemplates";
@@ -67,6 +68,7 @@ const EMPTY_STATS: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
+  image: null,
   coverZone: null,
 };
 
@@ -143,6 +145,19 @@ function App() {
   const [coverPanelOpen, setCoverPanelOpen] = useState(false);
   const wasCoverSelRef = useRef(false);
   const wasMermaidSelRef = useRef(false);
+  // Panneau « Image » : ouvert quand une image est sélectionnée, refermé quand la sélection la quitte (même cycle que Diagramme).
+  const [imagePanelOpen, setImagePanelOpen] = useState(false);
+  const wasImageSelRef = useRef(false);
+  useEffect(() => {
+    const was = wasImageSelRef.current;
+    wasImageSelRef.current = !!stats.image;
+    if (stats.image && !was) {
+      setImagePanelOpen(true);
+      setCtxTab("image");
+    } else if (!stats.image && was) {
+      setImagePanelOpen(false);
+    }
+  }, [stats.image]);
   useEffect(() => {
     const was = wasMermaidSelRef.current;
     wasMermaidSelRef.current = !!stats.mermaid;
@@ -194,7 +209,7 @@ function App() {
   // « toc ») : quand plusieurs contextes sont actifs en même temps (curseur
   // dans un tableau + édition d'en-tête/pied de page, p. ex.), l'utilisateur
   // choisit l'onglet.
-  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde">("tableau");
+  const [ctxTab, setCtxTab] = useState<"tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image">("tableau");
   // Panneau « Styles de titres » : ouvert/fermé À LA MAIN (chevron de la
   // galerie de styles du ruban), pas automatiquement comme Tableau/Sommaire.
   const [headingPanelOpen, setHeadingPanelOpen] = useState(false);
@@ -671,7 +686,7 @@ function App() {
         {/* Hôte UNIQUE des panneaux contextuels droits : onglets quand
          * plusieurs contextes actifs (demande 2026-10-17) — une seule
          * colonne, jamais de panneaux côte à côte. */}
-        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen || coverPanelOpen) && (
+        {activeTab && (tablePanelOpen || stats.headerFooterEditMode || tocPanelOpen || headingPanelOpen || mathPanelOpen || findReplaceOpen || mermaidPanelOpen || coverPanelOpen || imagePanelOpen) && (
           <ContextualPanelHost
             tabs={
               ([
@@ -685,10 +700,11 @@ function App() {
                 ...(findReplaceOpen ? [{ id: "rechercher", label: "Rechercher" }] : []),
                 ...(mermaidPanelOpen && stats.mermaid ? [{ id: "diagramme", label: "Diagramme" }] : []),
                 ...(coverPanelOpen && stats.coverZone ? [{ id: "page-de-garde", label: "Page de garde" }] : []),
+                ...(imagePanelOpen && stats.image ? [{ id: "image", label: "Image" }] : []),
               ] as ContextualTab[])
             }
             activeId={ctxTab}
-            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde")}
+            onSelect={(id) => setCtxTab(id as "tableau" | "hf" | "toc" | "styles" | "equation" | "rechercher" | "diagramme" | "page-de-garde" | "image")}
             /* « Rechercher » plus large (volet façon Word, retour
              * utilisateur 2026-10-21) — appliqué au changement d'onglet
              * seulement, l'utilisateur garde la main sur la poignée. */
@@ -778,6 +794,20 @@ function App() {
                     editorRef.current?.replaceAll(query, options, replacement) ?? 0
                   }
                   onClose={() => setFindReplaceOpen(false)}
+                />
+              )}
+            {ctxTab === "image" &&
+              imagePanelOpen &&
+              stats.image &&
+              editorRef.current && (
+                <ImagePanel
+                  key={stats.image.pos}
+                  src={stats.image.src}
+                  alt={stats.image.alt}
+                  width={stats.image.width}
+                  onChange={(patch) => editorRef.current?.updateImage(patch)}
+                  onDelete={() => editorRef.current?.deleteImage()}
+                  onClose={() => setImagePanelOpen(false)}
                 />
               )}
             {ctxTab === "diagramme" &&

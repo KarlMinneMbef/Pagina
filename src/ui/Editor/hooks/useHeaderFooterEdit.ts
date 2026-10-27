@@ -18,7 +18,7 @@ import { FontSize } from "../extensions/FontSize";
 import { Markdown } from "tiptap-markdown";
 import { ParagraphMarkdown } from "../extensions/ParagraphMarkdown";
 import { HEADER_TEMPLATE_ATTR, FOOTER_TEMPLATE_ATTR } from "../pagination/paintPages";
-import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
+import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getImageAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
 import { getSelectionShape } from "../editorTableOps";
 import { currentFontSizePt, headerFooterTargetNearViewport } from "../editorUtils";
 import type { EditorRefs } from "./editorRefs";
@@ -62,6 +62,7 @@ export function useHeaderFooterEdit({ editor, cmd, refs }: {
         insideToc: getInsideToc(editor),
         math: getMathAtSelection(editor),
         mermaid: getMermaidAtSelection(editor),
+        image: getImageAtSelection(editor),
         coverZone: getCoverZoneAtSelection(editor),
         tableSelectionShape: getSelectionShape(cmd()),
         headerFooterEditMode: mode,

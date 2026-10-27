@@ -37,6 +37,8 @@ export function useSelectionBarSync(
         selecting ||
         sel.empty ||
         sel instanceof CellSelection ||
+        // Image sélectionnée : rien à mettre en forme dans la mini-barre (le panneau Image s'en charge).
+        (sel as unknown as { node?: { type: { name: string } } }).node?.type.name === "image" ||
         headerMiniEditorRef.current ||
         editor.isActive("codeBlock") ||
         editor.isActive("mermaid")

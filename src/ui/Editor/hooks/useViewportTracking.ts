@@ -8,7 +8,7 @@ import type { Editor } from "@tiptap/react";
 import type { PageLayoutSettings } from "../../../core/pageLayout";
 import { useEffect, useRef } from "react";
 import { PAGE_GAP_PX } from "../pagination/Ruler";
-import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
+import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getImageAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
 import { getSelectionShape } from "../editorTableOps";
 import { currentFontSizePt } from "../editorUtils";
 import type { EditorRefs } from "./editorRefs";
@@ -61,6 +61,7 @@ export function useViewportTracking({ editor, cmd, layout, zoom, onZoomChange, s
           insideToc: getInsideToc(editor),
         math: getMathAtSelection(editor),
         mermaid: getMermaidAtSelection(editor),
+        image: getImageAtSelection(editor),
         coverZone: getCoverZoneAtSelection(editor),
           tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,

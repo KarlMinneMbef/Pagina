@@ -15,7 +15,7 @@ import { paintPages } from "../pagination/paintPages";
 import { computeCaretScreenPosition } from "../pagination/caretPosition";
 import { computeSelectionRects } from "../pagination/selectionHighlight";
 import { formatTodayForHeaderFooter, type PageLayoutSettings } from "../../../core/pageLayout";
-import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
+import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getImageAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
 import { getSelectionShape } from "../editorTableOps";
 import { currentFontSizePt } from "../editorUtils";
 import type { EditorRefs } from "./editorRefs";
@@ -276,6 +276,7 @@ export function useCanvasRepaint({ editor, geometry, layout, zoom, cmd, refs }: 
         insideToc: getInsideToc(editor),
         math: getMathAtSelection(editor),
         mermaid: getMermaidAtSelection(editor),
+        image: getImageAtSelection(editor),
         coverZone: getCoverZoneAtSelection(editor),
         tableSelectionShape: getSelectionShape(cmd()),
         headerFooterEditMode: headerFooterModeRef.current,

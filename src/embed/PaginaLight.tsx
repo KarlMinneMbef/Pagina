@@ -57,6 +57,7 @@ const STATS_INITIALES: EditorStats = {
   insideToc: false,
   math: null,
   mermaid: null,
+  image: null,
   coverZone: null,
 };
 

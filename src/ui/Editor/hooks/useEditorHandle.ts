@@ -11,7 +11,7 @@ import { findCoverZoneAround, coverZoneIndexAt, extractCoverZoneMarkdown } from 
 import { askLinkUrl, askBookmarkName, askCrossReference } from "../../dialogs/prompts";
 import { DOMParser as ProseMirrorDOMParser, Fragment, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
-import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, findMatchesInDoc, getMermaidAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
+import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, findMatchesInDoc, getMermaidAtSelection, getImageAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "../editorQueries";
 import { applyToSelectedCells, clearSelectedCellContents, applyBorderPreset, getSelectionShape, setGridLineBorder, readGridBorderState } from "../editorTableOps";
 import { FONT_SIZE_STEPS, currentFontSizePt, nextCase, copyEditorSelection, cutEditorSelection, pasteIntoEditor, slugifyBookmark, escapeHtmlText, headerFooterTargetNearViewport, revealInViewport } from "../editorUtils";
 import type { EditorRefs } from "./editorRefs";
@@ -214,6 +214,7 @@ export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwa
       currentPage: currentPageRef.current,
       headerFooterEditMode: headerFooterModeRef.current,
       mermaid: editor ? getMermaidAtSelection(editor) : null,
+      image: editor ? getImageAtSelection(editor) : null,
       coverZone: editor ? getCoverZoneAtSelection(editor) : null,
     }),
     editHeader: () => {
@@ -544,6 +545,22 @@ export function useEditorHandle({ editor, cmd, selectMathNodeBeforeCursor, forwa
       return matches.length;
     },
     // --- Signet / Renvoi (groupe « Liens » du ruban, façon Word) ---
+    updateImage: (patch) => {
+      const img = getImageAtSelection(editor);
+      if (!img) return;
+      const tr = editor.state.tr;
+      if (patch.alt !== undefined) tr.setNodeAttribute(img.pos, "alt", patch.alt);
+      if (patch.width !== undefined) tr.setNodeAttribute(img.pos, "width", patch.width);
+      editor.view.dispatch(tr);
+    },
+    deleteImage: () => {
+      const img = getImageAtSelection(editor);
+      if (!img) return;
+      const node = editor.state.doc.nodeAt(img.pos);
+      if (node) editor.view.dispatch(editor.state.tr.delete(img.pos, img.pos + node.nodeSize));
+      // Le bouton du panneau a pris le focus : on le rend à l'éditeur (Ctrl+Z doit pouvoir annuler la suppression).
+      editor.commands.focus(undefined, { scrollIntoView: false });
+    },
     insertImage: () => {
       void pickAndInsertImages(editor.view, refs.addImageRef.current);
     },

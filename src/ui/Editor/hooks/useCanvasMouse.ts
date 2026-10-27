@@ -261,7 +261,7 @@ export function useCanvasMouse({ editor, readOnly, setTableContextMenu, refs }: 
       // contextuel (`onContextMenu`) décide lui-même quoi sélectionner.
       if (e.button !== 0) return;
       // Clic sur une IMAGE peinte : l'image est sélectionnée (comme un objet) — Suppr la retire, le panneau Image s'ouvre.
-      const imgEl = (e.target as HTMLElement | null)?.closest?.("img");
+      const imgEl = (e.target as HTMLElement | null)?.closest?.("img:not(.ProseMirror-separator)");
       if (imgEl && editor.isEditable) {
         const imgPos = imagePosOfClone(editor.state.doc, imgEl as HTMLImageElement);
         if (imgPos !== null) {

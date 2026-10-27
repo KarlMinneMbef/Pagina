@@ -5,6 +5,7 @@
  * (conteneur `.xmd`, converti au besoin) et renvoie le lien RELATIF à écrire (`images/<nom>-<empreinte>.<ext>`) ; ce module
  * insère ensuite le nœud image à la sélection.
  */
+import { NodeSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { imageMimeOf } from "../../core/xmd/container";
 import { pickImageFiles, readBinaryFile } from "../../persistence/fileService";
@@ -31,7 +32,15 @@ export async function insertImageFile(view: EditorView, file: ImageFile, addImag
   const type = view.state.schema.nodes.image;
   if (!type) return false;
   const node = type.create({ src, alt: altFromFileName(file.name) });
-  view.dispatch(view.state.tr.replaceSelectionWith(node).scrollIntoView());
+  const from = view.state.selection.from;
+  const tr = view.state.tr.replaceSelectionWith(node);
+  // L'image insérée est SÉLECTIONNÉE : le panneau « Image » s'ouvre (largeur, texte alternatif), comme pour un diagramme.
+  try {
+    tr.setSelection(NodeSelection.create(tr.doc, from));
+  } catch {
+    /* position inattendue : la sélection reste celle de l'insertion */
+  }
+  view.dispatch(tr.scrollIntoView());
   return true;
 }
 
@@ -88,7 +97,7 @@ export function imagePosOfClone(doc: import("@tiptap/pm/model").Node, img: HTMLI
   if (!block || Number.isNaN(start)) return null;
   const node = doc.nodeAt(start);
   if (!node) return null;
-  const index = Array.from(block.querySelectorAll("img")).indexOf(img);
+  const index = Array.from(block.querySelectorAll("img:not(.ProseMirror-separator)")).indexOf(img);
   if (index < 0) return null;
   let seen = 0;
   let found: number | null = null;

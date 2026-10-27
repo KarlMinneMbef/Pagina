@@ -56,7 +56,7 @@ import "./MarkdownEditor.css";
 // Après MarkdownEditor.css : à spécificité égale, les thèmes de page de garde
 // doivent l'emporter sur le style générique des titres.
 import "../Cover/coverThemes.css";
-import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "./editorQueries";
+import { getActiveBlockStyle, getActiveMarks, getActiveAlign, getActiveListType, getInsideToc, getMermaidAtSelection, getImageAtSelection, getCoverZoneAtSelection, getMathAtSelection, currentTextColor, currentFontFamily } from "./editorQueries";
 import { getSelectionShape } from "./editorTableOps";
 import { currentFontSizePt, mmToPx } from "./editorUtils";
 import { useCodeLangChip } from "./hooks/useCodeLangChip";
@@ -398,6 +398,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           insideToc: getInsideToc(editor),
           math: getMathAtSelection(editor),
           mermaid: getMermaidAtSelection(editor),
+        image: getImageAtSelection(editor),
           coverZone: getCoverZoneAtSelection(editor),
           tableSelectionShape: getSelectionShape(cmd()),
           headerFooterEditMode: headerFooterModeRef.current,

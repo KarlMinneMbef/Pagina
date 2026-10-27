@@ -114,6 +114,16 @@ export function getMermaidAtSelection(editor: Editor): EditorStats["mermaid"] {
   return null;
 }
 
+/** Image sélectionnée (NodeSelection) — pilote le panneau latéral « Image ». */
+export function getImageAtSelection(editor: Editor): EditorStats["image"] {
+  const sel = editor.state.selection;
+  const node = (sel as unknown as { node?: { type: { name: string }; attrs: { src?: string | null; alt?: string | null; width?: string | null } } }).node;
+  if (node && node.type.name === "image") {
+    return { pos: sel.from, src: String(node.attrs.src ?? ""), alt: String(node.attrs.alt ?? ""), width: node.attrs.width ?? null };
+  }
+  return null;
+}
+
 /** Zone page de garde contenant le curseur (ou un marqueur sélectionné) —
  *  pilote le panneau latéral « Page de garde » (front montant dans
  *  App.tsx, comme le panneau Tableau avec insideTable). */
