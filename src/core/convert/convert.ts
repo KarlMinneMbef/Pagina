@@ -1,8 +1,7 @@
 /**
  * Import/export Word (.docx) et LibreOffice (.odt) — orchestration au-dessus
- * de Pandoc (voir persistence/fileService.ts ↔ src-tauri/src/convert_commands.rs,
- * décision utilisateur 2026-10-27 : moteur local léger, pas de PDF pour
- * l'instant — usage trop personnel pour un projet open source).
+ * de Pandoc (voir persistence/fileService.ts ↔ src-tauri/src/convert_commands.rs).
+ * Pas d'import PDF dans cette version ; ODT = texte Writer (pas ODP).
  *
  * IMPORT (`importDocument`) : Pandoc convertit en Markdown GFM et extrait les
  * images dans un dossier temporaire ; les images sont rangées dans un

@@ -1029,9 +1029,6 @@ export function Toolbar({
               icon={<IconWordDoc size={28} />}
               label="Word / LibreOffice…"
             />
-            <p className="tb-convert-note">
-              Import PDF : non prévu dans cette version (décision 2026-10-27 — usage trop personnel pour un projet open source).
-            </p>
           </RibbonGroup>
 
           <RibbonGroup label="Exporter le document" buttonsClassName="tb-group-buttons tb-group-buttons-flex">
